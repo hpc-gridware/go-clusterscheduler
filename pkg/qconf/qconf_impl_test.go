@@ -21,6 +21,7 @@ package qconf_test
 
 import (
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,6 +41,50 @@ var _ = Describe("QconfImpl", func() {
 			Expect(err).To(BeNil())
 			Expect(out).NotTo(BeNil())
 			Expect(out).To(ContainSubstring("total"))
+		})
+
+		It("should parse multi-line values", func() {
+			lines := strings.Split(`execd_params                 none
+reporting_params             accounting=true reporting=false flush_time= 00:00:15 \
+                             joblog=true sharelog=00:00:00
+finished_jobs                0
+gid_range                    20000-20100`, "\n")
+
+			value, isMultiline := qconf.ParseMultiLineValue(lines, 1)
+			Expect(isMultiline).To(BeTrue())
+			Expect(value).To(Equal("accounting=true reporting=false flush_time= 00:00:15 joblog=true sharelog=00:00:00"))
+
+			value, isMultiline = qconf.ParseMultiLineValue(lines, 0)
+			Expect(isMultiline).To(BeFalse())
+			Expect(value).To(Equal("none"))
+		})
+
+	})
+
+	Context("Cluster configuration", func() {
+
+		It("should read the current cluster configuration", func() {
+			qc, err := qconf.NewCommandLineQConf("qconf")
+			Expect(err).To(BeNil())
+
+			cc, err := qc.ReadClusterConfiguration()
+			Expect(err).To(BeNil())
+			Expect(cc).NotTo(BeNil())
+
+			/*
+				SGE_ROOT=/opt/cs-install
+				SGE_CELL=default
+				SGE_CLUSTER_NAME=p6444
+				SGE_QMASTER_PORT=6444
+				SGE_EXECD_PORT=6445
+			*/
+
+			env := cc.ClusterEnviornment
+			Expect(env.Root).To(Equal("/opt/cs-install"))
+			Expect(env.Cell).To(Equal("default"))
+			Expect(env.Name).To(Equal("p6444"))
+			Expect(env.QmasterPort).To(Equal(6444))
+			Expect(env.ExecdPort).To(Equal(6445))
 		})
 
 	})
@@ -208,6 +253,16 @@ var _ = Describe("QconfImpl", func() {
 		Expect(err).To(BeNil())
 		Expect(retrievedCkptConfig).To(Equal(ckptConfig))
 
+		// Modify the checkpointing interface configuration
+		ckptConfig.CleanCommand = "/path/to/modified_clean_command"
+		err = qc.ModifyCkptInterface(interfaceName, ckptConfig)
+		Expect(err).To(BeNil())
+
+		// Show the specific checkpointing interface and verify its configuration
+		retrievedCkptConfig, err = qc.ShowCkptInterface(interfaceName)
+		Expect(err).To(BeNil())
+		Expect(retrievedCkptConfig).To(Equal(ckptConfig))
+
 		// Delete the checkpointing interface
 		err = qc.DeleteCkptInterface(interfaceName)
 		Expect(err).To(BeNil())
@@ -347,50 +402,65 @@ var _ = Describe("QconfImpl", func() {
 			Expect(hosts).NotTo(BeNil())
 			Expect(hosts).NotTo(ContainElement(hostName))
 
-			// need a resolveable hostname to play with
-			/*
-					// Define a new executionhost configuration
-					hostExecConfig := qconf.HostExecConfig{
-						Hostname:        hostName,
-						LoadScaling:     "2.0",
-						ComplexValues:   "NONE",
-						UserLists:       "user1,user2",
-						XUserLists:      "user3",
-						Projects:        "project1",
-						XProjects:       "project2",
-						UsageScaling:    "1.5",
-						ReportVariables: "var1,var2",
-					}
+			eh, err := qc.ShowExecHost("master")
+			Expect(err).To(BeNil())
+			Expect(eh).NotTo(BeNil())
 
-					// Add the new execution host configuration
-					err = qc.AddExecHost(hostExecConfig)
-					Expect(err).To(BeNil())
+			err = qc.AddComplexEntry(qconf.ComplexEntryConfig{
+				Name:        "test_mem",
+				Shortcut:    "tm",
+				Type:        "INT",
+				Relop:       "<=",
+				Requestable: "YES",
+				Default:     "0",
+				Urgency:     0,
+			})
+			Expect(err).To(BeNil())
 
-				// Show all execution hosts, now should contain the new host
-				hosts, err = qc.ShowExecHosts()
-				Expect(err).To(BeNil())
-				Expect(hosts).NotTo(BeNil())
-				Expect(hosts).To(ContainElement(hostName))
+			// set on host
+			eh.ComplexValues = "test_mem=1024"
+			err = qc.ModifyExecHost("master", eh)
+			Expect(err).To(BeNil())
 
-				// Show the specific execution host configuration and verify its details
-				retrievedExecHostConfig, err := qc.ShowExecHost(hostName)
-				Expect(err).To(BeNil())
-				Expect(retrievedExecHostConfig).To(Equal(hostExecConfig))
+			eh, err = qc.ShowExecHost("master")
+			Expect(err).To(BeNil())
+			Expect(eh).NotTo(BeNil())
 
-				// Delete the execution host configuration
-				err = qc.DeleteExecHost(hostName)
-				Expect(err).To(BeNil())
+			Expect(eh.ComplexValues).To(Equal("test_mem=1024"))
 
-				// Show all execution hosts, should no longer contain the deleted host
-				hosts, err = qc.ShowExecHosts()
-				Expect(err).To(BeNil())
-				Expect(hosts).NotTo(BeNil())
-				Expect(hosts).NotTo(ContainElement(hostName))
+			err = qc.DeleteAttribute("exechost", "complex_values", "test_mem", "master")
+			Expect(err).To(BeNil())
 
-				// Show the specific execution host configuration, should return an error
-				_, err = qc.ShowExecHost(hostName)
-				Expect(err).NotTo(BeNil())
-			*/
+			eh, err = qc.ShowExecHost("master")
+			Expect(err).To(BeNil())
+			Expect(eh).NotTo(BeNil())
+
+			Expect(eh.ComplexValues).To(Equal("NONE"))
+
+			err = qc.DeleteComplexEntry("test_mem")
+			Expect(err).To(BeNil())
+
+			// Delete exec host config - fails because it is in use
+			// by all.q in @allhosts
+			err = qc.DeleteExecHost("master")
+			// TODO sometimes nil
+			Expect(err).NotTo(BeNil())
+
+			// TODO: Method for removing a host from a hostgroup
+			// remove from allhosts
+			err = qc.DeleteAttribute("hostgroup", "hostlist", "master", "@allhosts")
+			Expect(err).To(BeNil())
+
+			// now it should work
+			err = qc.DeleteExecHost("master")
+			Expect(err).To(BeNil())
+
+			err = qc.AddExecHost(eh)
+			Expect(err).To(BeNil())
+
+			err = qc.AddAttribute("hostgroup", "hostlist", "master", "@allhosts")
+			Expect(err).To(BeNil())
+
 		})
 	})
 
@@ -465,6 +535,10 @@ var _ = Describe("QconfImpl", func() {
 			retrievedHostGroupConfig, err := qc.ShowHostGroup(groupName)
 			Expect(err).To(BeNil())
 			Expect(retrievedHostGroupConfig).To(Equal(hostGroupConfig))
+
+			retrievedHostGroupConfig.Hostlist = ""
+			err = qc.ModifyHostGroup(groupName, retrievedHostGroupConfig)
+			Expect(err).To(BeNil())
 
 			// Delete the host group configuration
 			err = qc.DeleteHostGroup(groupName)
@@ -907,6 +981,16 @@ var _ = Describe("QconfImpl", func() {
 			retrievedUserSetListConfig, err = qc.ShowUserSetList(listName)
 			Expect(err).To(BeNil())
 			Expect(retrievedUserSetListConfig.Entries).To(Equal("NONE"))
+
+			// Modify
+			userSetListConfig.OTicket = 20
+			err = qc.ModifyUserset(listName, userSetListConfig)
+			Expect(err).To(BeNil())
+
+			modifiedUserSetListConfig, err := qc.ShowUserSetList(listName)
+			Expect(err).To(BeNil())
+
+			Expect(modifiedUserSetListConfig.OTicket).To(Equal(20))
 
 			err = qc.DeleteUserSetList(listName)
 			Expect(err).To(BeNil())

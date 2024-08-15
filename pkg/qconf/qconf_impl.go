@@ -53,9 +53,35 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 	return out.String(), err
 }
 
+func GetEnvInt(env string) (int, error) {
+	v, exists := os.LookupEnv(env)
+	if !exists {
+		return 0, fmt.Errorf("environment variable %s not set",
+			env)
+	}
+	return strconv.Atoi(v)
+}
+
+func GetEnvironment() (ClusterEnviornment, error) {
+	clusterEnviornment := ClusterEnviornment{}
+	clusterEnviornment.Name = os.Getenv("SGE_CLUSTER_NAME")
+	clusterEnviornment.Root = os.Getenv("SGE_ROOT")
+	clusterEnviornment.Cell = os.Getenv("SGE_CELL")
+	clusterEnviornment.QmasterPort, _ = GetEnvInt("SGE_QMASTER_PORT")
+	clusterEnviornment.ExecdPort, _ = GetEnvInt("SGE_EXECD_PORT")
+	return clusterEnviornment, nil
+}
+
 func (c *CommandLineQConf) ReadClusterConfiguration() (ClusterConfig, error) {
 	cc := ClusterConfig{}
+
+	// general settings which defines the environment
 	var err error
+	cc.ClusterEnviornment, err = GetEnvironment()
+	if err != nil {
+		return cc, fmt.Errorf("failed to read cluster environment: %v", err)
+	}
+
 	cc.GlobalConfig, err = c.ShowGlobalConfiguration()
 	if err != nil {
 		return cc, fmt.Errorf("failed to read global config: %v", err)
@@ -99,16 +125,9 @@ func (c *CommandLineQConf) ReadClusterConfiguration() (ClusterConfig, error) {
 	}
 
 	// Read Complex Entries
-	complexEntries, err := c.ShowComplexEntries()
+	cc.ComplexEntries, err = c.ShowAllComplexes()
 	if err != nil {
 		return cc, fmt.Errorf("failed to read complex entries: %v", err)
-	}
-	for _, complexEntry := range complexEntries {
-		ce, err := c.ShowComplexEntry(complexEntry)
-		if err != nil {
-			return cc, fmt.Errorf("failed to read complex entry: %v", err)
-		}
-		cc.ComplexEntries = append(cc.ComplexEntries, ce)
 	}
 
 	// Read Ckpt Interfaces
@@ -321,8 +340,37 @@ func (c *CommandLineQConf) ShowCalendars() ([]string, error) {
 	return splitWithoutEmptyLines(output, "\n"), nil
 }
 
+func SetDefaultComplexEntryValues(c *ComplexEntryConfig) {
+	if c.Shortcut == "" {
+		c.Shortcut = c.Name
+	}
+	if c.Requestable == "" {
+		c.Requestable = "NO"
+	}
+	if c.Consumable == "" {
+		c.Consumable = "NO"
+	}
+	if c.Default == "" {
+		if c.Type == "STRING" {
+			c.Default = "NONE"
+		} else {
+			c.Default = "0"
+		}
+	}
+	if c.Relop == "" {
+		c.Relop = "=="
+	}
+}
+
 // AddComplexEntry adds a new complex entry.
 func (c *CommandLineQConf) AddComplexEntry(e ComplexEntryConfig) error {
+	if e.Name == "" {
+		return fmt.Errorf("complex does not have a name")
+	}
+	if e.Type == "" {
+		return fmt.Errorf("complex does not have a type")
+	}
+	SetDefaultComplexEntryValues(&e)
 	file, err := createTempDirWithFileName(e.Name)
 	if err != nil {
 		return err
@@ -654,6 +702,52 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 	return cfg, nil
 }
 
+// parseMultiLineValue parses a multi-line value from the output.
+// This is tricky because the output is not structured and the values can be
+// split over multiple lines.
+// The input is an array of all lines, the current index, the current line,
+// and the fields of the current line. fields[0] is the detected key (like "reporting_params").
+// The function returns the value and a boolean indicating if the value is multi-line.
+//
+// Example:
+// ...
+// qmaster_params               none
+// execd_params                 none
+//
+//	reporting_params             accounting=true reporting=false finished_jobs=0 \
+//		  test=blub test=bla
+//
+// ...
+// lines is the array of all lines
+// i is the line number with "reporting_params"
+// The rule is that each non-multi-line output does not have a "  " prefix.
+func ParseMultiLineValue(lines []string, i int) (string, bool) {
+	line := lines[i]
+	fields := strings.Fields(line)
+	value := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+	if strings.HasSuffix(value, "\\") {
+		// multi-line value
+		value = strings.TrimSuffix(value, "\\")
+		for i, line := range lines {
+			fds := strings.Fields(line)
+			if len(fds) == 0 {
+				continue
+			}
+			// find key like "reporting_params"
+			if fds[0] == fields[0] {
+				// multi-line values are indented by spaces, find all remaining lines
+				for j := i + 1; j < len(lines) && strings.HasPrefix(lines[j], "  "); j++ {
+					// Now the question is if we do at " " or "," or other
+					// separators? We expect that the line ends with a separator.
+					value += "" + strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(lines[j]), "\\"))
+				}
+			}
+		}
+		return value, true
+	}
+	return value, false
+}
+
 // ShowGlobalConfiguration shows the global configuration.
 func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 	out, err := c.RunCommand("-sconf", "global")
@@ -662,7 +756,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 	}
 	lines := strings.Split(out, "\n")
 	cfg := GlobalConfig{}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -684,20 +778,20 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "shell_start_mode":
 			cfg.ShellStartMode = fields[1]
 		case "login_shells":
-			cfg.LoginShells = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.LoginShells, _ = ParseMultiLineValue(lines, i)
 		case "min_uid":
 			// Assuming the value can be converted to an integer
 			cfg.MinUID, _ = strconv.Atoi(fields[1])
 		case "min_gid":
 			cfg.MinGID, _ = strconv.Atoi(fields[1])
 		case "user_lists":
-			cfg.UserLists = fields[1]
+			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists = fields[1]
+			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
 		case "projects":
-			cfg.Projects = fields[1]
+			cfg.Projects, _ = ParseMultiLineValue(lines, i)
 		case "xprojects":
-			cfg.XProjects = fields[1]
+			cfg.XProjects, _ = ParseMultiLineValue(lines, i)
 		case "enforce_project":
 			cfg.EnforceProject, _ = strconv.ParseBool(fields[1])
 		case "enforce_user":
@@ -725,7 +819,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "execd_params":
 			cfg.ExecdParams = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "reporting_params":
-			cfg.ReportingParams = fields[1]
+			cfg.ReportingParams, _ = ParseMultiLineValue(lines, i)
 		case "finished_jobs":
 			cfg.FinishedJobs, _ = strconv.Atoi(fields[1])
 		case "gid_range":
@@ -853,7 +947,7 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 	}
 	lines := strings.Split(out, "\n")
 	cfg := HostExecConfig{Hostname: hostName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -862,21 +956,21 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 		case "hostname":
 			cfg.Hostname = fields[1]
 		case "load_scaling":
-			cfg.LoadScaling = fields[1]
+			cfg.LoadScaling = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "complex_values":
-			cfg.ComplexValues = fields[1]
+			cfg.ComplexValues, _ = ParseMultiLineValue(lines, i)
 		case "user_lists":
-			cfg.UserLists = fields[1]
+			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists = fields[1]
+			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
 		case "projects":
-			cfg.Projects = fields[1]
+			cfg.Projects, _ = ParseMultiLineValue(lines, i)
 		case "xprojects":
-			cfg.XProjects = fields[1]
+			cfg.XProjects, _ = ParseMultiLineValue(lines, i)
 		case "usage_scaling":
-			cfg.UsageScaling = fields[1]
+			cfg.UsageScaling, _ = ParseMultiLineValue(lines, i)
 		case "report_variables":
-			cfg.ReportVariables = fields[1]
+			cfg.ReportVariables, _ = ParseMultiLineValue(lines, i)
 		}
 	}
 	return cfg, nil
@@ -987,9 +1081,9 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 		}
 		switch fields[0] {
 		case "group_name":
-			cfg.GroupName = fields[1]
+			cfg.GroupName = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "hostlist":
-			cfg.Hostlist = fields[1]
+			cfg.Hostlist = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		}
 	}
 	return cfg, nil
@@ -1253,7 +1347,7 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 	}
 	lines := strings.Split(out, "\n")
 	cfg := ParallelEnvironmentConfig{PeName: peName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -1264,13 +1358,13 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 		case "slots":
 			cfg.Slots, _ = strconv.Atoi(fields[1])
 		case "user_lists":
-			cfg.UserLists = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
 		case "start_proc_args":
-			cfg.StartProcArgs = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.StartProcArgs, _ = ParseMultiLineValue(lines, i)
 		case "stop_proc_args":
-			cfg.StopProcArgs = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.StopProcArgs, _ = ParseMultiLineValue(lines, i)
 		case "allocation_rule":
 			cfg.AllocationRule = fields[1]
 		case "control_slaves":
@@ -1357,7 +1451,7 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 	}
 	lines := strings.Split(out, "\n")
 	cfg := ProjectConfig{Name: projectName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -1370,9 +1464,9 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 		case "fshare":
 			cfg.FShare, _ = strconv.Atoi(fields[1])
 		case "acl":
-			cfg.ACL = fields[1]
+			cfg.ACL, _ = ParseMultiLineValue(lines, i)
 		case "xacl":
-			cfg.XACL = fields[1]
+			cfg.XACL, _ = ParseMultiLineValue(lines, i)
 		}
 	}
 	return cfg, nil
@@ -1775,7 +1869,7 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 	}
 	lines := strings.Split(out, "\n")
 	cfg := ClusterQueueConfig{QName: queueName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -1784,7 +1878,7 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "qname":
 			cfg.QName = fields[1]
 		case "hostlist":
-			cfg.HostList = fields[1]
+			cfg.HostList, _ = ParseMultiLineValue(lines, i)
 		case "seq_no":
 			cfg.SeqNo, _ = strconv.Atoi(fields[1])
 		case "load_thresholds":
@@ -1804,9 +1898,9 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "qtype":
 			cfg.QType = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "ckpt_list":
-			cfg.CkptList = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.CkptList, _ = ParseMultiLineValue(lines, i)
 		case "pe_list":
-			cfg.PeList = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.PeList, _ = ParseMultiLineValue(lines, i)
 		case "rerun":
 			cfg.Rerun, _ = strconv.ParseBool(fields[1])
 		case "slots":
@@ -1832,23 +1926,23 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "notify":
 			cfg.Notify = fields[1]
 		case "owner_list":
-			cfg.OwnerList = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.OwnerList, _ = ParseMultiLineValue(lines, i)
 		case "user_lists":
-			cfg.UserLists = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
 		case "subordinate_list":
-			cfg.SubordinateList = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.SubordinateList, _ = ParseMultiLineValue(lines, i)
 		case "complex_values":
-			cfg.ComplexValues = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.ComplexValues, _ = ParseMultiLineValue(lines, i)
 		case "projects":
-			cfg.Projects = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.Projects, _ = ParseMultiLineValue(lines, i)
 		case "xprojects":
-			cfg.XProjects = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.XProjects, _ = ParseMultiLineValue(lines, i)
 		case "calendar":
-			cfg.Calendar = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.Calendar, _ = ParseMultiLineValue(lines, i)
 		case "initial_state":
-			cfg.InitialState = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.InitialState, _ = ParseMultiLineValue(lines, i)
 		case "s_rt":
 			cfg.SRt = fields[1]
 		case "h_rt":
@@ -1980,6 +2074,10 @@ func (c *CommandLineQConf) AddUserSetList(userSetListName string, u UserSetListC
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
+
+	if u.Entries == "" {
+		u.Entries = "NONE"
+	}
 
 	_, err = file.WriteString(fmt.Sprintf("name           %s\n", u.Name))
 	if err != nil {
@@ -2329,7 +2427,28 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 
 func SetDefaultExecHostConfig(cfg *HostExecConfig) {
 	if cfg.LoadScaling == "" {
-		// TODOD
+		cfg.LoadScaling = "NONE"
+	}
+	if cfg.ComplexValues == "" {
+		cfg.ComplexValues = "NONE"
+	}
+	if cfg.UserLists == "" {
+		cfg.UserLists = "NONE"
+	}
+	if cfg.XUserLists == "" {
+		cfg.XUserLists = "NONE"
+	}
+	if cfg.Projects == "" {
+		cfg.Projects = "NONE"
+	}
+	if cfg.XProjects == "" {
+		cfg.XProjects = "NONE"
+	}
+	if cfg.UsageScaling == "" {
+		cfg.UsageScaling = "NONE"
+	}
+	if cfg.ReportVariables == "" {
+		cfg.ReportVariables = "NONE"
 	}
 }
 
@@ -2396,7 +2515,7 @@ func (c *CommandLineQConf) ModifyHostGroup(hostGroupName string, cfg HostGroupCo
 		cfg.Hostlist = "NONE"
 	}
 
-	_, err = file.WriteString(fmt.Sprintf("group_name @%s\n", hostGroupName))
+	_, err = file.WriteString(fmt.Sprintf("group_name %s\n", hostGroupName))
 	if err != nil {
 		return err
 	}
@@ -2735,6 +2854,10 @@ func (c *CommandLineQConf) ModifyUserset(listnameList string, cfg UserSetListCon
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
+
+	if cfg.Entries == "" {
+		cfg.Entries = "NONE"
+	}
 
 	_, err = file.WriteString(fmt.Sprintf("name    %s\n", listnameList))
 	if err != nil {

@@ -29,27 +29,33 @@ type QConf interface {
 	DeleteCalendar(calendarName string) error
 	ShowCalendar(calendarName string) (CalendarConfig, error)
 	ShowCalendars() ([]string, error)
+	ModifyCalendar(calendarName string, c CalendarConfig) error
 
 	AddComplexEntry(e ComplexEntryConfig) error
 	DeleteComplexEntry(entryName string) error
 	ShowComplexEntry(entryName string) (ComplexEntryConfig, error)
 	ShowComplexEntries() ([]string, error)
 	ShowAllComplexes() ([]ComplexEntryConfig, error)
+	ModifyAllComplexes(complexAttr []ComplexEntryConfig) error
 
 	AddCkptInterface(c CkptInterfaceConfig) error
 	DeleteCkptInterface(interfaceName string) error
 	ShowCkptInterface(interfaceName string) (CkptInterfaceConfig, error)
 	ShowCkptInterfaces() ([]string, error)
+	ModifyCkptInterface(ckptName string, c CkptInterfaceConfig) error
 
 	AddHostConfiguration(config HostConfiguration) error
 	DeleteHostConfiguration(configName string) error
 	ShowHostConfiguration(hostName string) (HostConfiguration, error)
 	ShowHostConfigurations() ([]string, error)
+	ModifyHostConfiguration(configName string, c HostConfiguration) error
 
 	ShowGlobalConfiguration() (GlobalConfig, error)
+	ModifyGlobalConfig(g GlobalConfig) error
 
 	AddExecHost(hostExecConfig HostExecConfig) error
 	DeleteExecHost(hostList string) error
+	ModifyExecHost(execHostName string, h HostExecConfig) error
 	ShowExecHost(hostName string) (HostExecConfig, error)
 	ShowExecHosts() ([]string, error)
 
@@ -58,6 +64,7 @@ type QConf interface {
 	ShowAdminHosts() ([]string, error)
 
 	AddHostGroup(hostGroup HostGroupConfig) error
+	ModifyHostGroup(hostGroupName string, hg HostGroupConfig) error
 	DeleteHostGroup(groupName string) error
 	ShowHostGroup(groupName string) (HostGroupConfig, error)
 	ShowHostGroups() ([]string, error)
@@ -66,6 +73,7 @@ type QConf interface {
 	DeleteResourceQuotaSet(rqsList string) error
 	ShowResourceQuotaSet(rqsList string) (ResourceQuotaSetConfig, error)
 	ShowResourceQuotaSets() ([]string, error)
+	ModifyResourceQuotaSet(rqsName string, rqs ResourceQuotaSetConfig) error
 
 	AddUserToManagerList(users []string) error
 	DeleteUserFromManagerList(users []string) error
@@ -79,13 +87,16 @@ type QConf interface {
 	DeleteParallelEnvironment(peName string) error
 	ShowParallelEnvironment(peName string) (ParallelEnvironmentConfig, error)
 	ShowParallelEnvironments() ([]string, error)
+	ModifyParallelEnvironment(peName string, pe ParallelEnvironmentConfig) error
 
 	AddProject(project ProjectConfig) error
 	DeleteProject(projects []string) error
 	ShowProject(projectName string) (ProjectConfig, error)
 	ShowProjects() ([]string, error)
+	ModifyProject(projectName string, p ProjectConfig) error
 
 	AddClusterQueue(queue ClusterQueueConfig) error
+	ModifyClusterQueue(queueName string, q ClusterQueueConfig) error
 	DeleteClusterQueue(queueName string) error
 	ShowClusterQueue(queueName string) (ClusterQueueConfig, error)
 	ShowClusterQueues() ([]string, error)
@@ -108,11 +119,13 @@ type QConf interface {
 	DeleteUserSetList(userList string) error
 	ShowUserSetList(listnameList string) (UserSetListConfig, error)
 	ShowUserSetLists() ([]string, error)
+	ModifyUserset(listnameList string, u UserSetListConfig) error
 
 	AddUser(userConfig UserConfig) error
 	DeleteUser(users []string) error
 	ShowUser(userName string) (UserConfig, error)
 	ShowUsers() ([]string, error)
+	ModifyUser(userName string, u UserConfig) error
 
 	ClearUsage() error
 	CleanQueue(destinID []string) error
@@ -123,20 +136,6 @@ type QConf interface {
 	KillQmasterThread(threadName string) error
 
 	ModifyAttribute(objName, attrName, val, objIDList string) error
-	ModifyAllComplexes(complexAttr []ComplexEntryConfig) error
-	ModifyCalendar(calendarName string, c CalendarConfig) error
-	ModifyCkptInterface(ckptName string, c CkptInterfaceConfig) error
-	ModifyHostConfiguration(configName string, c HostConfiguration) error
-	ModifyGlobalConfig(g GlobalConfig) error
-	ModifyExecHost(execHostName string, h HostExecConfig) error
-	ModifyHostGroup(hostGroupName string, hg HostGroupConfig) error
-	ModifyResourceQuotaSet(rqsName string, rqs ResourceQuotaSetConfig) error
-	ModifyParallelEnvironment(peName string, pe ParallelEnvironmentConfig) error
-	ModifyProject(projectName string, p ProjectConfig) error
-	ModifyClusterQueue(queueName string, q ClusterQueueConfig) error
-	ModifyUserset(listnameList string, u UserSetListConfig) error
-	ModifyUser(userName string, u UserConfig) error
-
 	DeleteAttribute(objName, attrName, val, objIDList string) error
 	AddAttribute(objName, attrName, val, objIDList string) error
 }
