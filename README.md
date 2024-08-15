@@ -2,7 +2,8 @@
 
 Welcome to the **Open Cluster Scheduler Go API** repository. This project provides
 a Go-based API to interact with the Open Cluster Scheduler, encapsulating the
-command-line interface to streamline the development and management of clusters.
+command-line interface to streamline the configuration and management of
+Open/Gridware Cluster Scheduler clusters.
 
 ## Features
 
