@@ -62,14 +62,14 @@ func GetEnvInt(env string) (int, error) {
 	return strconv.Atoi(v)
 }
 
-func GetEnvironment() (ClusterEnviornment, error) {
-	clusterEnviornment := ClusterEnviornment{}
-	clusterEnviornment.Name = os.Getenv("SGE_CLUSTER_NAME")
-	clusterEnviornment.Root = os.Getenv("SGE_ROOT")
-	clusterEnviornment.Cell = os.Getenv("SGE_CELL")
-	clusterEnviornment.QmasterPort, _ = GetEnvInt("SGE_QMASTER_PORT")
-	clusterEnviornment.ExecdPort, _ = GetEnvInt("SGE_EXECD_PORT")
-	return clusterEnviornment, nil
+func GetEnvironment() (ClusterEnvironment, error) {
+	clusterEnvironment := ClusterEnvironment{}
+	clusterEnvironment.Name = os.Getenv("SGE_CLUSTER_NAME")
+	clusterEnvironment.Root = os.Getenv("SGE_ROOT")
+	clusterEnvironment.Cell = os.Getenv("SGE_CELL")
+	clusterEnvironment.QmasterPort, _ = GetEnvInt("SGE_QMASTER_PORT")
+	clusterEnvironment.ExecdPort, _ = GetEnvInt("SGE_EXECD_PORT")
+	return clusterEnvironment, nil
 }
 
 func (c *CommandLineQConf) ReadClusterConfiguration() (ClusterConfig, error) {

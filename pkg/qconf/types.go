@@ -21,7 +21,7 @@ package qconf
 
 // ClusterConfig represents the complete configuration of a cluster.
 type ClusterConfig struct {
-	ClusterEnviornment   ClusterEnviornment          `json:"cluster_environment"`
+	ClusterEnviornment   ClusterEnvironment          `json:"cluster_environment"`
 	GlobalConfig         GlobalConfig                `json:"global_config"`
 	Calendars            []CalendarConfig            `json:"calendars"`
 	ComplexEntries       []ComplexEntryConfig        `json:"complex_entries"`
@@ -41,7 +41,7 @@ type ClusterConfig struct {
 	UserConfig           []UserConfig                `json:"user_config"`
 }
 
-type ClusterEnviornment struct {
+type ClusterEnvironment struct {
 	Name        string `json:"sge_name"`
 	Root        string `json:"sge_root"`
 	Cell        string `json:"sge_cell"`
