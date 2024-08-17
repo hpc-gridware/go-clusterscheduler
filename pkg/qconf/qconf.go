@@ -23,7 +23,8 @@ package qconf
 // configuration. The methods are named after the qconf command line tool
 // which is used to interact with the Open Cluster Scheduler configuration.
 type QConf interface {
-	ReadClusterConfiguration() (ClusterConfig, error)
+	GetClusterConfiguration() (ClusterConfig, error)
+	ApplyClusterConfiguration(c ClusterConfig) error
 
 	AddCalendar(c CalendarConfig) error
 	DeleteCalendar(calendarName string) error
