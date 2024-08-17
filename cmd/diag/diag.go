@@ -8,7 +8,9 @@ import (
 )
 
 func main() {
-	qc, _ := qconf.NewCommandLineQConf("qconf")
+	qc, _ := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
+		Executable: "qconf",
+	})
 	cc, err := qc.GetClusterConfiguration()
 	if err != nil {
 		fmt.Println(err)

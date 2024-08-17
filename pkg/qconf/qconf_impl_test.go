@@ -34,7 +34,7 @@ var _ = Describe("QconfImpl", func() {
 	Context("Helper functions", func() {
 
 		It("should run a cli comand", func() {
-			ls, err := qconf.NewCommandLineQConf("ls")
+			ls, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "ls"})
 			Expect(err).To(BeNil())
 			Expect(ls).NotTo(BeNil())
 			out, err := ls.RunCommand("-lisa")
@@ -64,7 +64,7 @@ gid_range                    20000-20100`, "\n")
 	Context("Cluster configuration", func() {
 
 		It("should read the current cluster configuration", func() {
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			cc, err := qc.GetClusterConfiguration()
@@ -94,7 +94,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, modify, and delete resources", func() {
 			complexName := "go-qconf-impl-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			ces, err := qc.ShowComplexEntries()
@@ -156,7 +156,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete calendars", func() {
 			calendarName := "go-qconf-calendar-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all calendars, initially should not contain the new calendar
@@ -216,7 +216,7 @@ gid_range                    20000-20100`, "\n")
 	It("should show, add, list, and delete checkpointing interfaces", func() {
 		interfaceName := "go-qconf-ckpt-test"
 
-		qc, err := qconf.NewCommandLineQConf("qconf")
+		qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 		Expect(err).To(BeNil())
 
 		// Show all checkpointing interfaces, initially should not contain the new interface
@@ -281,7 +281,7 @@ gid_range                    20000-20100`, "\n")
 	Context("Global configuration", func() {
 
 		It("should show and modify the global configuration", func() {
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Retrieve the current global configuration
@@ -306,7 +306,7 @@ gid_range                    20000-20100`, "\n")
 		})
 
 		It("should handle bool and int fields correctly when modifying global configuration", func() {
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Retrieve the current global configuration
@@ -338,7 +338,7 @@ gid_range                    20000-20100`, "\n")
 			// We expect that this host is part of the cluster
 			hostName, _ := os.Hostname()
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all host configurations, initially should not contain the new host
@@ -393,7 +393,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete execution hosts", func() {
 			hostName := "exec-host-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all execution hosts, initially should not contain the new host
@@ -469,7 +469,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, and delete admin hosts", func() {
 			adminHosts := []string{"localhost"}
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all admin hosts, initially should not contain the new hosts
@@ -506,7 +506,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete host groups", func() {
 			groupName := "@host-group-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all host groups, initially should not contain the new group
@@ -561,7 +561,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete resource quota sets", func() {
 			rqsName := "resource-quota-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all resource quota sets, initially should not contain the new set
@@ -621,7 +621,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, and delete managers", func() {
 			managers := []string{"master"}
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all managers, initially should not contain the new manager
@@ -657,7 +657,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, and delete operators", func() {
 			operators := []string{"master"}
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all operators, initially should not contain the new operator
@@ -693,7 +693,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete parallel environments", func() {
 			peName := "parallel-env-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all parallel environments, initially should not contain the new PE
@@ -764,7 +764,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete projects", func() {
 			projectName := "project-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all projects, initially should not contain the new project
@@ -826,7 +826,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete cluster queues", func() {
 			queueName := "cluster-queue-test"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all cluster queues, initially should not contain the new queue
@@ -902,7 +902,7 @@ gid_range                    20000-20100`, "\n")
 
 			submitHosts := []string{hostname}
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all submit hosts, initially should not contain the new hosts
@@ -940,7 +940,7 @@ gid_range                    20000-20100`, "\n")
 			listName := "testlist"
 			user := "root"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all user set lists, initially should not contain the new list
@@ -1012,7 +1012,7 @@ gid_range                    20000-20100`, "\n")
 		It("should show, add, list, and delete users", func() {
 			userName := "root"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all users, initially should not contain the new user
@@ -1092,7 +1092,7 @@ gid_range                    20000-20100`, "\n")
 			val := "10"
 			objIDList := "all.q"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Set 10 slots for all all.q queue instances
@@ -1106,7 +1106,7 @@ gid_range                    20000-20100`, "\n")
 			val := "INTERACTIVE"
 			objIDList := "all.q"
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Don't allow interactive jobs in all.q queue instances'
@@ -1127,7 +1127,7 @@ gid_range                    20000-20100`, "\n")
 		Context("Cluster Control Operations", func() {
 
 			It("should clear job usage records correctly", func() {
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				err = qc.ClearUsage()
@@ -1137,7 +1137,7 @@ gid_range                    20000-20100`, "\n")
 			It("should clean queue job records correctly", func() {
 				queueName := "all.q"
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Clean the queue by its name
@@ -1148,7 +1148,7 @@ gid_range                    20000-20100`, "\n")
 			It("should shutdown execution daemons on specific hosts", func() {
 				hostName := "localhost"
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Shutdown the execution daemon on the specific host
@@ -1157,7 +1157,7 @@ gid_range                    20000-20100`, "\n")
 			})
 
 			It("should shutdown the master daemon", func() {
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Shutdown the master daemon
@@ -1166,7 +1166,7 @@ gid_range                    20000-20100`, "\n")
 			})
 
 			It("should shutdown the scheduling daemon", func() {
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Shutdown the scheduling daemon
@@ -1177,7 +1177,7 @@ gid_range                    20000-20100`, "\n")
 			It("should kill specific event clients by their IDs", func() {
 				eventID := "1234"
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Kill the event client by its ID
@@ -1188,7 +1188,7 @@ gid_range                    20000-20100`, "\n")
 			It("should kill specific qmaster threads by their names", func() {
 				threadName := "test-thread"
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Kill the qmaster thread by its name
@@ -1214,7 +1214,7 @@ gid_range                    20000-20100`, "\n")
 					Signal:         "signum",
 				}
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Modify the checkpointing interface
@@ -1232,7 +1232,7 @@ gid_range                    20000-20100`, "\n")
 					Xterm:  "/new/xterm",
 				}
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Modify the host configuration
@@ -1249,7 +1249,7 @@ gid_range                    20000-20100`, "\n")
 					LoadScaling: "1.0",
 				}
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Modify the execution host configuration
@@ -1266,7 +1266,7 @@ gid_range                    20000-20100`, "\n")
 					Hostlist:  "newhost1 newhost2",
 				}
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Modify the host group configuration
@@ -1293,7 +1293,7 @@ gid_range                    20000-20100`, "\n")
 					AccountingSummary: false,
 				}
 
-				qc, err := qconf.NewCommandLineQConf("qconf")
+				qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 				Expect(err).To(BeNil())
 
 				// Modify the parallel environment configuration

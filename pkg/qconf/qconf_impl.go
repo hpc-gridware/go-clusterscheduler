@@ -31,17 +31,26 @@ import (
 )
 
 type CommandLineQConf struct {
-	executable string
+	config CommandLineQConfConfig
+}
+
+type CommandLineQConfConfig struct {
+	Executable string
+	DryRun     bool
 }
 
 // NewCommandLineQConf creates a new instance of CommandLineQConf.
-func NewCommandLineQConf(executable string) (*CommandLineQConf, error) {
-	return &CommandLineQConf{executable: executable}, nil
+func NewCommandLineQConf(config CommandLineQConfConfig) (*CommandLineQConf, error) {
+	return &CommandLineQConf{config: config}, nil
 }
 
 // RunCommand executes the qconf command with the specified arguments.
 func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
-	cmd := exec.Command(c.executable, args...)
+	if c.config.DryRun {
+		fmt.Printf("Executing: %s, %v", c.config.Executable, args)
+		return "", nil
+	}
+	cmd := exec.Command(c.config.Executable, args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
@@ -1213,6 +1222,9 @@ func (c *CommandLineQConf) AddUserToManagerList(users []string) error {
 
 // DeleteUserFromManagerList deletes a list of users from the manager list.
 func (c *CommandLineQConf) DeleteUserFromManagerList(users []string) error {
+	if len(users) == 0 {
+		return nil
+	}
 	_, err := c.RunCommand("-dm", strings.Join(users, ","))
 	return err
 }
@@ -1237,7 +1249,7 @@ func (c *CommandLineQConf) AddUserToOperatorList(users []string) error {
 
 // DeleteUserFromOperatorList deletes a list of users from the operator list.
 func (c *CommandLineQConf) DeleteUserFromOperatorList(users []string) error {
-	if users == nil {
+	if len(users) == 0 {
 		return nil
 	}
 	_, err := c.RunCommand("-do", strings.Join(users, ","))
@@ -1459,6 +1471,9 @@ func (c *CommandLineQConf) AddProject(project ProjectConfig) error {
 
 // DeleteProject deletes the specified projects.
 func (c *CommandLineQConf) DeleteProject(projects []string) error {
+	if len(projects) == 0 {
+		return nil
+	}
 	_, err := c.RunCommand("-dprj", strings.Join(projects, ","))
 	return err
 }
@@ -2166,7 +2181,7 @@ func (c *CommandLineQConf) AddUser(userConfig UserConfig) error {
 
 // DeleteUser deletes a list of users.
 func (c *CommandLineQConf) DeleteUser(users []string) error {
-	if users == nil {
+	if len(users) == 0 {
 		return nil
 	}
 	_, err := c.RunCommand("-duser", strings.Join(users, ","))

@@ -88,7 +88,10 @@ var _ = Describe("CompareTo", func() {
 		})
 
 		It("should correctly identify added, modified, deleted entries", func() {
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{
+					Executable: "qconf",
+				})
 			Expect(err).To(BeNil())
 
 			cc, err := qc.GetClusterConfiguration()

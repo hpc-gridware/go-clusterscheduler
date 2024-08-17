@@ -20,20 +20,26 @@
 package cs
 
 import (
+	"path/filepath"
+
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
 )
 
-type CommandLineScheduler struct {
+type CommandLineInterface struct {
 	executablePath string
 }
 
-// NewCommandLineScheduler creates a new instance of CommandLineScheduler.
-func NewCommandLineScheduler(executablePath string) (*CommandLineScheduler, error) {
-	return &CommandLineScheduler{executablePath: executablePath}, nil
+// NewCommandLineScheduler creates a new instance of CommandLineInterface.
+func NewCommandLineInterface(executablePath string) (*CommandLineInterface, error) {
+	return &CommandLineInterface{executablePath: executablePath}, nil
 }
 
-func (c *CommandLineScheduler) QConf() (qconf.QConf, error) {
-	return qconf.NewCommandLineQConf(c.executablePath)
+func (c *CommandLineInterface) QConf() (qconf.QConf, error) {
+	return qconf.NewCommandLineQConf(
+		qconf.CommandLineQConfConfig{
+			Executable: filepath.Join(c.executablePath, "qconf"),
+		},
+	)
 }
 
 // Additional methods for other operations can be added here.
