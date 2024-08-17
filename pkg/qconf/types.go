@@ -138,7 +138,7 @@ type HostConfiguration struct {
 	Name   string // Inconsistency
 	Mailer string `json:"mailer"`
 	Xterm  string `json:"xterm"`
-	// Add additional fields here as needed
+	// @TODO Add additional fields here as needed
 }
 
 // HostGroupConfig represents the configuration for a host group.

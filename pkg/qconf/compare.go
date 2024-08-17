@@ -51,6 +51,36 @@ func (c *ClusterConfigComparison) String() string {
 		c.IsSame, c.GlobalConfigChanged, c.DiffAdded, c.DiffModified, c.DiffRemoved)
 }
 
+// PrintPlan prints the action plan to change the cluster
+// so that it matches the new cluster configuration.
+func (c *ClusterConfigComparison) PrintPlan() {
+	if c.IsSame {
+		fmt.Println("Cluster configuration is the same.")
+		return
+	}
+	if c.GlobalConfigChanged {
+		fmt.Println("Need to update global configuration.")
+	}
+	if len(c.DiffAdded.ComplexEntries) > 0 {
+		fmt.Println("Need to add complex entries:")
+		for _, complexEntry := range c.DiffAdded.ComplexEntries {
+			fmt.Printf("  %s\n", complexEntry.Name)
+		}
+	}
+	if len(c.DiffModified.ComplexEntries) > 0 {
+		fmt.Println("Need to modify complex entries:")
+		for _, complexEntry := range c.DiffModified.ComplexEntries {
+			fmt.Printf("  %s\n", complexEntry.Name)
+		}
+	}
+	if len(c.DiffRemoved.ComplexEntries) > 0 {
+		fmt.Println("Need to remove complex entries:")
+		for _, complexEntry := range c.DiffRemoved.ComplexEntries {
+			fmt.Printf("  %s\n", complexEntry.Name)
+		}
+	}
+}
+
 // CompareTo compares the current ClusterConfig with the new ClusterConfig and
 // returns a struct containing the differences between the two ClusterConfig structs.
 // It returns an error if there is an issue comparing the two ClusterConfig structs.

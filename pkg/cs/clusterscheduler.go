@@ -40,6 +40,10 @@ const (
 )
 
 // NewClusterScheduler creates a new instance of Scheduler based on the specified connection type.
+// The options map should contain the necessary parameters for the connection type.
+// For CommandLine connection type, the options map should contain the "executablePath" key.
+// The value of the "executablePath" key should be the path to the directory containing
+// the scheduler's executables (path to qconf, qacct, etc.).
 func NewClusterScheduler(connType ConnectionType, options map[string]string) (ClusterScheduler, error) {
 	switch connType {
 	case CommandLine:
@@ -48,7 +52,7 @@ func NewClusterScheduler(connType ConnectionType, options map[string]string) (Cl
 			return nil, fmt.Errorf(
 				"missing 'executablePath' option for command line connection")
 		}
-		return NewCommandLineScheduler(executablePath)
+		return NewCommandLineInterface(executablePath)
 	case Network:
 		// Placeholder for network implementation
 		// address, ok := options["address"]

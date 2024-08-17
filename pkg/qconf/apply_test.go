@@ -50,10 +50,34 @@ var _ = Describe("Apply", func() {
 						Year: "1.1.2024,6.1.2024,28.3.2024,30.3.2024-31.3.2024,18.5.2024-19.5.2024,3.10.2024,25.12.2024,26.12.2024=on",
 					},
 				},
+				ClusterQueues: []qconf.ClusterQueueConfig{
+					{
+						Name:      "InitialQueue1",
+						Slots:     1,
+						XProjects: "NewProject1",
+					},
+				},
+				Projects: []qconf.ProjectConfig{
+					{
+						Name: "NewProject1",
+						ACL:  "UserList1",
+					},
+				},
+				UserSetLists: []qconf.UserSetListConfig{
+					{
+						Name:    "UserList1",
+						Type:    "ACL",
+						Entries: "root peter",
+					},
+				},
+
 				// Initialize other fields as necessary
 			}
 
-			qc, err := qconf.NewCommandLineQConf("qconf")
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{
+					Executable: "qconf",
+				})
 			Expect(err).ToNot(HaveOccurred())
 
 			added, err := qconf.AddAllEntries(qc, add)
