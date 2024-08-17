@@ -9,7 +9,7 @@ import (
 
 func main() {
 	qc, _ := qconf.NewCommandLineQConf("qconf")
-	cc, err := qc.ReadClusterConfiguration()
+	cc, err := qc.GetClusterConfiguration()
 	if err != nil {
 		fmt.Println(err)
 		return

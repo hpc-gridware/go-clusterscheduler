@@ -45,6 +45,10 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
+	env := cmd.Environ()
+	// Set the SGE_SINGLE_LINE environment variable to true to ensure that
+	// qconf returns a single line of output.
+	cmd.Env = append(env, "SGE_SINGLE_LINE=true")
 	err := cmd.Run()
 	if err != nil {
 		return out.String(), fmt.Errorf("failed to run command (%s): %v",
@@ -72,12 +76,12 @@ func GetEnvironment() (ClusterEnvironment, error) {
 	return clusterEnvironment, nil
 }
 
-func (c *CommandLineQConf) ReadClusterConfiguration() (ClusterConfig, error) {
+func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	cc := ClusterConfig{}
 
 	// general settings which defines the environment
 	var err error
-	cc.ClusterEnviornment, err = GetEnvironment()
+	cc.ClusterEnvironment, err = GetEnvironment()
 	if err != nil {
 		return cc, fmt.Errorf("failed to read cluster environment: %v", err)
 	}
@@ -258,13 +262,19 @@ func (c *CommandLineQConf) ReadClusterConfiguration() (ClusterConfig, error) {
 	return cc, nil
 }
 
+func (c *CommandLineQConf) ApplyClusterConfiguration(cc ClusterConfig) error {
+	// make plan
+	// apply plan
+	return nil
+}
+
 // AddCalendar adds a new calendar.
 func (c *CommandLineQConf) AddCalendar(cfg CalendarConfig) error {
 	// Create file in tmp directory with calendar configuration.
 	// Use the file as input to the qconf command.
 	// Remove the file after the command completes.
 
-	if cfg.CalendarName == "" {
+	if cfg.Name == "" {
 		return fmt.Errorf("calendar name is required")
 	}
 	if cfg.Year == "" {
@@ -280,7 +290,7 @@ func (c *CommandLineQConf) AddCalendar(cfg CalendarConfig) error {
 	}
 	defer os.Remove("calendar")
 
-	_, err = file.WriteString(fmt.Sprintf("calendar_name    %s\n", cfg.CalendarName))
+	_, err = file.WriteString(fmt.Sprintf("calendar_name    %s\n", cfg.Name))
 	if err != nil {
 		return err
 	}
@@ -313,14 +323,14 @@ func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, er
 		return CalendarConfig{}, err
 	}
 	lines := strings.Split(out, "\n")
-	cfg := CalendarConfig{CalendarName: calendarName}
+	cfg := CalendarConfig{Name: calendarName}
 	for _, line := range lines {
 		if strings.HasPrefix(line, "year") {
 			cfg.Year = strings.TrimSpace(strings.Fields(line)[1])
 		} else if strings.HasPrefix(line, "week") {
 			cfg.Week = strings.TrimSpace(strings.Fields(line)[1])
 		} else if strings.HasPrefix(line, "calendar_name") {
-			cfg.CalendarName = strings.TrimSpace(strings.Fields(line)[1])
+			cfg.Name = strings.TrimSpace(strings.Fields(line)[1])
 		}
 	}
 	return cfg, nil
@@ -375,7 +385,8 @@ func (c *CommandLineQConf) AddComplexEntry(e ComplexEntryConfig) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(filepath.Dir(file.Name()))
+	fmt.Printf("file: %s\n", file.Name())
+	//defer os.RemoveAll(filepath.Dir(file.Name()))
 
 	// Format complex entry configuration.
 	_, err = file.WriteString(fmt.Sprintf("name        %s\n", e.Name))
@@ -815,9 +826,9 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "shepherd_cmd":
 			cfg.ShepherdCmd = fields[1]
 		case "qmaster_params":
-			cfg.QmasterParams = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.QmasterParams, _ = ParseMultiLineValue(lines, i)
 		case "execd_params":
-			cfg.ExecdParams = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.ExecdParams, _ = ParseMultiLineValue(lines, i)
 		case "reporting_params":
 			cfg.ReportingParams, _ = ParseMultiLineValue(lines, i)
 		case "finished_jobs":
@@ -861,7 +872,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "jsv_url":
 			cfg.JsvURL = fields[1]
 		case "jsv_allowed_mod":
-			cfg.JsvAllowedMod = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.JsvAllowedMod, _ = ParseMultiLineValue(lines, i)
 		}
 	}
 	return cfg, nil
@@ -882,13 +893,13 @@ func (c *CommandLineQConf) ShowHostConfigurations() ([]string, error) {
 
 // AddExecHost adds a new execution host.
 func (c *CommandLineQConf) AddExecHost(hostExecConfig HostExecConfig) error {
-	file, err := createTempDirWithFileName(hostExecConfig.Hostname)
+	file, err := createTempDirWithFileName(hostExecConfig.Name)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	_, err = file.WriteString(fmt.Sprintf("hostname         %s\n", hostExecConfig.Hostname))
+	_, err = file.WriteString(fmt.Sprintf("hostname         %s\n", hostExecConfig.Name))
 	if err != nil {
 		return err
 	}
@@ -946,7 +957,7 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 		return HostExecConfig{}, err
 	}
 	lines := strings.Split(out, "\n")
-	cfg := HostExecConfig{Hostname: hostName}
+	cfg := HostExecConfig{Name: hostName}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -954,7 +965,7 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 		}
 		switch fields[0] {
 		case "hostname":
-			cfg.Hostname = fields[1]
+			cfg.Name = fields[1]
 		case "load_scaling":
 			cfg.LoadScaling = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "complex_values":
@@ -1017,6 +1028,9 @@ func (c *CommandLineQConf) AddAdminHost(hosts []string) error {
 
 // DeleteAdminHost deletes an administrative host.
 func (c *CommandLineQConf) DeleteAdminHost(hosts []string) error {
+	if hosts == nil {
+		return nil
+	}
 	hostList := strings.Join(hosts, ",")
 	_, err := c.RunCommand("-dh", hostList)
 	if err != nil {
@@ -1036,17 +1050,17 @@ func (c *CommandLineQConf) ShowAdminHosts() ([]string, error) {
 
 // AddHostGroup adds a new host group.
 func (c *CommandLineQConf) AddHostGroup(hostGroup HostGroupConfig) error {
-	file, err := createTempDirWithFileName(hostGroup.GroupName)
+	file, err := createTempDirWithFileName(hostGroup.Name)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	if !strings.HasPrefix(hostGroup.GroupName, "@") {
+	if !strings.HasPrefix(hostGroup.Name, "@") {
 		return fmt.Errorf("group name must start with '@'")
 	}
 
-	_, err = file.WriteString(fmt.Sprintf("group_name %s\n", hostGroup.GroupName))
+	_, err = file.WriteString(fmt.Sprintf("group_name %s\n", hostGroup.Name))
 	if err != nil {
 		return err
 	}
@@ -1073,7 +1087,7 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 		return HostGroupConfig{}, err
 	}
 	lines := strings.Split(out, "\n")
-	cfg := HostGroupConfig{GroupName: groupName}
+	cfg := HostGroupConfig{Name: groupName}
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -1081,7 +1095,7 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 		}
 		switch fields[0] {
 		case "group_name":
-			cfg.GroupName = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.Name = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "hostlist":
 			cfg.Hostlist = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		}
@@ -1214,12 +1228,18 @@ func (c *CommandLineQConf) ShowManagers() ([]string, error) {
 
 // AddUserToOperatorList adds a list of users to the operator list.
 func (c *CommandLineQConf) AddUserToOperatorList(users []string) error {
+	if users == nil {
+		return nil
+	}
 	_, err := c.RunCommand("-ao", strings.Join(users, ","))
 	return err
 }
 
 // DeleteUserFromOperatorList deletes a list of users from the operator list.
 func (c *CommandLineQConf) DeleteUserFromOperatorList(users []string) error {
+	if users == nil {
+		return nil
+	}
 	_, err := c.RunCommand("-do", strings.Join(users, ","))
 	return err
 }
@@ -1268,7 +1288,7 @@ func MakeBoolCfg(v bool) string {
 // AddParallelEnvironment adds a new parallel environment.
 func (c *CommandLineQConf) AddParallelEnvironment(pe ParallelEnvironmentConfig) error {
 	SetDefaultParallelEnvironmentValues(&pe)
-	file, err := createTempDirWithFileName(pe.PeName)
+	file, err := createTempDirWithFileName(pe.Name)
 	if err != nil {
 		return err
 	}
@@ -1285,7 +1305,7 @@ func (c *CommandLineQConf) AddParallelEnvironment(pe ParallelEnvironmentConfig) 
 }
 
 func writePE(file *os.File, pe ParallelEnvironmentConfig) error {
-	_, err := file.WriteString(fmt.Sprintf("pe_name            %s\n", pe.PeName))
+	_, err := file.WriteString(fmt.Sprintf("pe_name            %s\n", pe.Name))
 	if err != nil {
 		return err
 	}
@@ -1346,7 +1366,7 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 		return ParallelEnvironmentConfig{}, err
 	}
 	lines := strings.Split(out, "\n")
-	cfg := ParallelEnvironmentConfig{PeName: peName}
+	cfg := ParallelEnvironmentConfig{Name: peName}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -1354,7 +1374,7 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 		}
 		switch fields[0] {
 		case "pe_name":
-			cfg.PeName = fields[1]
+			cfg.Name = fields[1]
 		case "slots":
 			cfg.Slots, _ = strconv.Atoi(fields[1])
 		case "user_lists":
@@ -1486,8 +1506,8 @@ func (c *CommandLineQConf) ShowProjects() ([]string, error) {
 }
 
 func SetDefaultQueueValues(queue *ClusterQueueConfig) {
-	if queue.QName == "" {
-		queue.QName = "test"
+	if queue.Name == "" {
+		queue.Name = "test"
 	}
 	if queue.HostList == "" {
 		queue.HostList = "NONE"
@@ -1642,13 +1662,13 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	SetDefaultQueueValues(&queue)
 
-	file, err := createTempDirWithFileName(queue.QName)
+	file, err := createTempDirWithFileName(queue.Name)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	_, err = file.WriteString(fmt.Sprintf("qname             %s\n", queue.QName))
+	_, err = file.WriteString(fmt.Sprintf("qname             %s\n", queue.Name))
 	if err != nil {
 		return err
 	}
@@ -1868,7 +1888,7 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		return ClusterQueueConfig{}, err
 	}
 	lines := strings.Split(out, "\n")
-	cfg := ClusterQueueConfig{QName: queueName}
+	cfg := ClusterQueueConfig{Name: queueName}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -1876,7 +1896,7 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		}
 		switch fields[0] {
 		case "qname":
-			cfg.QName = fields[1]
+			cfg.Name = fields[1]
 		case "hostlist":
 			cfg.HostList, _ = ParseMultiLineValue(lines, i)
 		case "seq_no":
@@ -1991,12 +2011,18 @@ func (c *CommandLineQConf) ShowClusterQueues() ([]string, error) {
 
 // AddSubmitHosts adds a list of submit hosts.
 func (c *CommandLineQConf) AddSubmitHosts(hostnames []string) error {
+	if hostnames == nil {
+		return nil
+	}
 	_, err := c.RunCommand("-as", strings.Join(hostnames, ","))
 	return err
 }
 
 // DeleteSubmitHost deletes a list of submit hosts.
 func (c *CommandLineQConf) DeleteSubmitHost(hostnames []string) error {
+	if hostnames == nil {
+		return nil
+	}
 	_, err := c.RunCommand("-ds", strings.Join(hostnames, ","))
 	return err
 }
@@ -2036,7 +2062,7 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 	}
 	lines := strings.Split(out, "\n")
 	cfg := UserSetListConfig{Name: listnameList}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -2051,7 +2077,7 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 		case "oticket":
 			cfg.OTicket, _ = strconv.Atoi(fields[1])
 		case "entries":
-			cfg.Entries = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.Entries, _ = ParseMultiLineValue(lines, i)
 		}
 	}
 	return cfg, nil
@@ -2140,6 +2166,9 @@ func (c *CommandLineQConf) AddUser(userConfig UserConfig) error {
 
 // DeleteUser deletes a list of users.
 func (c *CommandLineQConf) DeleteUser(users []string) error {
+	if users == nil {
+		return nil
+	}
 	_, err := c.RunCommand("-duser", strings.Join(users, ","))
 	return err
 }
@@ -2259,6 +2288,9 @@ func (c *CommandLineQConf) AddAttribute(objName, attrName, val, objIDList string
 
 // ModifyAllComplexes modifies complex attributes.
 func (c *CommandLineQConf) ModifyAllComplexes(centries []ComplexEntryConfig) error {
+	if centries == nil {
+		return nil
+	}
 	// Create a temporary file with the complex attributes configuration
 	file, err := os.CreateTemp("", "complexes")
 	if err != nil {

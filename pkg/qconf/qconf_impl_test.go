@@ -67,7 +67,7 @@ gid_range                    20000-20100`, "\n")
 			qc, err := qconf.NewCommandLineQConf("qconf")
 			Expect(err).To(BeNil())
 
-			cc, err := qc.ReadClusterConfiguration()
+			cc, err := qc.GetClusterConfiguration()
 			Expect(err).To(BeNil())
 			Expect(cc).NotTo(BeNil())
 
@@ -79,7 +79,7 @@ gid_range                    20000-20100`, "\n")
 				SGE_EXECD_PORT=6445
 			*/
 
-			env := cc.ClusterEnviornment
+			env := cc.ClusterEnvironment
 			Expect(env.Root).To(Equal("/opt/cs-install"))
 			Expect(env.Cell).To(Equal("default"))
 			Expect(env.Name).To(Equal("p6444"))
@@ -167,9 +167,9 @@ gid_range                    20000-20100`, "\n")
 
 			// Define a new calendar configuration
 			calConfig := qconf.CalendarConfig{
-				CalendarName: calendarName,
-				Year:         "12.03.2004=12-11=off",
-				Week:         "NONE",
+				Name: calendarName,
+				Year: "12.03.2004=12-11=off",
+				Week: "NONE",
 			}
 
 			// Add the new calendar
@@ -517,8 +517,8 @@ gid_range                    20000-20100`, "\n")
 
 			// Define a new host group configuration
 			hostGroupConfig := qconf.HostGroupConfig{
-				GroupName: groupName,
-				Hostlist:  "master",
+				Name:     groupName,
+				Hostlist: "master",
 			}
 
 			// Add the new host group
@@ -704,7 +704,7 @@ gid_range                    20000-20100`, "\n")
 
 			// Define a new parallel environment configuration
 			peConfig := qconf.ParallelEnvironmentConfig{
-				PeName:            peName,
+				Name:              peName,
 				Slots:             100,
 				UserLists:         "arusers defaultdepartment",
 				XUserLists:        "deadlineusers",
@@ -837,7 +837,7 @@ gid_range                    20000-20100`, "\n")
 
 			// Define a new cluster queue configuration
 			queueConfig := qconf.ClusterQueueConfig{
-				QName:    queueName,
+				Name:     queueName,
 				HostList: "@allhosts",
 				SeqNo:    77,
 				Priority: 0,
@@ -862,7 +862,7 @@ gid_range                    20000-20100`, "\n")
 			Expect(retrievedQueueConfig).To(Equal(queueConfig))
 
 			newQueueConfig := qconf.ClusterQueueConfig{
-				QName:          queueName,
+				Name:           queueName,
 				HostList:       "@allhosts",
 				SeqNo:          99,
 				LoadThresholds: "np_load_avg=1.75",

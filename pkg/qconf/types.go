@@ -21,7 +21,7 @@ package qconf
 
 // ClusterConfig represents the complete configuration of a cluster.
 type ClusterConfig struct {
-	ClusterEnviornment   ClusterEnvironment          `json:"cluster_environment"`
+	ClusterEnvironment   ClusterEnvironment          `json:"cluster_environment"`
 	GlobalConfig         GlobalConfig                `json:"global_config"`
 	Calendars            []CalendarConfig            `json:"calendars"`
 	ComplexEntries       []ComplexEntryConfig        `json:"complex_entries"`
@@ -51,9 +51,9 @@ type ClusterEnvironment struct {
 
 // CalendarConfig represents the configuration for resource.
 type CalendarConfig struct {
-	CalendarName string `json:"calendar_name"`
-	Year         string `json:"year"`
-	Week         string `json:"week"`
+	Name string `json:"calendar_name"`
+	Year string `json:"year"`
+	Week string `json:"week"`
 }
 
 // ComplexEntryConfig represents the configuration for a complex entry.
@@ -143,13 +143,13 @@ type HostConfiguration struct {
 
 // HostGroupConfig represents the configuration for a host group.
 type HostGroupConfig struct {
-	GroupName string `json:"group_name"`
-	Hostlist  string `json:"hostlist"`
+	Name     string `json:"group_name"`
+	Hostlist string `json:"hostlist"`
 }
 
 // HostExecConfig represents the execution host configuration.
 type HostExecConfig struct {
-	Hostname        string `json:"hostname"`
+	Name            string `json:"hostname"`
 	LoadScaling     string `json:"load_scaling"`
 	ComplexValues   string `json:"complex_values"`
 	UserLists       string `json:"user_lists"`
@@ -170,7 +170,7 @@ type ResourceQuotaSetConfig struct {
 
 // ParallelEnvironmentConfig represents the configuration for a parallel environment.
 type ParallelEnvironmentConfig struct {
-	PeName            string `json:"pe_name"`
+	Name              string `json:"pe_name"`
 	Slots             int    `json:"slots"`
 	UserLists         string `json:"user_lists"`
 	XUserLists        string `json:"xuser_lists"`
@@ -188,13 +188,13 @@ type ProjectConfig struct {
 	Name    string `json:"name"`
 	OTicket int    `json:"oticket"`
 	FShare  int    `json:"fshare"`
-	ACL     string `json:"acl"`
-	XACL    string `json:"xacl"`
+	ACL     string `json:"acl"`  // user_list space separated
+	XACL    string `json:"xacl"` // user_list space separated
 }
 
 // ClusterQueueConfig represents the configuration for a cluster queue.
 type ClusterQueueConfig struct {
-	QName             string `json:"qname"`
+	Name              string `json:"qname"`
 	HostList          string `json:"hostlist"`
 	SeqNo             int    `json:"seq_no"`
 	LoadThresholds    string `json:"load_thresholds"`
