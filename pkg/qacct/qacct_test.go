@@ -171,6 +171,127 @@ arid                               undefined`
 		})
 	})
 
+	Context("ShowJobDetails", func() {
+		It("should show job details correctly", func() {
+			mockQacctCli.mockOutput = `
+				==============================================================
+qname                              all.q
+hostname                           master
+group                              root
+owner                              root
+project                            NONE
+department                         defaultdepartment
+jobname                            sleep
+jobnumber                          26
+taskid                             1
+pe_taskid                          NONE
+account                            sge
+priority                           0
+qsub_time                          2024-08-19 05:34:42.613127
+submit_cmd_line                    qsub -b y -t 1-10:2 /bin/sleep 1
+start_time                         2024-08-19 05:34:43.347877
+end_time                           2024-08-19 05:34:45.151720
+granted_pe                         NONE
+slots                              1
+failed                             0
+exit_status                        0
+ru_wallclock                       1
+ru_utime                           0.458
+ru_stime                           0.222
+ru_maxrss                          9624
+ru_ixrss                           0
+ru_ismrss                          0
+ru_idrss                           0
+ru_isrss                           0
+ru_minflt                          530
+ru_majflt                          0
+ru_nswap                           0
+ru_inblock                         0
+ru_oublock                         8
+ru_msgsnd                          0
+ru_msgrcv                          0
+ru_nsignals                        0
+ru_nvcsw                           437
+ru_nivcsw                          2
+wallclock                          3.083
+cpu                                0.680
+mem                                0.007
+io                                 0.000
+iow                                0.000
+maxvmem                            20721664
+maxrss                             9854976
+arid                               undefined
+==============================================================
+qname                              all.q
+hostname                           master
+group                              root
+owner                              root
+project                            NONE
+department                         defaultdepartment
+jobname                            sleep
+jobnumber                          26
+taskid                             3
+pe_taskid                          NONE
+account                            sge
+priority                           0
+qsub_time                          2024-08-19 05:34:42.613127
+submit_cmd_line                    qsub -b y -t 1-10:2 /bin/sleep 1
+start_time                         2024-08-19 05:34:43.313686
+end_time                           2024-08-19 05:34:45.127886
+granted_pe                         NONE
+slots                              1
+failed                             0
+exit_status                        0
+ru_wallclock                       1
+ru_utime                           0.473
+ru_stime                           0.218
+ru_maxrss                          9360
+ru_ixrss                           0
+ru_ismrss                          0
+ru_idrss                           0
+ru_isrss                           0
+ru_minflt                          520
+ru_majflt                          0
+ru_nswap                           0
+ru_inblock                         0
+ru_oublock                         8
+ru_msgsnd                          0
+ru_msgrcv                          0
+ru_nsignals                        0
+ru_nvcsw                           429
+ru_nivcsw                          287
+wallclock                          3.072
+cpu                                0.690
+mem                                0.007
+io                                 0.000
+iow                                0.000
+maxvmem                            20721664
+maxrss                             9584640
+arid                               undefined`
+			details, err := qacctClient.ListTasks("26", "1-3:2")
+			Expect(err).To(BeNil())
+			Expect(details).To(HaveLen(2))
+			Expect(details[0].JobID).To(Equal(int64(26)))
+			Expect(details[0].TaskID).To(Equal(int64(1)))
+			Expect(details[1].JobID).To(Equal(int64(26)))
+			Expect(details[1].TaskID).To(Equal(int64(3)))
+
+			Expect(details[0].JobDetail.QSubTime).To(Equal("2024-08-19 05:34:42.613127"))
+			Expect(details[0].JobDetail.StartTime).To(Equal("2024-08-19 05:34:43.347877"))
+			Expect(details[0].JobDetail.EndTime).To(Equal("2024-08-19 05:34:45.151720"))
+			Expect(details[0].JobDetail.RuUTime).To(Equal(0.458))
+			Expect(details[0].JobDetail.WallClock).To(Equal(3.083))
+			Expect(details[0].JobDetail.MaxRSS).To(Equal(int64(9854976)))
+			Expect(details[0].JobDetail.MaxVMem).To(Equal(int64(20721664)))
+			Expect(details[0].JobDetail.ExitStatus).To(Equal(int64(0)))
+
+			Expect(details[1].JobDetail.QSubTime).To(Equal("2024-08-19 05:34:42.613127"))
+			Expect(details[1].JobDetail.StartTime).To(Equal("2024-08-19 05:34:43.313686"))
+			Expect(details[1].JobDetail.EndTime).To(Equal("2024-08-19 05:34:45.127886"))
+			Expect(details[1].JobDetail.SubmitCommandLine).To(Equal("qsub -b y -t 1-10:2 /bin/sleep 1"))
+		})
+	})
+
 	Context("ListDepartment", func() {
 		It("should list department usage correctly", func() {
 			mockQacctCli.mockOutput = "DEPARTMENT WALLCLOCK UTIME STIME CPU MEMORY IO IOW\n" +

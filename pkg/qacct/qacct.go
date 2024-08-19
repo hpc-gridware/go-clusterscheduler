@@ -22,7 +22,7 @@ package qacct
 // QAcct defines the methods for interacting with the Open Cluster Scheduler
 // to retrieve accounting information for finished jobs using the qacct command.
 //
-// The interface replicates the qacct command line options and arguments 1:1 so,
+// The interface replicates the qacct command line options and arguments 1:1 so
 // that it can be used for automating and testing.
 type QAcct interface {
 	WithAlternativeAccountingFile(accountingFile string) error
@@ -41,9 +41,8 @@ type QAcct interface {
 	ListParallelEnvironment(peName string) ([]PeUsage, error)
 	ListProject(project string) ([]ProjectInfo, error)
 	ListQueue(queue string) ([]QueueUsageDetail, error)
-	ListJobSlots(slots int) ([]JobInfo, error)
+	ListJobUsageBySlots(usedSlots int) ([]SlotsInfo, error)
 	ListTasks(jobID, taskIDRange string) ([]TaskInfo, error)
-	//UseAlternateAccountingFile(acctFile string)
 	ShowHelp() (string, error)
 	ShowTotalSystemUsage() (Usage, error)
 	ShowJobDetails(jobID int) (JobDetail, error)
