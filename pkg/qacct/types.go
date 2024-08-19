@@ -68,6 +68,11 @@ type ProjectInfo struct {
 	Usage
 }
 
+type SlotsInfo struct {
+	Slots int64 `json:"slots"`
+	Usage
+}
+
 type QueueUsageDetail struct {
 	HostName  string `json:"host"`
 	QueueName string `json:"queue"`
@@ -75,9 +80,9 @@ type QueueUsageDetail struct {
 }
 
 type TaskInfo struct {
-	JobID  int64  `json:"job_id"`
-	TaskID string `json:"task_id"`
-	// Other relevant fields
+	JobID     int64 `json:"job_id"`
+	TaskID    int64 `json:"task_id"`
+	JobDetail JobDetail
 }
 
 type JobDetail struct {
@@ -89,7 +94,7 @@ type JobDetail struct {
 	Department        string  `json:"department"`
 	JobName           string  `json:"jobname"`
 	JobNumber         int64   `json:"jobnumber"`
-	TaskID            string  `json:"taskid"`
+	TaskID            int64   `json:"taskid"`
 	PETaskID          string  `json:"pe_taskid"`
 	Account           string  `json:"account"`
 	Priority          int64   `json:"priority"`
@@ -101,7 +106,7 @@ type JobDetail struct {
 	Slots             int64   `json:"slots"`
 	Failed            int64   `json:"failed"`
 	ExitStatus        int64   `json:"exit_status"`
-	RuWallClock       int64   `json:"ru_wallclock"`
+	RuWallClock       float64 `json:"ru_wallclock"`
 	RuUTime           float64 `json:"ru_utime"`
 	RuSTime           float64 `json:"ru_stime"`
 	RuMaxRSS          int64   `json:"ru_maxrss"`

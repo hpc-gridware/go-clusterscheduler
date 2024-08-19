@@ -21,6 +21,7 @@ package qacct
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -67,6 +68,9 @@ func NewCommandLineQAcct(executable string) (*CommandLineQAcct, error) {
 // WithAlternativeAccountingFile sets the alternative accounting file to be used by qacct.
 // qacct -f <accountingFile> ...
 func (c *CommandLineQAcct) WithAlternativeAccountingFile(accountingFile string) error {
+	if _, err := os.Stat(accountingFile); os.IsNotExist(err) {
+		return fmt.Errorf("accounting file does not exist: %s", accountingFile)
+	}
 	c.runCommand = NewDefaultRunCommand(c.executable, accountingFile)
 	return nil
 }
@@ -358,24 +362,31 @@ func (c *CommandLineQAcct) ListQueue(queue string) ([]QueueUsageDetail, error) {
 	return queueUsages, nil
 }
 
-func (c *CommandLineQAcct) ListJobSlots(slots int) ([]JobInfo, error) {
+// ListJobUsageBySlots returns the Usage of all jobs that used
+// the specified number of slots.
+func (c *CommandLineQAcct) ListJobUsageBySlots(slots int) ([]SlotsInfo, error) {
 	out, err := c.RunCommand("-slots", strconv.Itoa(slots))
 	if err != nil {
 		return nil, err
 	}
-
-	return c.parseJobListOutput(out)
+	usage := parseSingleFieldUsage(out, "SLOTS", 1)
+	if len(usage) == 0 {
+		return nil, fmt.Errorf("no usage information found for slots %d", slots)
+	}
+	return []SlotsInfo{{Slots: int64(slots), Usage: usage[0]}}, nil
 }
 
 func (c *CommandLineQAcct) ListTasks(jobID, taskIDRange string) ([]TaskInfo, error) {
 	if jobID == "" {
 		return nil, fmt.Errorf("job ID is required")
 	}
+	if taskIDRange == "" {
+		return nil, fmt.Errorf("task ID range is required")
+	}
 	out, err := c.RunCommand("-j", jobID, "-t", taskIDRange)
 	if err != nil {
 		return nil, err
 	}
-
 	return c.parseTaskInfoOutput(out)
 }
 
@@ -509,7 +520,7 @@ func (c *CommandLineQAcct) parseJobDetail(output string) (JobDetail, error) {
 		case "jobnumber":
 			jobDetail.JobNumber = parseStringToInt(value)
 		case "taskid":
-			jobDetail.TaskID = value
+			jobDetail.TaskID = parseStringToInt(value)
 		case "pe_taskid":
 			jobDetail.PETaskID = value
 		case "account":
@@ -533,7 +544,7 @@ func (c *CommandLineQAcct) parseJobDetail(output string) (JobDetail, error) {
 		case "exit_status":
 			jobDetail.ExitStatus = parseStringToInt(value)
 		case "ru_wallclock":
-			jobDetail.RuWallClock = parseStringToInt(value)
+			jobDetail.RuWallClock = parseStringToFloat(value)
 		case "ru_utime":
 			jobDetail.RuUTime = parseStringToFloat(value)
 		case "ru_stime":
@@ -590,18 +601,26 @@ func (c *CommandLineQAcct) parseJobDetail(output string) (JobDetail, error) {
 }
 
 func (c *CommandLineQAcct) parseTaskInfoOutput(output string) ([]TaskInfo, error) {
-	lines := strings.Split(output, "\n")
+	// tasks are separated by "==========..." lines
+	separator := "=============================================================="
+	outTasks := strings.Split(output, separator)
 	var tasks []TaskInfo
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
+	// remove the first element which is the header
+	if len(outTasks) < 2 {
+		return tasks, fmt.Errorf("no tasks found in output")
+	}
+	outTasks = outTasks[1:]
+
+	for _, oTask := range outTasks {
+		task, err := c.parseJobDetail(oTask)
+		if err != nil {
+			return tasks, err
 		}
-		task := TaskInfo{
-			JobID:  parseStringToInt(fields[0]),
-			TaskID: fields[1],
-		}
-		tasks = append(tasks, task)
+		tasks = append(tasks, TaskInfo{
+			JobID:     task.JobNumber,
+			TaskID:    task.TaskID,
+			JobDetail: task,
+		})
 	}
 	return tasks, nil
 }
