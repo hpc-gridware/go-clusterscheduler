@@ -227,45 +227,45 @@ func (c *CommandLineQAcct) JobsStartedLastDays(days int) (Usage, error) {
 	return usage, nil
 }
 
-func (c *CommandLineQAcct) ListDepartment(department string) ([]DepartmentInfo, error) {
+func (c *CommandLineQAcct) ListDepartment(department string) ([]DepartmentUsage, error) {
 	out, err := c.RunCommand("-D", department)
 	if err != nil {
 		return nil, err
 	}
 
 	usages := parseSingleFieldUsage(out, "DEPARTMENT", 1)
-	var departments []DepartmentInfo
+	var departments []DepartmentUsage
 	for _, usage := range usages {
-		departments = append(departments, DepartmentInfo{Department: department,
+		departments = append(departments, DepartmentUsage{Department: department,
 			Usage: usage})
 	}
 	return departments, nil
 }
 
-func (c *CommandLineQAcct) ListGroup(groupIDOrName string) ([]GroupInfo, error) {
+func (c *CommandLineQAcct) ListGroup(groupIDOrName string) ([]GroupUsage, error) {
 	out, err := c.RunCommand("-g", groupIDOrName)
 	if err != nil {
 		return nil, err
 	}
 
 	usages := parseSingleFieldUsage(out, "GROUP", 1)
-	var groups []GroupInfo
+	var groups []GroupUsage
 	for _, usage := range usages {
-		groups = append(groups, GroupInfo{Group: groupIDOrName, Usage: usage})
+		groups = append(groups, GroupUsage{Group: groupIDOrName, Usage: usage})
 	}
 	return groups, nil
 }
 
-func (c *CommandLineQAcct) ListHost(host string) ([]HostInfo, error) {
+func (c *CommandLineQAcct) ListHost(host string) ([]HostUsage, error) {
 	out, err := c.RunCommand("-h", host)
 	if err != nil {
 		return nil, err
 	}
 
 	usages := parseSingleFieldUsage(out, "HOST", 1)
-	var hosts []HostInfo
+	var hosts []HostUsage
 	for _, usage := range usages {
-		hosts = append(hosts, HostInfo{HostName: host, Usage: usage})
+		hosts = append(hosts, HostUsage{HostName: host, Usage: usage})
 	}
 	return hosts, nil
 }
@@ -295,16 +295,16 @@ func (c *CommandLineQAcct) RequestComplexAttributes(attributes string) ([]JobInf
 	return c.parseJobListOutput(out)
 }
 
-func (c *CommandLineQAcct) ListOwner(owner string) ([]OwnerInfo, error) {
+func (c *CommandLineQAcct) ListOwner(owner string) ([]OwnerUsage, error) {
 	out, err := c.RunCommand("-o", owner)
 	if err != nil {
 		return nil, err
 	}
 
 	usages := parseSingleFieldUsage(out, "OWNER", 1)
-	var owners []OwnerInfo
+	var owners []OwnerUsage
 	for _, usage := range usages {
-		owners = append(owners, OwnerInfo{OwnerName: owner, Usage: usage})
+		owners = append(owners, OwnerUsage{OwnerName: owner, Usage: usage})
 	}
 	return owners, nil
 }
@@ -323,21 +323,21 @@ func (c *CommandLineQAcct) ListParallelEnvironment(peName string) ([]PeUsage, er
 	return peUsages, nil
 }
 
-func (c *CommandLineQAcct) ListProject(project string) ([]ProjectInfo, error) {
+func (c *CommandLineQAcct) ListProject(project string) ([]ProjectUsage, error) {
 	out, err := c.RunCommand("-P", project)
 	if err != nil {
 		return nil, err
 	}
 
 	usages := parseSingleFieldUsage(out, "PROJECT", 1)
-	var projects []ProjectInfo
+	var projects []ProjectUsage
 	for _, usage := range usages {
-		projects = append(projects, ProjectInfo{ProjectName: project, Usage: usage})
+		projects = append(projects, ProjectUsage{ProjectName: project, Usage: usage})
 	}
 	return projects, nil
 }
 
-func (c *CommandLineQAcct) ListQueue(queue string) ([]QueueUsageDetail, error) {
+func (c *CommandLineQAcct) ListQueue(queue string) ([]QueueUsage, error) {
 	out, err := c.RunCommand("-q", queue)
 	if err != nil {
 		return nil, err
@@ -346,7 +346,7 @@ func (c *CommandLineQAcct) ListQueue(queue string) ([]QueueUsageDetail, error) {
 	if len(lines) <= 2 {
 		return nil, fmt.Errorf("no usage information found for queues %s", queue)
 	}
-	var queueUsages []QueueUsageDetail
+	var queueUsages []QueueUsage
 	// host / queue and usage
 	for _, line := range lines[2:] {
 		fields := strings.Fields(line)
@@ -356,7 +356,7 @@ func (c *CommandLineQAcct) ListQueue(queue string) ([]QueueUsageDetail, error) {
 		host := fields[0]
 		queue := fields[1]
 		usage := parseUsageAtIndex(line, 2)
-		queueUsages = append(queueUsages, QueueUsageDetail{
+		queueUsages = append(queueUsages, QueueUsage{
 			QueueName: queue, HostName: host, Usage: usage})
 	}
 	return queueUsages, nil
@@ -364,7 +364,7 @@ func (c *CommandLineQAcct) ListQueue(queue string) ([]QueueUsageDetail, error) {
 
 // ListJobUsageBySlots returns the Usage of all jobs that used
 // the specified number of slots.
-func (c *CommandLineQAcct) ListJobUsageBySlots(slots int) ([]SlotsInfo, error) {
+func (c *CommandLineQAcct) ListJobUsageBySlots(slots int) ([]SlotsUsage, error) {
 	out, err := c.RunCommand("-slots", strconv.Itoa(slots))
 	if err != nil {
 		return nil, err
@@ -373,10 +373,10 @@ func (c *CommandLineQAcct) ListJobUsageBySlots(slots int) ([]SlotsInfo, error) {
 	if len(usage) == 0 {
 		return nil, fmt.Errorf("no usage information found for slots %d", slots)
 	}
-	return []SlotsInfo{{Slots: int64(slots), Usage: usage[0]}}, nil
+	return []SlotsUsage{{Slots: int64(slots), Usage: usage[0]}}, nil
 }
 
-func (c *CommandLineQAcct) ListTasks(jobID, taskIDRange string) ([]TaskInfo, error) {
+func (c *CommandLineQAcct) ListTasks(jobID, taskIDRange string) ([]TaskUsage, error) {
 	if jobID == "" {
 		return nil, fmt.Errorf("job ID is required")
 	}
@@ -600,11 +600,11 @@ func (c *CommandLineQAcct) parseJobDetail(output string) (JobDetail, error) {
 	return jobDetail, nil
 }
 
-func (c *CommandLineQAcct) parseTaskInfoOutput(output string) ([]TaskInfo, error) {
+func (c *CommandLineQAcct) parseTaskInfoOutput(output string) ([]TaskUsage, error) {
 	// tasks are separated by "==========..." lines
 	separator := "=============================================================="
 	outTasks := strings.Split(output, separator)
-	var tasks []TaskInfo
+	var tasks []TaskUsage
 	// remove the first element which is the header
 	if len(outTasks) < 2 {
 		return tasks, fmt.Errorf("no tasks found in output")
@@ -616,7 +616,7 @@ func (c *CommandLineQAcct) parseTaskInfoOutput(output string) ([]TaskInfo, error
 		if err != nil {
 			return tasks, err
 		}
-		tasks = append(tasks, TaskInfo{
+		tasks = append(tasks, TaskUsage{
 			JobID:     task.JobNumber,
 			TaskID:    task.TaskID,
 			JobDetail: task,

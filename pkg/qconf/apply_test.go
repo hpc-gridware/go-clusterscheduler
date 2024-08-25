@@ -80,6 +80,9 @@ var _ = Describe("Apply", func() {
 				})
 			Expect(err).ToNot(HaveOccurred())
 
+			// first delete them all
+			deleted, _ := qconf.DeleteAllEnries(qc, add, true)
+
 			added, err := qconf.AddAllEntries(qc, add)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -91,7 +94,7 @@ var _ = Describe("Apply", func() {
 			Expect(added).To(Equal(add))
 
 			// Cleanup
-			deleted, err := qconf.DeleteAllEnries(qc, added)
+			deleted, err = qconf.DeleteAllEnries(qc, added, true)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(deleted).To(Equal(add))
 		})

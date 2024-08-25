@@ -19,6 +19,10 @@ This project includes scripts to set up a one-node Open Cluster Scheduler
 cluster, which helps you to quickly build and test Go API applications
 without manually constructing a build environment.
 
+Note, that the tests are written for this container setup. You should
+not run the tests against a real cluster as they will modify the cluster
+configuration of course.
+
 ## Getting Started
 
 ### Prerequisites

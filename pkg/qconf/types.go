@@ -41,6 +41,11 @@ type ClusterConfig struct {
 	UserConfig           []UserConfig                `json:"user_config"`
 }
 
+// ClusterEnvironment provides information about the
+// specific cluster, like the installation path, the
+// "cell" (which is used to separate different clusters
+// sharing the same installation directory) and the
+// ports used by the qmaster and execd.
 type ClusterEnvironment struct {
 	Name        string `json:"sge_name"`
 	Root        string `json:"sge_root"`
@@ -82,55 +87,55 @@ type CkptInterfaceConfig struct {
 }
 
 type GlobalConfig struct {
-	ExecdSpoolDir          string `json:"execd_spool_dir"`
-	Mailer                 string `json:"mailer"`
-	Xterm                  string `json:"xterm"`
-	LoadSensor             string `json:"load_sensor"`
-	Prolog                 string `json:"prolog"`
-	Epilog                 string `json:"epilog"`
-	ShellStartMode         string `json:"shell_start_mode"`
-	LoginShells            string `json:"login_shells"`
-	MinUID                 int    `json:"min_uid"`
-	MinGID                 int    `json:"min_gid"`
-	UserLists              string `json:"user_lists"`
-	XUserLists             string `json:"xuser_lists"`
-	Projects               string `json:"projects"`
-	XProjects              string `json:"xprojects"`
-	EnforceProject         bool   `json:"enforce_project"`
-	EnforceUser            string `json:"enforce_user"`
-	LoadReportTime         string `json:"load_report_time"`
-	MaxUnheard             string `json:"max_unheard"`
-	RescheduleUnknown      string `json:"reschedule_unknown"`
-	LogLevel               string `json:"loglevel"`
-	AdministratorMail      string `json:"administrator_mail"`
-	SetTokenCmd            string `json:"set_token_cmd"`
-	PagCmd                 string `json:"pag_cmd"`
-	TokenExtendTime        string `json:"token_extend_time"`
-	ShepherdCmd            string `json:"shepherd_cmd"`
-	QmasterParams          string `json:"qmaster_params"`
-	ExecdParams            string `json:"execd_params"`
-	ReportingParams        string `json:"reporting_params"`
-	FinishedJobs           int    `json:"finished_jobs"`
-	GidRange               string `json:"gid_range"`
-	QloginCommand          string `json:"qlogin_command"`
-	QloginDaemon           string `json:"qlogin_daemon"`
-	RloginCommand          string `json:"rlogin_command"`
-	RloginDaemon           string `json:"rlogin_daemon"`
-	RshCommand             string `json:"rsh_command"`
-	RshDaemon              string `json:"rsh_daemon"`
-	MaxAJInstances         int    `json:"max_aj_instances"`
-	MaxAJTasks             int    `json:"max_aj_tasks"`
-	MaxUJobs               int    `json:"max_u_jobs"`
-	MaxJobs                int    `json:"max_jobs"`
-	MaxAdvanceReservations int    `json:"max_advance_reservations"`
-	AutoUserOTicket        int    `json:"auto_user_oticket"`
-	AutoUserFshare         int    `json:"auto_user_fshare"`
-	AutoUserDefaultProject string `json:"auto_user_default_project"`
-	AutoUserDeleteTime     int    `json:"auto_user_delete_time"`
-	DelegatedFileStaging   bool   `json:"delegated_file_staging"`
-	Reprioritize           int    `json:"reprioritize"`
-	JsvURL                 string `json:"jsv_url"`
-	JsvAllowedMod          string `json:"jsv_allowed_mod"`
+	ExecdSpoolDir          string   `json:"execd_spool_dir"`
+	Mailer                 string   `json:"mailer"`
+	Xterm                  string   `json:"xterm"`
+	LoadSensor             string   `json:"load_sensor"`
+	Prolog                 string   `json:"prolog"`
+	Epilog                 string   `json:"epilog"`
+	ShellStartMode         string   `json:"shell_start_mode"`
+	LoginShells            []string `json:"login_shells"`
+	MinUID                 int      `json:"min_uid"`
+	MinGID                 int      `json:"min_gid"`
+	UserLists              []string `json:"user_lists"`
+	XUserLists             []string `json:"xuser_lists"`
+	Projects               []string `json:"projects"`
+	XProjects              []string `json:"xprojects"`
+	EnforceProject         string   `json:"enforce_project"`
+	EnforceUser            string   `json:"enforce_user"`
+	LoadReportTime         string   `json:"load_report_time"`
+	MaxUnheard             string   `json:"max_unheard"`
+	RescheduleUnknown      string   `json:"reschedule_unknown"`
+	LogLevel               string   `json:"loglevel"`
+	AdministratorMail      string   `json:"administrator_mail"`
+	SetTokenCmd            string   `json:"set_token_cmd"`
+	PagCmd                 string   `json:"pag_cmd"`
+	TokenExtendTime        string   `json:"token_extend_time"`
+	ShepherdCmd            string   `json:"shepherd_cmd"`
+	QmasterParams          []string `json:"qmaster_params"`
+	ExecdParams            []string `json:"execd_params"`
+	ReportingParams        []string `json:"reporting_params"`
+	FinishedJobs           int      `json:"finished_jobs"`
+	GidRange               string   `json:"gid_range"`
+	QloginCommand          string   `json:"qlogin_command"`
+	QloginDaemon           string   `json:"qlogin_daemon"`
+	RloginCommand          string   `json:"rlogin_command"`
+	RloginDaemon           string   `json:"rlogin_daemon"`
+	RshCommand             string   `json:"rsh_command"`
+	RshDaemon              string   `json:"rsh_daemon"`
+	MaxAJInstances         int      `json:"max_aj_instances"`
+	MaxAJTasks             int      `json:"max_aj_tasks"`
+	MaxUJobs               int      `json:"max_u_jobs"`
+	MaxJobs                int      `json:"max_jobs"`
+	MaxAdvanceReservations int      `json:"max_advance_reservations"`
+	AutoUserOTicket        int      `json:"auto_user_oticket"`
+	AutoUserFshare         int      `json:"auto_user_fshare"`
+	AutoUserDefaultProject string   `json:"auto_user_default_project"`
+	AutoUserDeleteTime     int      `json:"auto_user_delete_time"`
+	DelegatedFileStaging   bool     `json:"delegated_file_staging"`
+	Reprioritize           int      `json:"reprioritize"`
+	JsvURL                 string   `json:"jsv_url"`
+	JsvAllowedMod          string   `json:"jsv_allowed_mod"`
 }
 
 // HostConfiguration represents the configuration for a host.
@@ -143,21 +148,25 @@ type HostConfiguration struct {
 
 // HostGroupConfig represents the configuration for a host group.
 type HostGroupConfig struct {
-	Name     string `json:"group_name"`
-	Hostlist string `json:"hostlist"`
+	Name string `json:"group_name"`
+	// Hosts are space separated.
+	Hosts []string `json:"hostlist"`
 }
 
 // HostExecConfig represents the execution host configuration.
 type HostExecConfig struct {
-	Name            string `json:"hostname"`
-	LoadScaling     string `json:"load_scaling"`
-	ComplexValues   string `json:"complex_values"`
-	UserLists       string `json:"user_lists"`
-	XUserLists      string `json:"xuser_lists"`
-	Projects        string `json:"projects"`
-	XProjects       string `json:"xprojects"`
-	UsageScaling    string `json:"usage_scaling"`
-	ReportVariables string `json:"report_variables"`
+	Name string `json:"hostname"`
+	// LoadScaling scales the reported load of the resources.
+	LoadScaling map[string]float64 `json:"load_scaling"`
+	// UsageScaling scales the reported usage of the resources.
+	UsageScaling  map[string]float64 `json:"usage_scaling"`
+	ComplexValues map[string]string  `json:"complex_values"`
+	UserLists     []string           `json:"user_lists"`
+	XUserLists    []string           `json:"xuser_lists"`
+	Projects      []string           `json:"projects"`
+	XProjects     []string           `json:"xprojects"`
+	// ReportVariables includes the resources that are reported by the execution host.
+	ReportVariables []string `json:"report_variables"`
 }
 
 // ResourceQuotaSetConfig represents the configuration for a resource quota set.
@@ -194,56 +203,56 @@ type ProjectConfig struct {
 
 // ClusterQueueConfig represents the configuration for a cluster queue.
 type ClusterQueueConfig struct {
-	Name              string `json:"qname"`
-	HostList          string `json:"hostlist"`
-	SeqNo             int    `json:"seq_no"`
-	LoadThresholds    string `json:"load_thresholds"`
-	SuspendThresholds string `json:"suspend_thresholds"`
-	NSuspend          int    `json:"nsuspend"`
-	SuspendInterval   string `json:"suspend_interval"`
-	Priority          int    `json:"priority"`
-	MinCpuInterval    string `json:"min_cpu_interval"`
-	Processors        string `json:"processors"`
-	QType             string `json:"qtype"`
-	CkptList          string `json:"ckpt_list"`
-	PeList            string `json:"pe_list"`
-	Rerun             bool   `json:"rerun"`
-	Slots             int    `json:"slots"`
-	TmpDir            string `json:"tmpdir"`
-	Shell             string `json:"shell"`
-	Prolog            string `json:"prolog"`
-	Epilog            string `json:"epilog"`
-	ShellStartMode    string `json:"shell_start_mode"`
-	StarterMethod     string `json:"starter_method"`
-	SuspendMethod     string `json:"suspend_method"`
-	ResumeMethod      string `json:"resume_method"`
-	TerminateMethod   string `json:"terminate_method"`
-	Notify            string `json:"notify"`
-	OwnerList         string `json:"owner_list"`
-	UserLists         string `json:"user_lists"`
-	XUserLists        string `json:"xuser_lists"`
-	SubordinateList   string `json:"subordinate_list"`
-	ComplexValues     string `json:"complex_values"`
-	Projects          string `json:"projects"`
-	XProjects         string `json:"xprojects"`
-	Calendar          string `json:"calendar"`
-	InitialState      string `json:"initial_state"`
-	SRt               string `json:"s_rt"`
-	HRt               string `json:"h_rt"`
-	SCpu              string `json:"s_cpu"`
-	HCpu              string `json:"h_cpu"`
-	SSize             string `json:"s_fsize"`
-	HSize             string `json:"h_fsize"`
-	SData             string `json:"s_data"`
-	HData             string `json:"h_data"`
-	SStack            string `json:"s_stack"`
-	HStack            string `json:"h_stack"`
-	SCore             string `json:"s_core"`
-	HCore             string `json:"h_core"`
-	SRss              string `json:"s_rss"`
-	HRss              string `json:"h_rss"`
-	SVmem             string `json:"s_vmem"`
-	HVmem             string `json:"h_vmem"`
+	Name              string   `json:"qname"`
+	HostList          []string `json:"hostlist"`
+	SeqNo             int      `json:"seq_no"`
+	LoadThresholds    string   `json:"load_thresholds"`
+	SuspendThresholds string   `json:"suspend_thresholds"`
+	NSuspend          int      `json:"nsuspend"`
+	SuspendInterval   string   `json:"suspend_interval"`
+	Priority          int      `json:"priority"`
+	MinCpuInterval    string   `json:"min_cpu_interval"`
+	Processors        string   `json:"processors"`
+	QType             string   `json:"qtype"`
+	CkptList          string   `json:"ckpt_list"`
+	PeList            string   `json:"pe_list"`
+	Rerun             bool     `json:"rerun"`
+	Slots             int      `json:"slots"`
+	TmpDir            string   `json:"tmpdir"`
+	Shell             string   `json:"shell"`
+	Prolog            string   `json:"prolog"`
+	Epilog            string   `json:"epilog"`
+	ShellStartMode    string   `json:"shell_start_mode"`
+	StarterMethod     string   `json:"starter_method"`
+	SuspendMethod     string   `json:"suspend_method"`
+	ResumeMethod      string   `json:"resume_method"`
+	TerminateMethod   string   `json:"terminate_method"`
+	Notify            string   `json:"notify"`
+	OwnerList         string   `json:"owner_list"`
+	UserLists         string   `json:"user_lists"`
+	XUserLists        string   `json:"xuser_lists"`
+	SubordinateList   string   `json:"subordinate_list"`
+	ComplexValues     string   `json:"complex_values"`
+	Projects          string   `json:"projects"`
+	XProjects         string   `json:"xprojects"`
+	Calendar          string   `json:"calendar"`
+	InitialState      string   `json:"initial_state"`
+	SRt               string   `json:"s_rt"`
+	HRt               string   `json:"h_rt"`
+	SCpu              string   `json:"s_cpu"`
+	HCpu              string   `json:"h_cpu"`
+	SSize             string   `json:"s_fsize"`
+	HSize             string   `json:"h_fsize"`
+	SData             string   `json:"s_data"`
+	HData             string   `json:"h_data"`
+	SStack            string   `json:"s_stack"`
+	HStack            string   `json:"h_stack"`
+	SCore             string   `json:"s_core"`
+	HCore             string   `json:"h_core"`
+	SRss              string   `json:"s_rss"`
+	HRss              string   `json:"h_rss"`
+	SVmem             string   `json:"s_vmem"`
+	HVmem             string   `json:"h_vmem"`
 }
 
 // UserSetListConfig represents the configuration for a user set list.

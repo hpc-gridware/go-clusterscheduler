@@ -105,8 +105,8 @@ var _ = Describe("CompareTo", func() {
 			// a lot is added in a default installation ...
 			Expect(comparison.DiffAdded).NotTo(BeNil())
 			Expect(len(comparison.DiffAdded.ComplexEntries)).To(BeNumerically(">", 10))
-			Expect(len(comparison.DiffAdded.ExecHosts)).To(BeNumerically("==", 1))
-			Expect(len(comparison.DiffAdded.HostGroups)).To(BeNumerically("==", 1))
+			Expect(len(comparison.DiffAdded.ExecHosts)).To(BeNumerically("==", len(cc.ExecHosts)))
+			Expect(len(comparison.DiffAdded.HostGroups)).To(BeNumerically("==", len(cc.HostGroups)))
 
 			// 0 if no job has been submitted in this container installation
 			// 1 if root submitted a job already

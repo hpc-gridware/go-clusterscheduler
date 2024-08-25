@@ -722,52 +722,6 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 	return cfg, nil
 }
 
-// parseMultiLineValue parses a multi-line value from the output.
-// This is tricky because the output is not structured and the values can be
-// split over multiple lines.
-// The input is an array of all lines, the current index, the current line,
-// and the fields of the current line. fields[0] is the detected key (like "reporting_params").
-// The function returns the value and a boolean indicating if the value is multi-line.
-//
-// Example:
-// ...
-// qmaster_params               none
-// execd_params                 none
-//
-//	reporting_params             accounting=true reporting=false finished_jobs=0 \
-//		  test=blub test=bla
-//
-// ...
-// lines is the array of all lines
-// i is the line number with "reporting_params"
-// The rule is that each non-multi-line output does not have a "  " prefix.
-func ParseMultiLineValue(lines []string, i int) (string, bool) {
-	line := lines[i]
-	fields := strings.Fields(line)
-	value := strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
-	if strings.HasSuffix(value, "\\") {
-		// multi-line value
-		value = strings.TrimSuffix(value, "\\")
-		for i, line := range lines {
-			fds := strings.Fields(line)
-			if len(fds) == 0 {
-				continue
-			}
-			// find key like "reporting_params"
-			if fds[0] == fields[0] {
-				// multi-line values are indented by spaces, find all remaining lines
-				for j := i + 1; j < len(lines) && strings.HasPrefix(lines[j], "  "); j++ {
-					// Now the question is if we do at " " or "," or other
-					// separators? We expect that the line ends with a separator.
-					value += "" + strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(lines[j]), "\\"))
-				}
-			}
-		}
-		return value, true
-	}
-	return value, false
-}
-
 // ShowGlobalConfiguration shows the global configuration.
 func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 	out, err := c.RunCommand("-sconf", "global")
@@ -798,22 +752,22 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "shell_start_mode":
 			cfg.ShellStartMode = fields[1]
 		case "login_shells":
-			cfg.LoginShells, _ = ParseMultiLineValue(lines, i)
+			cfg.LoginShells = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "min_uid":
 			// Assuming the value can be converted to an integer
 			cfg.MinUID, _ = strconv.Atoi(fields[1])
 		case "min_gid":
 			cfg.MinGID, _ = strconv.Atoi(fields[1])
 		case "user_lists":
-			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.XUserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "projects":
-			cfg.Projects, _ = ParseMultiLineValue(lines, i)
+			cfg.Projects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xprojects":
-			cfg.XProjects, _ = ParseMultiLineValue(lines, i)
+			cfg.XProjects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "enforce_project":
-			cfg.EnforceProject, _ = strconv.ParseBool(fields[1])
+			cfg.EnforceProject = fields[1]
 		case "enforce_user":
 			cfg.EnforceUser = fields[1]
 		case "load_report_time":
@@ -835,11 +789,11 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "shepherd_cmd":
 			cfg.ShepherdCmd = fields[1]
 		case "qmaster_params":
-			cfg.QmasterParams, _ = ParseMultiLineValue(lines, i)
+			cfg.QmasterParams = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "execd_params":
-			cfg.ExecdParams, _ = ParseMultiLineValue(lines, i)
+			cfg.ExecdParams = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "reporting_params":
-			cfg.ReportingParams, _ = ParseMultiLineValue(lines, i)
+			cfg.ReportingParams = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "finished_jobs":
 			cfg.FinishedJobs, _ = strconv.Atoi(fields[1])
 		case "gid_range":
@@ -908,39 +862,48 @@ func (c *CommandLineQConf) AddExecHost(hostExecConfig HostExecConfig) error {
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	_, err = file.WriteString(fmt.Sprintf("hostname         %s\n", hostExecConfig.Name))
+	_, err = file.WriteString(fmt.Sprintf("hostname         %s\n",
+		hostExecConfig.Name))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("load_scaling     %s\n", hostExecConfig.LoadScaling))
+	_, err = file.WriteString(fmt.Sprintf("load_scaling     %s\n",
+		JoinStringFloatMap(hostExecConfig.LoadScaling, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("complex_values   %s\n", hostExecConfig.ComplexValues))
+	_, err = file.WriteString(fmt.Sprintf("complex_values   %s\n",
+		JoinStringStringMap(hostExecConfig.ComplexValues, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists       %s\n", hostExecConfig.UserLists))
+	_, err = file.WriteString(fmt.Sprintf("user_lists       %s\n",
+		JoinList(hostExecConfig.UserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists      %s\n", hostExecConfig.XUserLists))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists      %s\n",
+		JoinList(hostExecConfig.XUserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("projects         %s\n", hostExecConfig.Projects))
+	_, err = file.WriteString(fmt.Sprintf("projects         %s\n",
+		JoinList(hostExecConfig.Projects, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xprojects        %s\n", hostExecConfig.XProjects))
+	_, err = file.WriteString(fmt.Sprintf("xprojects        %s\n",
+		JoinList(hostExecConfig.XProjects, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("usage_scaling    %s\n", hostExecConfig.UsageScaling))
+	_, err = file.WriteString(fmt.Sprintf("usage_scaling    %s\n",
+		JoinStringFloatMap(hostExecConfig.UsageScaling, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("report_variables %s\n", hostExecConfig.ReportVariables))
+	_, err = file.WriteString(fmt.Sprintf("report_variables %s\n",
+		JoinList(hostExecConfig.ReportVariables, ",")))
 	if err != nil {
 		return err
 	}
@@ -957,6 +920,36 @@ func (c *CommandLineQConf) AddExecHost(hostExecConfig HostExecConfig) error {
 func (c *CommandLineQConf) DeleteExecHost(hostList string) error {
 	_, err := c.RunCommand("-de", hostList)
 	return err
+}
+
+func ParseIntoStringFloatMap(val string, sep string) map[string]float64 {
+	pairs := strings.Split(val, sep)
+	out := make(map[string]float64)
+	for _, pair := range pairs {
+		kv := strings.Split(pair, "=")
+		if len(kv) != 2 {
+			continue
+		}
+		f, err := strconv.ParseFloat(kv[1], 64)
+		if err != nil {
+			continue
+		}
+		out[kv[0]] = f
+	}
+	return out
+}
+
+func ParseIntoStringStringMap(val string, sep string) map[string]string {
+	pairs := strings.Split(val, sep)
+	out := make(map[string]string)
+	for _, pair := range pairs {
+		kv := strings.Split(pair, "=")
+		if len(kv) != 2 {
+			continue
+		}
+		out[kv[0]] = kv[1]
+	}
+	return out
 }
 
 // ShowExecHost shows the specified execution host.
@@ -976,21 +969,25 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 		case "hostname":
 			cfg.Name = fields[1]
 		case "load_scaling":
-			cfg.LoadScaling = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			line, _ := ParseMultiLineValue(lines, i)
+			cfg.LoadScaling = ParseIntoStringFloatMap(line, ",")
 		case "complex_values":
-			cfg.ComplexValues, _ = ParseMultiLineValue(lines, i)
+			line, _ := ParseMultiLineValue(lines, i)
+			cfg.ComplexValues = ParseIntoStringStringMap(line, ",")
 		case "user_lists":
-			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
+			// https://linux.die.net/man/5/sge_host_conf
+			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.XUserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "projects":
-			cfg.Projects, _ = ParseMultiLineValue(lines, i)
+			cfg.Projects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xprojects":
-			cfg.XProjects, _ = ParseMultiLineValue(lines, i)
+			cfg.XProjects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "usage_scaling":
-			cfg.UsageScaling, _ = ParseMultiLineValue(lines, i)
+			line, _ := ParseMultiLineValue(lines, i)
+			cfg.UsageScaling = ParseIntoStringFloatMap(line, ",")
 		case "report_variables":
-			cfg.ReportVariables, _ = ParseMultiLineValue(lines, i)
+			cfg.ReportVariables = ParseCommaSeparatedMultiLineValues(lines, i)
 		}
 	}
 	return cfg, nil
@@ -1073,7 +1070,8 @@ func (c *CommandLineQConf) AddHostGroup(hostGroup HostGroupConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("hostlist %s\n", hostGroup.Hostlist))
+	_, err = file.WriteString(fmt.Sprintf("hostlist %s\n",
+		JoinList(hostGroup.Hosts, " ")))
 	if err != nil {
 		return err
 	}
@@ -1106,7 +1104,8 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 		case "group_name":
 			cfg.Name = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
 		case "hostlist":
-			cfg.Hostlist = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.Hosts = strings.Split(strings.TrimSpace(
+				strings.TrimPrefix(line, fields[0])), " ")
 		}
 	}
 	return cfg, nil
@@ -1524,8 +1523,8 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 	if queue.Name == "" {
 		queue.Name = "test"
 	}
-	if queue.HostList == "" {
-		queue.HostList = "NONE"
+	if len(queue.HostList) == 0 {
+		queue.HostList = []string{"NONE"}
 	}
 	if queue.SeqNo == 0 {
 		queue.SeqNo = 0
@@ -1687,7 +1686,12 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n", queue.HostList))
+	hostlist := strings.Join(queue.HostList, " ")
+	if len(queue.HostList) == 0 {
+		hostlist = "NONE"
+	}
+	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n",
+		hostlist))
 	if err != nil {
 		return err
 	}
@@ -1913,7 +1917,7 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "qname":
 			cfg.Name = fields[1]
 		case "hostlist":
-			cfg.HostList, _ = ParseMultiLineValue(lines, i)
+			cfg.HostList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "seq_no":
 			cfg.SeqNo, _ = strconv.Atoi(fields[1])
 		case "load_thresholds":
@@ -2440,7 +2444,6 @@ func createTempDirWithFileName(name string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	file, err := os.Create(filepath.Join(dir, name))
 	if err != nil {
 		return nil, err
@@ -2461,6 +2464,29 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 	for i := 0; i < v.NumField(); i++ {
 		fieldName := typeOfS.Field(i).Tag.Get("json")
 		fieldValue := v.Field(i).Interface()
+		// if type is []string, join the values either
+		// comma separated or space separated depending on fieldName
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Slice {
+			if len(fieldValue.([]string)) == 0 {
+				fieldValue = []string{"NONE"}
+			}
+			switch fieldName {
+			case "complex_values", "login_shells", "qmaster_params",
+				"execd_params", "reporting_params":
+				fieldValue = strings.Join(fieldValue.([]string), ",")
+			case "user_lists", "xuser_lists", "projects", "xprojects":
+				fieldValue = strings.Join(fieldValue.([]string), " ")
+			default:
+				return fmt.Errorf("unsupported slice type: %s", fieldName)
+			}
+		}
+
+		// an empty string should be written as "NONE"
+		if reflect.TypeOf(fieldValue).Kind() == reflect.String {
+			if fieldValue.(string) == "" {
+				fieldValue = "NONE"
+			}
+		}
 		_, err = file.WriteString(fmt.Sprintf("%s %v\n", fieldName, fieldValue))
 		if err != nil {
 			return err
@@ -2473,30 +2499,7 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 }
 
 func SetDefaultExecHostConfig(cfg *HostExecConfig) {
-	if cfg.LoadScaling == "" {
-		cfg.LoadScaling = "NONE"
-	}
-	if cfg.ComplexValues == "" {
-		cfg.ComplexValues = "NONE"
-	}
-	if cfg.UserLists == "" {
-		cfg.UserLists = "NONE"
-	}
-	if cfg.XUserLists == "" {
-		cfg.XUserLists = "NONE"
-	}
-	if cfg.Projects == "" {
-		cfg.Projects = "NONE"
-	}
-	if cfg.XProjects == "" {
-		cfg.XProjects = "NONE"
-	}
-	if cfg.UsageScaling == "" {
-		cfg.UsageScaling = "NONE"
-	}
-	if cfg.ReportVariables == "" {
-		cfg.ReportVariables = "NONE"
-	}
+	// Nothing to do here.
 }
 
 // ModifyExecHost modifies an execution host.
@@ -2512,35 +2515,38 @@ func (c *CommandLineQConf) ModifyExecHost(execHostName string, cfg HostExecConfi
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("load_scaling     %s\n", cfg.LoadScaling))
+	_, err = file.WriteString(fmt.Sprintf("load_scaling     %s\n",
+		JoinStringFloatMap(cfg.LoadScaling, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("complex_values   %s\n", cfg.ComplexValues))
+	_, err = file.WriteString(fmt.Sprintf("complex_values   %s\n",
+		JoinStringStringMap(cfg.ComplexValues, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists       %s\n", cfg.UserLists))
+	_, err = file.WriteString(fmt.Sprintf("user_lists       %s\n", JoinList(cfg.UserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists      %s\n", cfg.XUserLists))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists      %s\n", JoinList(cfg.XUserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("projects         %s\n", cfg.Projects))
+	_, err = file.WriteString(fmt.Sprintf("projects         %s\n", JoinList(cfg.Projects, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xprojects        %s\n", cfg.XProjects))
+	_, err = file.WriteString(fmt.Sprintf("xprojects        %s\n", JoinList(cfg.XProjects, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("usage_scaling    %s\n", cfg.UsageScaling))
+	_, err = file.WriteString(fmt.Sprintf("usage_scaling    %s\n",
+		JoinStringFloatMap(cfg.UsageScaling, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("report_variables %s\n", cfg.ReportVariables))
+	_, err = file.WriteString(fmt.Sprintf("report_variables %s\n", JoinList(cfg.ReportVariables, ",")))
 	if err != nil {
 		return err
 	}
@@ -2558,15 +2564,11 @@ func (c *CommandLineQConf) ModifyHostGroup(hostGroupName string, cfg HostGroupCo
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	if cfg.Hostlist == "" {
-		cfg.Hostlist = "NONE"
-	}
-
 	_, err = file.WriteString(fmt.Sprintf("group_name %s\n", hostGroupName))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("hostlist %s\n", cfg.Hostlist))
+	_, err = file.WriteString(fmt.Sprintf("hostlist %s\n", JoinList(cfg.Hosts, " ")))
 	if err != nil {
 		return err
 	}
@@ -2691,7 +2693,11 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n", cfg.HostList))
+	hostlist := strings.Join(cfg.HostList, " ")
+	if len(cfg.HostList) == 0 {
+		hostlist = "NONE"
+	}
+	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n", hostlist))
 	if err != nil {
 		return err
 	}
