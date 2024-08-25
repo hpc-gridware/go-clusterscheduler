@@ -281,7 +281,8 @@ gid_range                    20000-20100`, "\n")
 	Context("Global configuration", func() {
 
 		It("should show and modify the global configuration", func() {
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
+				Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Retrieve the current global configuration
@@ -316,7 +317,7 @@ gid_range                    20000-20100`, "\n")
 
 			// Modify the global configuration with emphasis on bool and int fields
 			modifiedConfig := globalConfig
-			modifiedConfig.EnforceProject = !globalConfig.EnforceProject
+			modifiedConfig.EnforceProject = "true"
 			modifiedConfig.MaxJobs = globalConfig.MaxJobs + 1
 
 			// Apply the modified configuration
@@ -328,6 +329,9 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 			Expect(retrievedConfig.EnforceProject).To(Equal(modifiedConfig.EnforceProject))
 			Expect(retrievedConfig.MaxJobs).To(Equal(modifiedConfig.MaxJobs))
+			Expect(len(retrievedConfig.LoginShells)).To(BeNumerically("==", 5))
+			// none of the slices should be < 1 in length since "NONE" must
+			// always be present
 		})
 
 	})
@@ -390,11 +394,30 @@ gid_range                    20000-20100`, "\n")
 
 	Context("Execution Host configuration", func() {
 
+		var qc *qconf.CommandLineQConf
+		var err error
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			qc.DeleteAttribute("hostgroup", "hostlist", "master", "@allhosts")
+			qc.DeleteExecHost("master")
+			qc.DeleteComplexEntry("test_mem")
+
+			qc.DeleteProject([]string{"test_project", "test_project2",
+				"test_project3", "test_project4"})
+
+			qc.ModifyHostGroup("@allhosts", qconf.HostGroupConfig{
+				Name:  "@allhosts",
+				Hosts: []string{"master"},
+			})
+		})
+
 		It("should show, add, list, and delete execution hosts", func() {
 			hostName := "exec-host-test"
-
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
-			Expect(err).To(BeNil())
 
 			// Show all execution hosts, initially should not contain the new host
 			hosts, err := qc.ShowExecHosts()
@@ -405,6 +428,12 @@ gid_range                    20000-20100`, "\n")
 			eh, err := qc.ShowExecHost("master")
 			Expect(err).To(BeNil())
 			Expect(eh).NotTo(BeNil())
+
+			allhosts, err := qc.ShowHostGroup("@allhosts")
+			Expect(err).To(BeNil())
+
+			Expect(allhosts).NotTo(BeNil())
+			Expect(allhosts.Hosts).To(ContainElement("master"))
 
 			err = qc.AddComplexEntry(qconf.ComplexEntryConfig{
 				Name:        "test_mem",
@@ -418,7 +447,9 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 
 			// set on host
-			eh.ComplexValues = "test_mem=1024"
+			eh.ComplexValues = map[string]string{"test_mem": "1024"}
+			eh.UserLists = []string{"arusers", "deadlineusers"}
+			eh.XUserLists = nil
 			err = qc.ModifyExecHost("master", eh)
 			Expect(err).To(BeNil())
 
@@ -426,7 +457,10 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 			Expect(eh).NotTo(BeNil())
 
-			Expect(eh.ComplexValues).To(Equal("test_mem=1024"))
+			Expect(eh.ComplexValues).To(
+				Equal(map[string]string{"test_mem": "1024"}))
+			Expect(eh.UserLists).To(Equal([]string{"arusers", "deadlineusers"}))
+			Expect(eh.XUserLists).To(BeNil())
 
 			err = qc.DeleteAttribute("exechost", "complex_values", "test_mem", "master")
 			Expect(err).To(BeNil())
@@ -435,7 +469,7 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 			Expect(eh).NotTo(BeNil())
 
-			Expect(eh.ComplexValues).To(Equal("NONE"))
+			Expect(len(eh.ComplexValues)).To(Equal(0))
 
 			err = qc.DeleteComplexEntry("test_mem")
 			Expect(err).To(BeNil())
@@ -461,6 +495,112 @@ gid_range                    20000-20100`, "\n")
 			err = qc.AddAttribute("hostgroup", "hostlist", "master", "@allhosts")
 			Expect(err).To(BeNil())
 
+		})
+
+		It("should show, add, and delete execution hosts", func() {
+
+			qc.AddProject(qconf.ProjectConfig{
+				Name: "test_project",
+			})
+			defer qc.DeleteProject([]string{"test_project"})
+
+			qc.AddProject(qconf.ProjectConfig{
+				Name: "test_project2",
+			})
+			defer qc.DeleteProject([]string{"test_project2"})
+
+			qc.AddProject(qconf.ProjectConfig{
+				Name: "test_project3",
+			})
+			defer qc.DeleteProject([]string{"test_project3"})
+
+			qc.AddProject(qconf.ProjectConfig{
+				Name: "test_project4",
+			})
+			defer qc.DeleteProject([]string{"test_project4"})
+
+			// Show all execution hosts, initially should not contain the new host
+			hosts, err := qc.ShowExecHosts()
+			Expect(err).To(BeNil())
+			Expect(hosts).NotTo(BeNil())
+			Expect(len(hosts)).To(BeNumerically(">", 0))
+
+			testhost := hosts[0]
+
+			// Show the specific execution host and verify its configuration
+			retrievedHost, err := qc.ShowExecHost(testhost)
+			Expect(err).To(BeNil())
+
+			hostConfigCopy := qconf.HostExecConfig{
+				Name:            retrievedHost.Name,
+				LoadScaling:     retrievedHost.LoadScaling,
+				UsageScaling:    retrievedHost.UsageScaling,
+				ComplexValues:   retrievedHost.ComplexValues,
+				UserLists:       retrievedHost.UserLists,
+				XUserLists:      retrievedHost.XUserLists,
+				Projects:        retrievedHost.Projects,
+				XProjects:       retrievedHost.XProjects,
+				ReportVariables: retrievedHost.ReportVariables,
+			}
+
+			// Modify the host configuration with multiple entries
+			hostConfigCopy.LoadScaling = map[string]float64{
+				"np_load_avg":  0.5,
+				"np_load_long": 1.2,
+			}
+			hostConfigCopy.UsageScaling = map[string]float64{
+				"cpu": 0.5,
+				"mem": 1.2,
+				"io":  0.8,
+			}
+			hostConfigCopy.ReportVariables = []string{"mem_free", "np_load_avg"}
+			hostConfigCopy.ComplexValues = map[string]string{
+				"mem_free":    "1024",
+				"np_load_avg": "4",
+			}
+			hostConfigCopy.UserLists = []string{"arusers", "defaultdepartment"}
+			hostConfigCopy.XUserLists = []string{"deadlineusers"}
+			hostConfigCopy.Projects = []string{"test_project", "test_project2"}
+			hostConfigCopy.XProjects = []string{"test_project3", "test_project4"}
+			err = qc.ModifyExecHost(testhost, hostConfigCopy)
+			Expect(err).To(BeNil())
+
+			chc, err := qc.ShowExecHost(testhost)
+			Expect(err).To(BeNil())
+
+			Expect(chc.LoadScaling).To(Equal(map[string]float64{
+				"np_load_avg":  0.5,
+				"np_load_long": 1.2,
+			}))
+			Expect(chc.UsageScaling).To(Equal(map[string]float64{
+				"cpu": 0.5,
+				"mem": 1.2,
+				"io":  0.8,
+			}))
+			Expect(chc.ReportVariables).To(Equal([]string{
+				"mem_free", "np_load_avg",
+			}))
+			Expect(chc.ComplexValues).To(Equal(map[string]string{
+				"mem_free":    "1024",
+				"np_load_avg": "4",
+			}))
+			Expect(chc.UserLists).To(Equal([]string{"arusers", "defaultdepartment"}))
+			Expect(chc.XUserLists).To(Equal([]string{"deadlineusers"}))
+			Expect(chc.Projects).To(Equal([]string{"test_project", "test_project2"}))
+			Expect(chc.XProjects).To(Equal([]string{"test_project3", "test_project4"}))
+
+			// Modify the host configuration with empty entries
+			hostConfigCopy.LoadScaling = nil
+			hostConfigCopy.UsageScaling = map[string]float64{}
+			hostConfigCopy.ReportVariables = []string{}
+			hostConfigCopy.ComplexValues = map[string]string{}
+			hostConfigCopy.UserLists = []string{}
+			err = qc.ModifyExecHost(testhost, hostConfigCopy)
+			Expect(err).To(BeNil())
+
+			// change back to original values
+			err = qc.ModifyExecHost(testhost, retrievedHost)
+			Expect(err).To(BeNil())
 		})
 	})
 
@@ -503,11 +643,21 @@ gid_range                    20000-20100`, "\n")
 
 	Context("Host Group configuration", func() {
 
-		It("should show, add, list, and delete host groups", func() {
-			groupName := "@host-group-test"
+		var qc *qconf.CommandLineQConf
+		var err error
 
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+		groupName := "@host-group-test"
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			qc.DeleteHostGroup(groupName)
+		})
+
+		It("should show, add, list, and delete host groups", func() {
 
 			// Show all host groups, initially should not contain the new group
 			groups, err := qc.ShowHostGroups()
@@ -517,8 +667,8 @@ gid_range                    20000-20100`, "\n")
 
 			// Define a new host group configuration
 			hostGroupConfig := qconf.HostGroupConfig{
-				Name:     groupName,
-				Hostlist: "master",
+				Name:  groupName,
+				Hosts: []string{"master"},
 			}
 
 			// Add the new host group
@@ -536,7 +686,7 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 			Expect(retrievedHostGroupConfig).To(Equal(hostGroupConfig))
 
-			retrievedHostGroupConfig.Hostlist = ""
+			retrievedHostGroupConfig.Hosts = nil
 			err = qc.ModifyHostGroup(groupName, retrievedHostGroupConfig)
 			Expect(err).To(BeNil())
 
@@ -838,7 +988,7 @@ gid_range                    20000-20100`, "\n")
 			// Define a new cluster queue configuration
 			queueConfig := qconf.ClusterQueueConfig{
 				Name:     queueName,
-				HostList: "@allhosts",
+				HostList: []string{"@allhosts"},
 				SeqNo:    77,
 				Priority: 0,
 				Slots:    10,
@@ -863,7 +1013,7 @@ gid_range                    20000-20100`, "\n")
 
 			newQueueConfig := qconf.ClusterQueueConfig{
 				Name:           queueName,
-				HostList:       "@allhosts",
+				HostList:       []string{"@allhosts"},
 				SeqNo:          99,
 				LoadThresholds: "np_load_avg=1.75",
 				Slots:          50,

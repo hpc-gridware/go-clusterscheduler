@@ -43,43 +43,43 @@ type JobInfo struct {
 	// Other relevant fields
 }
 
-type DepartmentInfo struct {
+type DepartmentUsage struct {
 	Department string `json:"department"`
 	Usage
 }
 
-type GroupInfo struct {
+type GroupUsage struct {
 	Group string `json:"group"`
 	Usage
 }
 
-type HostInfo struct {
+type HostUsage struct {
 	HostName string `json:"host"`
 	Usage
 }
 
-type OwnerInfo struct {
+type OwnerUsage struct {
 	OwnerName string `json:"owner"`
 	Usage
 }
 
-type ProjectInfo struct {
+type ProjectUsage struct {
 	ProjectName string `json:"project"`
 	Usage
 }
 
-type SlotsInfo struct {
+type SlotsUsage struct {
 	Slots int64 `json:"slots"`
 	Usage
 }
 
-type QueueUsageDetail struct {
+type QueueUsage struct {
 	HostName  string `json:"host"`
 	QueueName string `json:"queue"`
 	Usage
 }
 
-type TaskInfo struct {
+type TaskUsage struct {
 	JobID     int64 `json:"job_id"`
 	TaskID    int64 `json:"task_id"`
 	JobDetail JobDetail

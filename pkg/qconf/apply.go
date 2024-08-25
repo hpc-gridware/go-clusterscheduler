@@ -20,6 +20,7 @@
 package qconf
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -66,7 +67,7 @@ func Apply(qc QConf, newConfig ClusterConfig, dryRun bool) error {
 	}
 
 	if comparison.DiffRemoved != nil {
-		if _, err := DeleteAllEnries(qc, *comparison.DiffRemoved); err != nil {
+		if _, err := DeleteAllEnries(qc, *comparison.DiffRemoved, false); err != nil {
 			return fmt.Errorf("failed to delete elements: %w", err)
 		}
 	}
@@ -363,12 +364,19 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 // In case of an error, it returns the deleted cluster configuration
 // and the error. The deleted cluster configuration can be used
 // for rollback.
-func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
+func DeleteAllEnries(qc QConf, q ClusterConfig, continueOnError bool) (ClusterConfig, error) {
 	var deletedConfig ClusterConfig
+
+	var allErrors []error
 
 	// Delete all cluster queues
 	for _, elem := range q.ClusterQueues {
 		if err := qc.DeleteClusterQueue(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting cluster queue %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting cluster queue %s: %w", elem.Name, err)
 		}
@@ -378,6 +386,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all parallel environments
 	for _, elem := range q.ParallelEnvironments {
 		if err := qc.DeleteParallelEnvironment(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting parallel environment %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting parallel environment %s: %w", elem.Name, err)
 		}
@@ -387,6 +400,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all resource quota sets
 	for _, elem := range q.ResourceQuotaSets {
 		if err := qc.DeleteResourceQuotaSet(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting resource quota set %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting resource quota set %s: %w", elem.Name, err)
 		}
@@ -395,14 +413,24 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 
 	// Delete all admin hosts
 	if err := qc.DeleteAdminHost(q.AdminHosts); err != nil {
-		return deletedConfig,
-			fmt.Errorf("error deleting admin hosts: %w", err)
+		if continueOnError {
+			allErrors = append(allErrors,
+				fmt.Errorf("error deleting admin hosts: %w", err))
+		} else {
+			return deletedConfig,
+				fmt.Errorf("error deleting admin hosts: %w", err)
+		}
 	}
 	deletedConfig.AdminHosts = q.AdminHosts
 
 	// Delete all ckpt interfaces
 	for _, elem := range q.CkptInterfaces {
 		if err := qc.DeleteCkptInterface(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting ckpt interface %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting ckpt interface %s: %w", elem.Name, err)
 		}
@@ -412,6 +440,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all calendars
 	for _, elem := range q.Calendars {
 		if err := qc.DeleteCalendar(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting calendar %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting calendar %s: %w", elem.Name, err)
 		}
@@ -421,6 +454,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all complex entries
 	for _, elem := range q.ComplexEntries {
 		if err := qc.DeleteComplexEntry(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting complex entry %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting complex entry %s: %w", elem.Name, err)
 		}
@@ -430,6 +468,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all exec hosts
 	for _, elem := range q.ExecHosts {
 		if err := qc.DeleteExecHost(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting exec host %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting exec host %s: %w", elem.Name, err)
 		}
@@ -439,6 +482,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all host groups
 	for _, elem := range q.HostGroups {
 		if err := qc.DeleteHostGroup(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting host group %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting host group %s: %w", elem.Name, err)
 		}
@@ -448,6 +496,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all host configurations
 	for _, elem := range q.HostConfigurations {
 		if err := qc.DeleteHostConfiguration(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting host configuration %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting host configuration %s: %w", elem.Name, err)
 		}
@@ -457,6 +510,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all operators
 	for _, elem := range q.Operators {
 		if err := qc.DeleteUserFromOperatorList([]string{elem}); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting operator %s: %w", elem, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting operator %s: %w", elem, err)
 		}
@@ -466,6 +524,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all managers
 	for _, elem := range q.Managers {
 		if err := qc.DeleteUserFromManagerList([]string{elem}); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting manager %s: %w", elem, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting manager %s: %w", elem, err)
 		}
@@ -475,6 +538,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all projects
 	for _, elem := range q.Projects {
 		if err := qc.DeleteProject([]string{elem.Name}); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting project %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting project %s: %w", elem.Name, err)
 		}
@@ -484,6 +552,11 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all user set lists
 	for _, elem := range q.UserSetLists {
 		if err := qc.DeleteUserSetList(elem.Name); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting user set list %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting user set list %s: %w", elem.Name, err)
 		}
@@ -493,10 +566,23 @@ func DeleteAllEnries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Delete all users
 	for _, elem := range q.Users {
 		if err := qc.DeleteUser([]string{elem.Name}); err != nil {
+			if continueOnError {
+				allErrors = append(allErrors,
+					fmt.Errorf("error deleting user %s: %w", elem.Name, err))
+				continue
+			}
 			return deletedConfig,
 				fmt.Errorf("error deleting user %s: %w", elem.Name, err)
 		}
 		deletedConfig.Users = append(deletedConfig.Users, elem)
+	}
+
+	if len(allErrors) > 0 {
+		errMsg := "error deleting multiple objects: "
+		for _, err := range allErrors {
+			errMsg += err.Error() + "; "
+		}
+		return deletedConfig, errors.New(errMsg)
 	}
 
 	return deletedConfig, nil
