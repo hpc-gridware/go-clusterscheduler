@@ -54,20 +54,20 @@ var _ = Describe("Apply", func() {
 					{
 						Name:      "InitialQueue1",
 						Slots:     1,
-						XProjects: "NewProject1",
+						XProjects: []string{"NewProject1"},
 					},
 				},
 				Projects: []qconf.ProjectConfig{
 					{
 						Name: "NewProject1",
-						ACL:  "UserList1",
+						ACL:  []string{"UserList1"},
 					},
 				},
 				UserSetLists: []qconf.UserSetListConfig{
 					{
 						Name:    "UserList1",
 						Type:    "ACL",
-						Entries: "root peter",
+						Entries: []string{"root", "peter"},
 					},
 				},
 

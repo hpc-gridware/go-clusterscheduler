@@ -75,48 +75,50 @@ type ComplexEntryConfig struct {
 
 // CkptInterfaceConfig represents the configuration for a checkpointing interface.
 type CkptInterfaceConfig struct {
-	Name           string `json:"ckpt_name"`
-	Interface      string `json:"interface"`
-	CleanCommand   string `json:"clean_command"`
-	CheckpointCmd  string `json:"ckpt_command"`
-	MigrCommand    string `json:"migr_command"`
-	RestartCommand string `json:"restart_command"`
-	CkptDir        string `json:"ckpt_dir"`
-	Signal         string `json:"signal"`
-	When           string `json:"when"`
+	Name              string `json:"ckpt_name"`
+	Interface         string `json:"interface"`
+	CleanCommand      string `json:"clean_command"`
+	CheckpointCommand string `json:"ckpt_command"`
+	MigrCommand       string `json:"migr_command"`
+	RestartCommand    string `json:"restart_command"`
+	CheckpointDir     string `json:"ckpt_dir"`
+	Signal            string `json:"signal"`
+	When              string `json:"when"`
 }
 
 type GlobalConfig struct {
-	ExecdSpoolDir          string   `json:"execd_spool_dir"`
-	Mailer                 string   `json:"mailer"`
-	Xterm                  string   `json:"xterm"`
-	LoadSensor             string   `json:"load_sensor"`
-	Prolog                 string   `json:"prolog"`
-	Epilog                 string   `json:"epilog"`
-	ShellStartMode         string   `json:"shell_start_mode"`
-	LoginShells            []string `json:"login_shells"`
-	MinUID                 int      `json:"min_uid"`
-	MinGID                 int      `json:"min_gid"`
-	UserLists              []string `json:"user_lists"`
-	XUserLists             []string `json:"xuser_lists"`
-	Projects               []string `json:"projects"`
-	XProjects              []string `json:"xprojects"`
-	EnforceProject         string   `json:"enforce_project"`
-	EnforceUser            string   `json:"enforce_user"`
-	LoadReportTime         string   `json:"load_report_time"`
-	MaxUnheard             string   `json:"max_unheard"`
-	RescheduleUnknown      string   `json:"reschedule_unknown"`
-	LogLevel               string   `json:"loglevel"`
-	AdministratorMail      string   `json:"administrator_mail"`
-	SetTokenCmd            string   `json:"set_token_cmd"`
-	PagCmd                 string   `json:"pag_cmd"`
-	TokenExtendTime        string   `json:"token_extend_time"`
-	ShepherdCmd            string   `json:"shepherd_cmd"`
-	QmasterParams          []string `json:"qmaster_params"`
-	ExecdParams            []string `json:"execd_params"`
-	ReportingParams        []string `json:"reporting_params"`
-	FinishedJobs           int      `json:"finished_jobs"`
-	GidRange               string   `json:"gid_range"`
+	ExecdSpoolDir string `json:"execd_spool_dir"`
+	Mailer        string `json:"mailer"`
+	Xterm         string `json:"xterm"`
+	// CommaSeparatedList
+	LoadSensors       []string `json:"load_sensor"`
+	Prolog            string   `json:"prolog"`
+	Epilog            string   `json:"epilog"`
+	ShellStartMode    string   `json:"shell_start_mode"`
+	LoginShells       []string `json:"login_shells"`
+	MinUID            int      `json:"min_uid"`
+	MinGID            int      `json:"min_gid"`
+	UserLists         []string `json:"user_lists"`
+	XUserLists        []string `json:"xuser_lists"`
+	Projects          []string `json:"projects"`
+	XProjects         []string `json:"xprojects"`
+	EnforceProject    string   `json:"enforce_project"`
+	EnforceUser       string   `json:"enforce_user"`
+	LoadReportTime    string   `json:"load_report_time"`
+	MaxUnheard        string   `json:"max_unheard"`
+	RescheduleUnknown string   `json:"reschedule_unknown"`
+	LogLevel          string   `json:"loglevel"`
+	AdministratorMail string   `json:"administrator_mail"`
+	SetTokenCmd       string   `json:"set_token_cmd"`
+	PagCmd            string   `json:"pag_cmd"`
+	TokenExtendTime   string   `json:"token_extend_time"`
+	ShepherdCmd       string   `json:"shepherd_cmd"`
+	QmasterParams     []string `json:"qmaster_params"`
+	ExecdParams       []string `json:"execd_params"`
+	ReportingParams   []string `json:"reporting_params"`
+	FinishedJobs      int      `json:"finished_jobs"`
+	// CommaSeparatedList
+	GidRange               []string `json:"gid_range"`
 	QloginCommand          string   `json:"qlogin_command"`
 	QloginDaemon           string   `json:"qlogin_daemon"`
 	RloginCommand          string   `json:"rlogin_command"`
@@ -135,7 +137,8 @@ type GlobalConfig struct {
 	DelegatedFileStaging   bool     `json:"delegated_file_staging"`
 	Reprioritize           int      `json:"reprioritize"`
 	JsvURL                 string   `json:"jsv_url"`
-	JsvAllowedMod          string   `json:"jsv_allowed_mod"`
+	// CommaSeparatedList
+	JsvAllowedMod []string `json:"jsv_allowed_mod"`
 }
 
 // HostConfiguration represents the configuration for a host.
@@ -179,27 +182,30 @@ type ResourceQuotaSetConfig struct {
 
 // ParallelEnvironmentConfig represents the configuration for a parallel environment.
 type ParallelEnvironmentConfig struct {
-	Name              string `json:"pe_name"`
-	Slots             int    `json:"slots"`
-	UserLists         string `json:"user_lists"`
-	XUserLists        string `json:"xuser_lists"`
-	StartProcArgs     string `json:"start_proc_args"`
-	StopProcArgs      string `json:"stop_proc_args"`
-	AllocationRule    string `json:"allocation_rule"`
-	ControlSlaves     bool   `json:"control_slaves"`
-	JobIsFirstTask    bool   `json:"job_is_first_task"`
-	UrgencySlots      string `json:"urgency_slots"`
-	AccountingSummary bool   `json:"accounting_summary"`
+	Name              string   `json:"pe_name"`
+	Slots             int      `json:"slots"`
+	UserLists         []string `json:"user_lists"`
+	XUserLists        []string `json:"xuser_lists"`
+	StartProcArgs     string   `json:"start_proc_args"`
+	StopProcArgs      string   `json:"stop_proc_args"`
+	AllocationRule    string   `json:"allocation_rule"`
+	ControlSlaves     string   `json:"control_slaves"`
+	JobIsFirstTask    bool     `json:"job_is_first_task"`
+	UrgencySlots      string   `json:"urgency_slots"`
+	AccountingSummary bool     `json:"accounting_summary"`
 }
 
 // ProjectConfig represents the configuration for a project.
 type ProjectConfig struct {
-	Name    string `json:"name"`
-	OTicket int    `json:"oticket"`
-	FShare  int    `json:"fshare"`
-	ACL     string `json:"acl"`  // user_list space separated
-	XACL    string `json:"xacl"` // user_list space separated
+	Name    string   `json:"name"`
+	OTicket int      `json:"oticket"`
+	FShare  int      `json:"fshare"`
+	ACL     []string `json:"acl"`  // user_list space separated
+	XACL    []string `json:"xacl"` // user_list space separated
 }
+
+const QTypeBatch string = "BATCH"
+const QTypeInteractive string = "INTERACTIVE"
 
 // ClusterQueueConfig represents the configuration for a cluster queue.
 type ClusterQueueConfig struct {
@@ -213,9 +219,9 @@ type ClusterQueueConfig struct {
 	Priority          int      `json:"priority"`
 	MinCpuInterval    string   `json:"min_cpu_interval"`
 	Processors        string   `json:"processors"`
-	QType             string   `json:"qtype"`
-	CkptList          string   `json:"ckpt_list"`
-	PeList            string   `json:"pe_list"`
+	QType             []string `json:"qtype"`
+	CkptList          []string `json:"ckpt_list"`
+	PeList            []string `json:"pe_list"`
 	Rerun             bool     `json:"rerun"`
 	Slots             int      `json:"slots"`
 	TmpDir            string   `json:"tmpdir"`
@@ -228,13 +234,13 @@ type ClusterQueueConfig struct {
 	ResumeMethod      string   `json:"resume_method"`
 	TerminateMethod   string   `json:"terminate_method"`
 	Notify            string   `json:"notify"`
-	OwnerList         string   `json:"owner_list"`
-	UserLists         string   `json:"user_lists"`
-	XUserLists        string   `json:"xuser_lists"`
-	SubordinateList   string   `json:"subordinate_list"`
-	ComplexValues     string   `json:"complex_values"`
-	Projects          string   `json:"projects"`
-	XProjects         string   `json:"xprojects"`
+	OwnerList         []string `json:"owner_list"`
+	UserLists         []string `json:"user_lists"`
+	XUserLists        []string `json:"xuser_lists"`
+	SubordinateList   []string `json:"subordinate_list"`
+	ComplexValues     []string `json:"complex_values"`
+	Projects          []string `json:"projects"`
+	XProjects         []string `json:"xprojects"`
 	Calendar          string   `json:"calendar"`
 	InitialState      string   `json:"initial_state"`
 	SRt               string   `json:"s_rt"`
@@ -257,11 +263,11 @@ type ClusterQueueConfig struct {
 
 // UserSetListConfig represents the configuration for a user set list.
 type UserSetListConfig struct {
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	FShare  int    `json:"fshare"`
-	OTicket int    `json:"oticket"`
-	Entries string `json:"entries"`
+	Name    string   `json:"name"`
+	Type    string   `json:"type"`
+	FShare  int      `json:"fshare"`
+	OTicket int      `json:"oticket"`
+	Entries []string `json:"entries"`
 }
 
 // UserConfig represents the configuration for a user.
@@ -277,17 +283,3 @@ type UserConfig struct {
 type ComplexAttributeConfig struct {
 	Resources []ComplexEntryConfig `json:"resources"`
 }
-
-// Resource represents an individual resource within the complex attribute
-// configuration.
-/*type Resource struct {
-	Name        string `json:"name"`
-	Shortcut    string `json:"shortcut"`
-	Type        string `json:"type"`
-	Relop       string `json:"relop"`
-	Requestable string `json:"requestable"`
-	Consumable  string `json:"consumable"`
-	Default     string `json:"default"`
-	Urgency     int    `json:"urgency"`
-}
-*/

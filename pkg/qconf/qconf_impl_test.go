@@ -227,15 +227,15 @@ gid_range                    20000-20100`, "\n")
 
 		// Define a new checkpointing interface configuration
 		ckptConfig := qconf.CkptInterfaceConfig{
-			Name:           interfaceName,
-			Interface:      "userdefined",
-			CleanCommand:   "/path/to/clean_command",
-			CheckpointCmd:  "/path/to/checkpoint_cmd",
-			MigrCommand:    "/path/to/migr_command",
-			RestartCommand: "/path/to/restart_command",
-			CkptDir:        "/path/to/ckpt_dir",
-			When:           "xmr",
-			Signal:         "usr2",
+			Name:              interfaceName,
+			Interface:         "userdefined",
+			CleanCommand:      "/path/to/clean_command",
+			CheckpointCommand: "/path/to/checkpoint_cmd",
+			MigrCommand:       "/path/to/migr_command",
+			RestartCommand:    "/path/to/restart_command",
+			CheckpointDir:     "/path/to/ckpt_dir",
+			When:              "xmr",
+			Signal:            "usr2",
 		}
 
 		// Add the new checkpointing interface
@@ -280,10 +280,24 @@ gid_range                    20000-20100`, "\n")
 
 	Context("Global configuration", func() {
 
-		It("should show and modify the global configuration", func() {
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
+		var qc *qconf.CommandLineQConf
+		var err error
+
+		var global qconf.GlobalConfig
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
 				Executable: "qconf"})
 			Expect(err).To(BeNil())
+			global, err = qc.ShowGlobalConfiguration()
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			qc.ModifyGlobalConfig(global)
+		})
+
+		It("should show and modify the global configuration", func() {
 
 			// Retrieve the current global configuration
 			globalConfig, err := qc.ShowGlobalConfiguration()
@@ -295,6 +309,14 @@ gid_range                    20000-20100`, "\n")
 			modifiedConfig.ExecdSpoolDir = "/new/spool/dir"
 			modifiedConfig.AutoUserDeleteTime = 3600
 			modifiedConfig.AdministratorMail = "admin@example.com"
+			modifiedConfig.QmasterParams = []string{"ENABLE_FORCED_QDEL_IF_UNKNOWN=true", "MONITOR_TIME=0:0:10"}
+			modifiedConfig.ExecdParams = []string{"KEEP_ACTIVE=true", "USE_QSUB_GID=true"}
+			modifiedConfig.GidRange = []string{"20000-20100", "20101-20200"}
+			modifiedConfig.JsvAllowedMod = []string{"l_hard", "l_soft"}
+			modifiedConfig.UserLists = []string{"arusers", "deadlineusers"}
+			modifiedConfig.ReportingParams = []string{"accounting_flush_time=00:00:00", "joblog=true"}
+			modifiedConfig.LoginShells = []string{"/bin/bash", "/bin/zsh", "/bin/sh"}
+			//modifiedConfig.XProjects = []string{"p1", "p2"}
 
 			// Apply the modified configuration
 			err = qc.ModifyGlobalConfig(modifiedConfig)
@@ -307,9 +329,6 @@ gid_range                    20000-20100`, "\n")
 		})
 
 		It("should handle bool and int fields correctly when modifying global configuration", func() {
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
-			Expect(err).To(BeNil())
-
 			// Retrieve the current global configuration
 			globalConfig, err := qc.ShowGlobalConfiguration()
 			Expect(err).To(BeNil())
@@ -330,8 +349,7 @@ gid_range                    20000-20100`, "\n")
 			Expect(retrievedConfig.EnforceProject).To(Equal(modifiedConfig.EnforceProject))
 			Expect(retrievedConfig.MaxJobs).To(Equal(modifiedConfig.MaxJobs))
 			Expect(len(retrievedConfig.LoginShells)).To(BeNumerically("==", 5))
-			// none of the slices should be < 1 in length since "NONE" must
-			// always be present
+			// none of the slices should be < 1 in length since "NONE" must always be present
 		})
 
 	})
@@ -856,12 +874,12 @@ gid_range                    20000-20100`, "\n")
 			peConfig := qconf.ParallelEnvironmentConfig{
 				Name:              peName,
 				Slots:             100,
-				UserLists:         "arusers defaultdepartment",
-				XUserLists:        "deadlineusers",
+				UserLists:         []string{"arusers", "defaultdepartment"},
+				XUserLists:        []string{"deadlineusers"},
 				StartProcArgs:     "/start/procedure",
 				StopProcArgs:      "/stop/procedure",
 				AllocationRule:    "$pe_slots",
-				ControlSlaves:     true,
+				ControlSlaves:     "TRUE",
 				JobIsFirstTask:    true,
 				UrgencySlots:      "100",
 				AccountingSummary: true,
@@ -928,8 +946,8 @@ gid_range                    20000-20100`, "\n")
 				Name:    projectName,
 				OTicket: 111,
 				FShare:  222,
-				ACL:     "",
-				XACL:    "",
+				ACL:     nil,
+				XACL:    nil,
 			}
 
 			// Add the new project
@@ -973,11 +991,46 @@ gid_range                    20000-20100`, "\n")
 	})
 
 	Context("Cluster Queue configuration", func() {
-		It("should show, add, list, and delete cluster queues", func() {
-			queueName := "cluster-queue-test"
 
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+		var qc *qconf.CommandLineQConf
+		var err error
+
+		queueName := "cluster-queue-test"
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
+
+			err = qc.AddParallelEnvironment(
+				qconf.ParallelEnvironmentConfig{
+					Name: "p1",
+				},
+			)
+			Expect(err).To(BeNil())
+
+			err = qc.AddParallelEnvironment(
+				qconf.ParallelEnvironmentConfig{
+					Name: "p2",
+				},
+			)
+			Expect(err).To(BeNil())
+
+			err = qc.AddHostGroup(
+				qconf.HostGroupConfig{
+					Name:  "@newhosts",
+					Hosts: []string{},
+				})
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			qc.DeleteClusterQueue(queueName)
+			qc.DeleteParallelEnvironment("p1")
+			qc.DeleteParallelEnvironment("p2")
+			qc.DeleteHostGroup("@newhosts")
+		})
+
+		It("should show, add, list, and delete cluster queues", func() {
 
 			// Show all cluster queues, initially should not contain the new queue
 			queues, err := qc.ShowClusterQueues()
@@ -985,14 +1038,18 @@ gid_range                    20000-20100`, "\n")
 			Expect(queues).NotTo(BeNil())
 			Expect(queues).NotTo(ContainElement(queueName))
 
-			// Define a new cluster queue configuration
 			queueConfig := qconf.ClusterQueueConfig{
 				Name:     queueName,
 				HostList: []string{"@allhosts"},
 				SeqNo:    77,
 				Priority: 0,
 				Slots:    10,
-				// Add other necessary fields here...
+				PeList:   []string{"p1", "p2"},
+				QType:    []string{qconf.QTypeBatch, qconf.QTypeInteractive},
+				//ChktList
+				OwnerList:     []string{"root", "ubuntu"},
+				UserLists:     []string{"arusers", "deadlineusers"},
+				ComplexValues: []string{"slots=10", "s_rt=86400", "mem_free=10G"},
 			}
 
 			// Add the new cluster queue
@@ -1008,26 +1065,32 @@ gid_range                    20000-20100`, "\n")
 			// Show the specific cluster queue configuration and verify its details
 			retrievedQueueConfig, err := qc.ShowClusterQueue(queueName)
 			Expect(err).To(BeNil())
+			// add some default values which are not set
 			qconf.SetDefaultQueueValues(&queueConfig)
 			Expect(retrievedQueueConfig).To(Equal(queueConfig))
 
 			newQueueConfig := qconf.ClusterQueueConfig{
 				Name:           queueName,
-				HostList:       []string{"@allhosts"},
+				HostList:       []string{"@allhosts", "@newhosts"},
 				SeqNo:          99,
 				LoadThresholds: "np_load_avg=1.75",
 				Slots:          50,
 				MinCpuInterval: "00:01:00",
-				QType:          "BATCH INTERACTIVE",
+				QType:          []string{"BATCH", "INTERACTIVE"},
 				Prolog:         "/new/prolog",
 				Epilog:         "/new/epilog",
 				InitialState:   "disabled",
+				Rerun:          true,
 			}
 			err = qc.ModifyClusterQueue(queueName, newQueueConfig)
 			Expect(err).To(BeNil())
 
 			// Show the specific cluster queue configuration and verify its details
 			retrievedQueueConfig, err = qc.ShowClusterQueue(queueName)
+			Expect(err).To(BeNil())
+			// add some default values which are not set
+			qconf.SetDefaultQueueValues(&newQueueConfig)
+			Expect(retrievedQueueConfig).To(Equal(newQueueConfig))
 
 			// Delete the cluster queue
 			err = qc.DeleteClusterQueue(queueName)
@@ -1121,7 +1184,7 @@ gid_range                    20000-20100`, "\n")
 			// Show the specific user set list configuration and verify its details
 			retrievedUserSetListConfig, err := qc.ShowUserSetList(listName)
 			Expect(err).To(BeNil())
-			userSetListConfig.Entries = user
+			userSetListConfig.Entries = []string{user}
 			Expect(retrievedUserSetListConfig).To(Equal(userSetListConfig))
 
 			// Delete user from the user set list
@@ -1130,7 +1193,7 @@ gid_range                    20000-20100`, "\n")
 
 			retrievedUserSetListConfig, err = qc.ShowUserSetList(listName)
 			Expect(err).To(BeNil())
-			Expect(retrievedUserSetListConfig.Entries).To(Equal("NONE"))
+			Expect(retrievedUserSetListConfig.Entries).To(BeEmpty())
 
 			// Modify
 			userSetListConfig.OTicket = 20
