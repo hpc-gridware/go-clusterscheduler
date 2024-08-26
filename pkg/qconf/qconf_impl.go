@@ -566,11 +566,11 @@ func (c *CommandLineQConf) AddCkptInterface(cfg CkptInterfaceConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_command  %s\n", cfg.CheckpointCmd))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_command  %s\n", cfg.CheckpointCommand))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_dir      %s\n", cfg.CkptDir))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_dir      %s\n", cfg.CheckpointDir))
 	if err != nil {
 		return err
 	}
@@ -631,13 +631,13 @@ func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfac
 		case "clean_command":
 			cfg.CleanCommand = fields[1]
 		case "ckpt_command":
-			cfg.CheckpointCmd = fields[1]
+			cfg.CheckpointCommand = fields[1]
 		case "migr_command":
 			cfg.MigrCommand = fields[1]
 		case "restart_command":
 			cfg.RestartCommand = fields[1]
 		case "ckpt_dir":
-			cfg.CkptDir = fields[1]
+			cfg.CheckpointDir = fields[1]
 		case "signal":
 			cfg.Signal = fields[1]
 		case "when":
@@ -744,7 +744,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "xterm":
 			cfg.Xterm = fields[1]
 		case "load_sensor":
-			cfg.LoadSensor = fields[1]
+			cfg.LoadSensors = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "prolog":
 			cfg.Prolog = fields[1]
 		case "epilog":
@@ -789,15 +789,15 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "shepherd_cmd":
 			cfg.ShepherdCmd = fields[1]
 		case "qmaster_params":
-			cfg.QmasterParams = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.QmasterParams = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "execd_params":
-			cfg.ExecdParams = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.ExecdParams = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "reporting_params":
-			cfg.ReportingParams = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.ReportingParams = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "finished_jobs":
 			cfg.FinishedJobs, _ = strconv.Atoi(fields[1])
 		case "gid_range":
-			cfg.GidRange = fields[1]
+			cfg.GidRange = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "qlogin_command":
 			cfg.QloginCommand = fields[1]
 		case "qlogin_daemon":
@@ -835,7 +835,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "jsv_url":
 			cfg.JsvURL = fields[1]
 		case "jsv_allowed_mod":
-			cfg.JsvAllowedMod, _ = ParseMultiLineValue(lines, i)
+			cfg.JsvAllowedMod = ParseCommaSeparatedMultiLineValues(lines, i)
 		}
 	}
 	return cfg, nil
@@ -1269,12 +1269,6 @@ func (c *CommandLineQConf) ShowOperators() ([]string, error) {
 }
 
 func SetDefaultParallelEnvironmentValues(pe *ParallelEnvironmentConfig) {
-	if pe.UserLists == "" {
-		pe.UserLists = "NONE"
-	}
-	if pe.XUserLists == "" {
-		pe.XUserLists = "NONE"
-	}
 	if pe.StartProcArgs == "" {
 		pe.StartProcArgs = "/bin/true"
 	}
@@ -1286,6 +1280,9 @@ func SetDefaultParallelEnvironmentValues(pe *ParallelEnvironmentConfig) {
 	}
 	if pe.UrgencySlots == "" {
 		pe.UrgencySlots = "min"
+	}
+	if pe.ControlSlaves == "" {
+		pe.ControlSlaves = "FALSE"
 	}
 }
 
@@ -1324,11 +1321,11 @@ func writePE(file *os.File, pe ParallelEnvironmentConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists         %s\n", pe.UserLists))
+	_, err = file.WriteString(fmt.Sprintf("user_lists         %s\n", JoinList(pe.UserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists        %s\n", pe.XUserLists))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists        %s\n", JoinList(pe.XUserLists, " ")))
 	if err != nil {
 		return err
 	}
@@ -1344,7 +1341,7 @@ func writePE(file *os.File, pe ParallelEnvironmentConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("control_slaves     %s\n", MakeBoolCfg(pe.ControlSlaves)))
+	_, err = file.WriteString(fmt.Sprintf("control_slaves     %s\n", pe.ControlSlaves))
 	if err != nil {
 		return err
 	}
@@ -1389,9 +1386,9 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 		case "slots":
 			cfg.Slots, _ = strconv.Atoi(fields[1])
 		case "user_lists":
-			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.XUserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "start_proc_args":
 			cfg.StartProcArgs, _ = ParseMultiLineValue(lines, i)
 		case "stop_proc_args":
@@ -1399,7 +1396,7 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 		case "allocation_rule":
 			cfg.AllocationRule = fields[1]
 		case "control_slaves":
-			cfg.ControlSlaves, _ = strconv.ParseBool(fields[1])
+			cfg.ControlSlaves = fields[1]
 		case "job_is_first_task":
 			cfg.JobIsFirstTask, _ = strconv.ParseBool(fields[1])
 		case "urgency_slots":
@@ -1425,12 +1422,7 @@ func (c *CommandLineQConf) ShowParallelEnvironments() ([]string, error) {
 }
 
 func SetDefaultProjectValues(project *ProjectConfig) {
-	if project.ACL == "" {
-		project.ACL = "NONE"
-	}
-	if project.XACL == "" {
-		project.XACL = "NONE"
-	}
+	// Nothing todo
 }
 
 // AddProject adds a project.
@@ -1454,11 +1446,11 @@ func (c *CommandLineQConf) AddProject(project ProjectConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("acl     %s\n", project.ACL))
+	_, err = file.WriteString(fmt.Sprintf("acl     %s\n", JoinList(project.ACL, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xacl    %s\n", project.XACL))
+	_, err = file.WriteString(fmt.Sprintf("xacl    %s\n", JoinList(project.XACL, " ")))
 	if err != nil {
 		return err
 	}
@@ -1498,9 +1490,9 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 		case "fshare":
 			cfg.FShare, _ = strconv.Atoi(fields[1])
 		case "acl":
-			cfg.ACL, _ = ParseMultiLineValue(lines, i)
+			cfg.ACL = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xacl":
-			cfg.XACL, _ = ParseMultiLineValue(lines, i)
+			cfg.XACL = ParseSpaceSeparatedMultiLineValues(lines, i)
 		}
 	}
 	return cfg, nil
@@ -1550,14 +1542,8 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 	if queue.Processors == "" {
 		queue.Processors = "UNDEFINED"
 	}
-	if queue.QType == "" {
-		queue.QType = "BATCH INTERACTIVE"
-	}
-	if queue.CkptList == "" {
-		queue.CkptList = "NONE"
-	}
-	if queue.PeList == "" {
-		queue.PeList = "make"
+	if queue.QType == nil {
+		queue.QType = []string{"BATCH", "INTERACTIVE"}
 	}
 	if queue.Rerun == false {
 		queue.Rerun = false
@@ -1594,27 +1580,6 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 	}
 	if queue.Notify == "" {
 		queue.Notify = "00:00:60"
-	}
-	if queue.OwnerList == "" {
-		queue.OwnerList = "NONE"
-	}
-	if queue.UserLists == "" {
-		queue.UserLists = "NONE"
-	}
-	if queue.XUserLists == "" {
-		queue.XUserLists = "NONE"
-	}
-	if queue.SubordinateList == "" {
-		queue.SubordinateList = "NONE"
-	}
-	if queue.ComplexValues == "" {
-		queue.ComplexValues = "NONE"
-	}
-	if queue.Projects == "" {
-		queue.Projects = "NONE"
-	}
-	if queue.XProjects == "" {
-		queue.XProjects = "NONE"
 	}
 	if queue.Calendar == "" {
 		queue.Calendar = "NONE"
@@ -1727,19 +1692,19 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", queue.QType))
+	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", JoinList(queue.QType, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", queue.CkptList))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", JoinList(queue.CkptList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", queue.PeList))
+	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", JoinList(queue.PeList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("rerun             %v\n", queue.Rerun))
+	_, err = file.WriteString(fmt.Sprintf("rerun             %t\n", queue.Rerun))
 	if err != nil {
 		return err
 	}
@@ -1787,31 +1752,31 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n", queue.OwnerList))
+	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n", JoinList(queue.OwnerList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n", queue.UserLists))
+	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n", JoinList(queue.UserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n", queue.XUserLists))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n", JoinList(queue.XUserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n", queue.SubordinateList))
+	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n", JoinList(queue.SubordinateList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n", queue.ComplexValues))
+	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n", JoinList(queue.ComplexValues, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("projects          %s\n", queue.Projects))
+	_, err = file.WriteString(fmt.Sprintf("projects          %s\n", JoinList(queue.Projects, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n", queue.XProjects))
+	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n", JoinList(queue.XProjects, " ")))
 	if err != nil {
 		return err
 	}
@@ -1935,11 +1900,11 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "processors":
 			cfg.Processors = fields[1]
 		case "qtype":
-			cfg.QType = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+			cfg.QType = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "ckpt_list":
-			cfg.CkptList, _ = ParseMultiLineValue(lines, i)
+			cfg.CkptList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "pe_list":
-			cfg.PeList, _ = ParseMultiLineValue(lines, i)
+			cfg.PeList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "rerun":
 			cfg.Rerun, _ = strconv.ParseBool(fields[1])
 		case "slots":
@@ -1965,19 +1930,19 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "notify":
 			cfg.Notify = fields[1]
 		case "owner_list":
-			cfg.OwnerList, _ = ParseMultiLineValue(lines, i)
+			cfg.OwnerList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "user_lists":
-			cfg.UserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists, _ = ParseMultiLineValue(lines, i)
+			cfg.XUserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "subordinate_list":
-			cfg.SubordinateList, _ = ParseMultiLineValue(lines, i)
+			cfg.SubordinateList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "complex_values":
-			cfg.ComplexValues, _ = ParseMultiLineValue(lines, i)
+			cfg.ComplexValues = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "projects":
-			cfg.Projects, _ = ParseMultiLineValue(lines, i)
+			cfg.Projects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xprojects":
-			cfg.XProjects, _ = ParseMultiLineValue(lines, i)
+			cfg.XProjects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "calendar":
 			cfg.Calendar, _ = ParseMultiLineValue(lines, i)
 		case "initial_state":
@@ -2096,16 +2061,13 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 		case "oticket":
 			cfg.OTicket, _ = strconv.Atoi(fields[1])
 		case "entries":
-			cfg.Entries, _ = ParseMultiLineValue(lines, i)
+			cfg.Entries = ParseSpaceSeparatedMultiLineValues(lines, i)
 		}
 	}
 	return cfg, nil
 }
 
 func SetDefaultUserSetListConfig(u *UserSetListConfig) {
-	if u.Entries == "" {
-		u.Entries = "NONE"
-	}
 	if u.Type == "" {
 		u.Type = "ACL DEPT"
 	}
@@ -2119,10 +2081,6 @@ func (c *CommandLineQConf) AddUserSetList(userSetListName string, u UserSetListC
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
-
-	if u.Entries == "" {
-		u.Entries = "NONE"
-	}
 
 	_, err = file.WriteString(fmt.Sprintf("name           %s\n", u.Name))
 	if err != nil {
@@ -2140,7 +2098,7 @@ func (c *CommandLineQConf) AddUserSetList(userSetListName string, u UserSetListC
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("entries           %s\n", u.Entries))
+	_, err = file.WriteString(fmt.Sprintf("entries           %s\n", JoinList(u.Entries, " ")))
 	if err != nil {
 		return err
 	}
@@ -2383,7 +2341,7 @@ func (c *CommandLineQConf) ModifyCkptInterface(ckptName string, cfg CkptInterfac
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_command  %s\n", cfg.CheckpointCmd))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_command  %s\n", cfg.CheckpointCommand))
 	if err != nil {
 		return err
 	}
@@ -2395,7 +2353,7 @@ func (c *CommandLineQConf) ModifyCkptInterface(ckptName string, cfg CkptInterfac
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_dir        %s\n", cfg.CkptDir))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_dir        %s\n", cfg.CheckpointDir))
 	if err != nil {
 		return err
 	}
@@ -2472,7 +2430,7 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 			}
 			switch fieldName {
 			case "complex_values", "login_shells", "qmaster_params",
-				"execd_params", "reporting_params":
+				"execd_params", "reporting_params", "load_sensor", "gid_range", "jsv_allowed_mod":
 				fieldValue = strings.Join(fieldValue.([]string), ",")
 			case "user_lists", "xuser_lists", "projects", "xprojects":
 				fieldValue = strings.Join(fieldValue.([]string), " ")
@@ -2666,11 +2624,11 @@ func (c *CommandLineQConf) ModifyProject(projectName string, cfg ProjectConfig) 
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("acl     %s\n", cfg.ACL))
+	_, err = file.WriteString(fmt.Sprintf("acl     %s\n", JoinList(cfg.ACL, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xacl    %s\n", cfg.XACL))
+	_, err = file.WriteString(fmt.Sprintf("xacl    %s\n", JoinList(cfg.XACL, " ")))
 	if err != nil {
 		return err
 	}
@@ -2693,11 +2651,8 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	hostlist := strings.Join(cfg.HostList, " ")
-	if len(cfg.HostList) == 0 {
-		hostlist = "NONE"
-	}
-	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n", hostlist))
+
+	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n", JoinList(cfg.HostList, " ")))
 	if err != nil {
 		return err
 	}
@@ -2733,15 +2688,15 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", cfg.QType))
+	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", JoinList(cfg.QType, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", cfg.CkptList))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", JoinList(cfg.CkptList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", cfg.PeList))
+	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", JoinList(cfg.PeList, " ")))
 	if err != nil {
 		return err
 	}
@@ -2793,31 +2748,31 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n", cfg.OwnerList))
+	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n", JoinList(cfg.OwnerList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n", cfg.UserLists))
+	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n", JoinList(cfg.UserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n", cfg.XUserLists))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n", JoinList(cfg.XUserLists, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n", cfg.SubordinateList))
+	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n", JoinList(cfg.SubordinateList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n", cfg.ComplexValues))
+	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n", JoinList(cfg.ComplexValues, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("projects          %s\n", cfg.Projects))
+	_, err = file.WriteString(fmt.Sprintf("projects          %s\n", JoinList(cfg.Projects, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n", cfg.XProjects))
+	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n", JoinList(cfg.XProjects, " ")))
 	if err != nil {
 		return err
 	}
@@ -2908,10 +2863,6 @@ func (c *CommandLineQConf) ModifyUserset(listnameList string, cfg UserSetListCon
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	if cfg.Entries == "" {
-		cfg.Entries = "NONE"
-	}
-
 	_, err = file.WriteString(fmt.Sprintf("name    %s\n", listnameList))
 	if err != nil {
 		return err
@@ -2928,7 +2879,8 @@ func (c *CommandLineQConf) ModifyUserset(listnameList string, cfg UserSetListCon
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("entries %s\n", cfg.Entries))
+	_, err = file.WriteString(fmt.Sprintf("entries %s\n",
+		JoinList(cfg.Entries, " ")))
 	if err != nil {
 		return err
 	}
