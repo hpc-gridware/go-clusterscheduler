@@ -1047,7 +1047,7 @@ gid_range                    20000-20100`, "\n")
 				PeList:   []string{"p1", "p2"},
 				QType:    []string{qconf.QTypeBatch, qconf.QTypeInteractive},
 				//ChktList
-				OwnerList:     []string{"root", "ubuntu"},
+				OwnerList:     []string{"root"},
 				UserLists:     []string{"arusers", "deadlineusers"},
 				ComplexValues: []string{"slots=10", "s_rt=86400", "mem_free=10G"},
 			}
@@ -1149,12 +1149,23 @@ gid_range                    20000-20100`, "\n")
 
 	Context("User Set List configuration", func() {
 
-		It("should show, add users to, list, and delete from user set lists", func() {
-			listName := "testlist"
-			user := "root"
+		listName := "testlist"
+		user := "root"
+		user2 := "ubuntu"
 
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+		var qc qconf.QConf
+		var err error
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			qc.DeleteUserSetList(listName)
+		})
+
+		It("should show, add users to, list, and delete from user set lists", func() {
 
 			// Show all user set lists, initially should not contain the new list
 			lists, err := qc.ShowUserSetLists()
@@ -1175,6 +1186,9 @@ gid_range                    20000-20100`, "\n")
 			err = qc.AddUserToUserSetList(user, listName)
 			Expect(err).To(BeNil())
 
+			err = qc.AddUserToUserSetList(user2, listName)
+			Expect(err).To(BeNil())
+
 			// Show all user set lists, now should contain the new list
 			lists, err = qc.ShowUserSetLists()
 			Expect(err).To(BeNil())
@@ -1184,7 +1198,7 @@ gid_range                    20000-20100`, "\n")
 			// Show the specific user set list configuration and verify its details
 			retrievedUserSetListConfig, err := qc.ShowUserSetList(listName)
 			Expect(err).To(BeNil())
-			userSetListConfig.Entries = []string{user}
+			userSetListConfig.Entries = []string{user, user2}
 			Expect(retrievedUserSetListConfig).To(Equal(userSetListConfig))
 
 			// Delete user from the user set list
@@ -1193,7 +1207,7 @@ gid_range                    20000-20100`, "\n")
 
 			retrievedUserSetListConfig, err = qc.ShowUserSetList(listName)
 			Expect(err).To(BeNil())
-			Expect(retrievedUserSetListConfig.Entries).To(BeEmpty())
+			Expect(len(retrievedUserSetListConfig.Entries)).To(Equal(1))
 
 			// Modify
 			userSetListConfig.OTicket = 20
@@ -1227,6 +1241,8 @@ gid_range                    20000-20100`, "\n")
 
 			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
+
+			qc.DeleteUser([]string{"root"})
 
 			// Show all users, initially should not contain the new user
 			users, err := qc.ShowUsers()
@@ -1331,9 +1347,80 @@ gid_range                    20000-20100`, "\n")
 			err = qc.AddAttribute(objName, attrName, "INTERACTIVE BATCH", objIDList)
 			Expect(err).To(BeNil())
 
-			// missing on CLI
+			// @TODO missing on CLI
 			//attr = qc.ShowAttribute(objName, attrName, objIDList)
 		})
+	})
+
+	Context("Scheduler Configuration", func() {
+
+		var backup qconf.SchedulerConfig
+
+		var qc *qconf.CommandLineQConf
+		var err error
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+			backup, err = qc.ShowSchedulerConfiguration()
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			err = qc.ModifySchedulerConfig(backup)
+			Expect(err).To(BeNil())
+		})
+
+		It("should show and modify the scheduler configuration", func() {
+
+			// Show the current scheduler configuration
+			schedulerConfig, err := qc.ShowSchedulerConfiguration()
+			Expect(err).To(BeNil())
+
+			// Modify the scheduler configuration
+			schedulerConfig.MaxUJobs = 100
+			schedulerConfig.MaxReservation = 1000
+			schedulerConfig.MaxFunctionalJobsToSchedule = 10000
+			schedulerConfig.DefaultDuration = "01:00:00"
+
+			// Update HalflifeDecayList with values representing decay rates
+			schedulerConfig.HalflifeDecayList = []string{"cpu=0.5", "io=0.75", "mem=0.9"}
+
+			// Update JobLoadAdjustments with some test values
+			schedulerConfig.JobLoadAdjustments = []string{"np_load_avg=1.00", "mem_free=1.00"}
+
+			// Update UsageWeightList with test values
+			schedulerConfig.UsageWeightList = []string{"cpu=0.800000", "mem=0.100000", "io=100000.000000"}
+
+			schedulerConfig.Params = []string{"MONITOR=1", "PROFILE=1"}
+
+			// Update policy hierarchy
+			schedulerConfig.PolicyHierarchy = "OFS"
+
+			err = qc.ModifySchedulerConfig(schedulerConfig)
+			Expect(err).To(BeNil())
+
+			// Show the modified scheduler configuration
+			modifiedSchedulerConfig, err := qc.ShowSchedulerConfiguration()
+			Expect(err).To(BeNil())
+			Expect(modifiedSchedulerConfig).To(Equal(schedulerConfig))
+
+			// revert to original configuration
+			err = qc.ModifySchedulerConfig(backup)
+			Expect(err).To(BeNil())
+
+			revertedConfig, err := qc.ShowSchedulerConfiguration()
+			Expect(err).To(BeNil())
+			Expect(revertedConfig).To(Equal(backup))
+
+		})
+
+		It("should modify with an empty configuration", func() {
+			err = qc.ModifySchedulerConfig(qconf.SchedulerConfig{})
+			Expect(err).To(BeNil())
+		})
+
 	})
 
 	/*

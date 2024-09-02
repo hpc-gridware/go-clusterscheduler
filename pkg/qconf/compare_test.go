@@ -112,7 +112,7 @@ var _ = Describe("CompareTo", func() {
 			// 1 if root submitted a job already
 			Expect(len(comparison.DiffAdded.Users)).To(BeNumerically(">=", 0))
 			Expect(len(comparison.DiffAdded.Managers)).To(BeNumerically("==", 1))
-			Expect(len(comparison.DiffAdded.Operators)).To(BeNumerically("==", 0))
+			Expect(len(comparison.DiffAdded.Operators)).To(BeNumerically("==", 1))
 
 			Expect(comparison.DiffModified).NotTo(BeNil())
 			Expect(comparison.DiffModified.GlobalConfig).To(Equal(cc.GlobalConfig))

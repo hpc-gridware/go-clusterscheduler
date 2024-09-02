@@ -283,3 +283,42 @@ type UserConfig struct {
 type ComplexAttributeConfig struct {
 	Resources []ComplexEntryConfig `json:"resources"`
 }
+
+// SchedulerConfig represents the configuration for the scheduler.
+type SchedulerConfig struct {
+	Algorithm                   string   `json:"algorithm"`
+	ScheduleInterval            string   `json:"schedule_interval"`
+	MaxUJobs                    int      `json:"maxujobs"`
+	QueueSortMethod             string   `json:"queue_sort_method"`
+	JobLoadAdjustments          []string `json:"job_load_adjustments"`
+	LoadAdjustmentDecayTime     string   `json:"load_adjustment_decay_time"`
+	LoadFormula                 string   `json:"load_formula"`
+	ScheddJobInfo               string   `json:"schedd_job_info"`
+	FlushSubmitSec              int      `json:"flush_submit_sec"`
+	FlushFinishSec              int      `json:"flush_finish_sec"`
+	Params                      []string `json:"params"`
+	ReprioritizeInterval        string   `json:"reprioritize_interval"`
+	Halftime                    int      `json:"halftime"`
+	UsageWeightList             []string `json:"usage_weight_list"`
+	CompensationFactor          float64  `json:"compensation_factor"`
+	WeightUser                  float64  `json:"weight_user"`
+	WeightProject               float64  `json:"weight_project"`
+	WeightDepartment            float64  `json:"weight_department"`
+	WeightJob                   float64  `json:"weight_job"`
+	WeightTicketsFunctional     int      `json:"weight_tickets_functional"`
+	WeightTicketsShare          int      `json:"weight_tickets_share"`
+	ShareOverrideTickets        bool     `json:"share_override_tickets"`
+	ShareFunctionalShares       bool     `json:"share_functional_shares"`
+	MaxFunctionalJobsToSchedule int      `json:"max_functional_jobs_to_schedule"`
+	ReportPJobTickets           bool     `json:"report_pjob_tickets"`
+	MaxPendingTasksPerJob       int      `json:"max_pending_tasks_per_job"`
+	HalflifeDecayList           []string `json:"halflife_decay_list"`
+	PolicyHierarchy             string   `json:"policy_hierarchy"`
+	WeightTicket                float64  `json:"weight_ticket"`
+	WeightWaitingTime           float64  `json:"weight_waiting_time"`
+	WeightDeadline              float64  `json:"weight_deadline"`
+	WeightUrgency               float64  `json:"weight_urgency"`
+	WeightPriority              float64  `json:"weight_priority"`
+	MaxReservation              int      `json:"max_reservation"`
+	DefaultDuration             string   `json:"default_duration"`
+}

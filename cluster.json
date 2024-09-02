@@ -713,7 +713,18 @@
       "hostlist": ["master"]
     }
   ],
-  "resource_quota_sets": null,
+  "resource_quota_sets": [
+    {
+      "name": "test_q_limit",
+      "description": "This is a very detailed description",
+      "enabled": false,
+      "limits": [
+        "users @allusers queues all.q to slots=2000",
+        "users @arusers queues all.q to slots=1331",
+        "users {@allusers} queues all.q to slots=333"
+      ]
+    }
+  ],
   "managers": ["root"],
   "operators": [],
   "parallel_environments": [
