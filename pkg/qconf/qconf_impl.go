@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type CommandLineQConf struct {
@@ -37,6 +38,10 @@ type CommandLineQConf struct {
 type CommandLineQConfConfig struct {
 	Executable string
 	DryRun     bool
+	// DelayAfter is the time to wait after executing a command.
+	// This is useful for not overloading qmaster when 1000s of
+	// configuration objects (like queues) are defined.
+	DelayAfter time.Duration
 }
 
 // NewCommandLineQConf creates a new instance of CommandLineQConf.
@@ -56,9 +61,12 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 	cmd.Stderr = &out
 	env := cmd.Environ()
 	// Set the SGE_SINGLE_LINE environment variable to true to ensure that
-	// qconf returns a single line of output.
+	// qconf returns a single line of output for each entry.
 	cmd.Env = append(env, "SGE_SINGLE_LINE=true")
 	err := cmd.Run()
+	if c.config.DelayAfter != 0 {
+		<-time.After(c.config.DelayAfter)
+	}
 	if err != nil {
 		return out.String(), fmt.Errorf("failed to run command (%s): %v",
 			out.String(), err)
@@ -2109,6 +2117,9 @@ func (c *CommandLineQConf) AddUserSetList(userSetListName string, u UserSetListC
 
 // AddUser adds a new user.
 func (c *CommandLineQConf) AddUser(userConfig UserConfig) error {
+	if userConfig.DefaultProject == "" {
+		userConfig.DefaultProject = "NONE"
+	}
 	file, err := createTempDirWithFileName(userConfig.Name)
 	if err != nil {
 		return err
