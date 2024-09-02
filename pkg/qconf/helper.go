@@ -74,6 +74,20 @@ func ParseSpaceSeparatedMultiLineValues(lines []string, i int) []string {
 	return entries
 }
 
+// ParseSpaceAndCommaSeparatedMultiLineValues splits on spaces and commas.
+func ParseSpaceAndCommaSeparatedMultiLineValues(lines []string, i int) []string {
+	vals, _ := ParseMultiLineValue(lines, i)
+
+	// Split on spaces and commas
+	entries := strings.FieldsFunc(vals, func(r rune) bool {
+		return r == ' ' || r == ','
+	})
+	if len(entries) == 1 && strings.ToUpper(entries[0]) == "NONE" {
+		return nil
+	}
+	return entries
+}
+
 // parseMultiLineValue parses a multi-line value from the output.
 // This is tricky because the output is not structured and the values can be
 // split over multiple lines.

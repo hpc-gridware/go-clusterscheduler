@@ -797,11 +797,11 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 		case "shepherd_cmd":
 			cfg.ShepherdCmd = fields[1]
 		case "qmaster_params":
-			cfg.QmasterParams = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.QmasterParams = ParseSpaceAndCommaSeparatedMultiLineValues(lines, i)
 		case "execd_params":
-			cfg.ExecdParams = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.ExecdParams = ParseSpaceAndCommaSeparatedMultiLineValues(lines, i)
 		case "reporting_params":
-			cfg.ReportingParams = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.ReportingParams = ParseSpaceAndCommaSeparatedMultiLineValues(lines, i)
 		case "finished_jobs":
 			cfg.FinishedJobs, _ = strconv.Atoi(fields[1])
 		case "gid_range":
@@ -2069,7 +2069,7 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 		case "oticket":
 			cfg.OTicket, _ = strconv.Atoi(fields[1])
 		case "entries":
-			cfg.Entries = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.Entries = ParseCommaSeparatedMultiLineValues(lines, i)
 		}
 	}
 	return cfg, nil
@@ -2441,9 +2441,9 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 			}
 			switch fieldName {
 			case "complex_values", "login_shells", "qmaster_params",
-				"execd_params", "reporting_params", "load_sensor", "gid_range", "jsv_allowed_mod":
+				"execd_params", "load_sensor", "gid_range", "jsv_allowed_mod":
 				fieldValue = strings.Join(fieldValue.([]string), ",")
-			case "user_lists", "xuser_lists", "projects", "xprojects":
+			case "user_lists", "xuser_lists", "projects", "xprojects", "reporting_params":
 				fieldValue = strings.Join(fieldValue.([]string), " ")
 			default:
 				return fmt.Errorf("unsupported slice type: %s", fieldName)
@@ -2945,5 +2945,190 @@ func (c *CommandLineQConf) ModifyUser(userName string, cfg UserConfig) error {
 // DeleteAttribute deletes an attribute from an object.
 func (c *CommandLineQConf) DeleteAttribute(objName, attrName, val, objIDList string) error {
 	_, err := c.RunCommand("-dattr", objName, attrName, val, objIDList)
+	return err
+}
+
+// ShowSchedulerConfiguration shows the scheduler configuration.
+func (c *CommandLineQConf) ShowSchedulerConfiguration() (SchedulerConfig, error) {
+	out, err := c.RunCommand("-ssconf")
+	if err != nil {
+		return SchedulerConfig{}, err
+	}
+	lines := strings.Split(out, "\n")
+	cfg := SchedulerConfig{}
+	for i, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		value := fields[1]
+
+		switch fields[0] {
+		case "algorithm":
+			cfg.Algorithm = value
+		case "schedule_interval":
+			cfg.ScheduleInterval = value
+		case "maxujobs":
+			cfg.MaxUJobs, _ = strconv.Atoi(value)
+		case "queue_sort_method":
+			cfg.QueueSortMethod = value
+		case "job_load_adjustments":
+			cfg.JobLoadAdjustments = ParseCommaSeparatedMultiLineValues(lines, i)
+		case "load_adjustment_decay_time":
+			cfg.LoadAdjustmentDecayTime = value
+		case "load_formula":
+			cfg.LoadFormula = value
+		case "schedd_job_info":
+			cfg.ScheddJobInfo = value
+		case "flush_submit_sec":
+			cfg.FlushSubmitSec, _ = strconv.Atoi(value)
+		case "flush_finish_sec":
+			cfg.FlushFinishSec, _ = strconv.Atoi(value)
+		case "params":
+			cfg.Params = ParseSpaceAndCommaSeparatedMultiLineValues(lines, i)
+		case "reprioritize_interval":
+			cfg.ReprioritizeInterval = value
+		case "halftime":
+			cfg.Halftime, _ = strconv.Atoi(value)
+		case "usage_weight_list":
+			cfg.UsageWeightList = ParseCommaSeparatedMultiLineValues(lines, i)
+		case "compensation_factor":
+			cfg.CompensationFactor, _ = strconv.ParseFloat(value, 64)
+		case "weight_user":
+			cfg.WeightUser, _ = strconv.ParseFloat(value, 64)
+		case "weight_project":
+			cfg.WeightProject, _ = strconv.ParseFloat(value, 64)
+		case "weight_department":
+			cfg.WeightDepartment, _ = strconv.ParseFloat(value, 64)
+		case "weight_job":
+			cfg.WeightJob, _ = strconv.ParseFloat(value, 64)
+		case "weight_tickets_functional":
+			cfg.WeightTicketsFunctional, _ = strconv.Atoi(value)
+		case "weight_tickets_share":
+			cfg.WeightTicketsShare, _ = strconv.Atoi(value)
+		case "share_override_tickets":
+			cfg.ShareOverrideTickets, _ = strconv.ParseBool(value)
+		case "share_functional_shares":
+			cfg.ShareFunctionalShares, _ = strconv.ParseBool(value)
+		case "max_functional_jobs_to_schedule":
+			cfg.MaxFunctionalJobsToSchedule, _ = strconv.Atoi(value)
+		case "report_pjob_tickets":
+			cfg.ReportPJobTickets, _ = strconv.ParseBool(value)
+		case "max_pending_tasks_per_job":
+			cfg.MaxPendingTasksPerJob, _ = strconv.Atoi(value)
+		case "halflife_decay_list":
+			cfg.HalflifeDecayList = ParseCommaSeparatedMultiLineValues(lines, i)
+		case "policy_hierarchy":
+			cfg.PolicyHierarchy = value
+		case "weight_ticket":
+			cfg.WeightTicket, _ = strconv.ParseFloat(value, 64)
+		case "weight_waiting_time":
+			cfg.WeightWaitingTime, _ = strconv.ParseFloat(value, 64)
+		case "weight_deadline":
+			cfg.WeightDeadline, _ = strconv.ParseFloat(value, 64)
+		case "weight_urgency":
+			cfg.WeightUrgency, _ = strconv.ParseFloat(value, 64)
+		case "weight_priority":
+			cfg.WeightPriority, _ = strconv.ParseFloat(value, 64)
+		case "max_reservation":
+			cfg.MaxReservation, _ = strconv.Atoi(value)
+		case "default_duration":
+			cfg.DefaultDuration = value
+		}
+	}
+	return cfg, nil
+}
+
+// ModifySchedulerConfig modifies the scheduler configuration.
+func (c *CommandLineQConf) ModifySchedulerConfig(cfg SchedulerConfig) error {
+
+	// set defaults
+	if cfg.LoadAdjustmentDecayTime == "" {
+		cfg.LoadAdjustmentDecayTime = "00:00:00"
+	}
+
+	if cfg.ScheduleInterval == "" {
+		cfg.ScheduleInterval = "00:00:00"
+	}
+
+	if cfg.ScheddJobInfo == "" {
+		cfg.ScheddJobInfo = "false"
+	}
+
+	if cfg.DefaultDuration == "" {
+		cfg.DefaultDuration = "00:00:00"
+	}
+
+	if cfg.ReprioritizeInterval == "" {
+		cfg.ReprioritizeInterval = "00:00:00"
+	}
+
+	if cfg.MaxPendingTasksPerJob == 0 {
+		// must be > 0
+		cfg.MaxPendingTasksPerJob = 50
+	}
+
+	if cfg.Algorithm == "" {
+		cfg.Algorithm = "default"
+	}
+
+	if cfg.LoadFormula == "" {
+		cfg.LoadFormula = "np_load_avg"
+	}
+
+	file, err := createTempDirWithFileName("scheduler")
+	if err != nil {
+		return err
+	}
+	//defer os.RemoveAll(filepath.Dir(file.Name()))
+
+	v := reflect.ValueOf(cfg)
+	typeOfS := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		fieldName := typeOfS.Field(i).Tag.Get("json")
+		fieldValue := v.Field(i).Interface()
+		// if type is []string, join the values either
+		// comma separated or space separated depending on fieldName
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Slice {
+			if len(fieldValue.([]string)) == 0 {
+				fieldValue = []string{"NONE"}
+			}
+			switch fieldName {
+			case "job_load_adjustments", "halflife_decay_list", "usage_weight_list", "params":
+				fieldValue = strings.Join(fieldValue.([]string), ",")
+			default:
+				return fmt.Errorf("unsupported slice type: %s", fieldName)
+			}
+		}
+
+		// for booleans, write "TRUE" or "FALSE"
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Bool {
+			if fieldValue.(bool) {
+				fieldValue = "TRUE"
+			} else {
+				fieldValue = "FALSE"
+			}
+		}
+
+		// for float64, write the value with 6 decimal places
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Float64 {
+			fieldValue = fmt.Sprintf("%.6f", fieldValue)
+		}
+
+		// an empty string should be written as "NONE"
+		if reflect.TypeOf(fieldValue).Kind() == reflect.String {
+			if fieldValue.(string) == "" {
+				fieldValue = "NONE"
+			}
+		}
+
+		_, err = file.WriteString(fmt.Sprintf("%s %v\n", fieldName, fieldValue))
+		if err != nil {
+			return err
+		}
+	}
+	file.Close()
+
+	_, err = c.RunCommand("-Msconf", file.Name())
 	return err
 }
