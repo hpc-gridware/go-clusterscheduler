@@ -108,7 +108,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all user set lists
 	for _, elem := range q.UserSetLists {
 		if err := qc.AddUserSetList(elem.Name, elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add user set list %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.UserSetLists = append(appliedConfig.UserSetLists, elem)
 	}
@@ -116,7 +117,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all projects - can have userset lists
 	for _, elem := range q.Projects {
 		if err := qc.AddProject(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add project %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.Projects = append(appliedConfig.Projects, elem)
 	}
@@ -124,27 +126,29 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all users (can reference projects)
 	for _, elem := range q.Users {
 		if err := qc.AddUser(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add user %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.Users = append(appliedConfig.Users, elem)
 	}
 
 	// Add all managers
 	if err := qc.AddUserToManagerList(q.Managers); err != nil {
-		return appliedConfig, err
+		return appliedConfig, fmt.Errorf("failed to add managers: %w", err)
 	}
 	appliedConfig.Managers = q.Managers
 
 	// Add all operators
 	if err := qc.AddUserToOperatorList(q.Operators); err != nil {
-		return appliedConfig, err
+		return appliedConfig, fmt.Errorf("failed to add operators: %w", err)
 	}
 	appliedConfig.Operators = q.Operators
 
 	// Add all host configurations
 	for _, elem := range q.HostConfigurations {
 		if err := qc.AddHostConfiguration(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add host configuration %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.HostConfigurations = append(appliedConfig.HostConfigurations, elem)
 	}
@@ -152,7 +156,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all host groups
 	for _, elem := range q.HostGroups {
 		if err := qc.AddHostGroup(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add host group %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.HostGroups = append(appliedConfig.HostGroups, elem)
 	}
@@ -160,7 +165,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all exec hosts
 	for _, elem := range q.ExecHosts {
 		if err := qc.AddExecHost(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add exec host %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.ExecHosts = append(appliedConfig.ExecHosts, elem)
 	}
@@ -168,7 +174,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all complex entries
 	for _, elem := range q.ComplexEntries {
 		if err := qc.AddComplexEntry(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add complex entry %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.ComplexEntries = append(appliedConfig.ComplexEntries, elem)
 	}
@@ -176,7 +183,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all calendars
 	for _, elem := range q.Calendars {
 		if err := qc.AddCalendar(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add calendar %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.Calendars = append(appliedConfig.Calendars, elem)
 	}
@@ -184,21 +192,23 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all ckpt interfaces
 	for _, elem := range q.CkptInterfaces {
 		if err := qc.AddCkptInterface(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add ckpt interface %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.CkptInterfaces = append(appliedConfig.CkptInterfaces, elem)
 	}
 
 	// Add all admin hosts
 	if err := qc.AddAdminHost(q.AdminHosts); err != nil {
-		return appliedConfig, err
+		return appliedConfig, fmt.Errorf("failed to add admin hosts: %w", err)
 	}
 	appliedConfig.AdminHosts = q.AdminHosts
 
 	// Add all resource quota sets
 	for _, elem := range q.ResourceQuotaSets {
 		if err := qc.AddResourceQuotaSet(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add resource quota set %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.ResourceQuotaSets = append(appliedConfig.ResourceQuotaSets, elem)
 	}
@@ -206,7 +216,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all parallel environments
 	for _, elem := range q.ParallelEnvironments {
 		if err := qc.AddParallelEnvironment(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add parallel environment %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.ParallelEnvironments = append(appliedConfig.ParallelEnvironments, elem)
 	}
@@ -214,7 +225,8 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Add all cluster queues
 	for _, elem := range q.ClusterQueues {
 		if err := qc.AddClusterQueue(elem); err != nil {
-			return appliedConfig, err
+			return appliedConfig, fmt.Errorf("failed to add cluster queue %s: %w",
+				elem.Name, err)
 		}
 		appliedConfig.ClusterQueues = append(appliedConfig.ClusterQueues, elem)
 	}
@@ -237,7 +249,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all user set lists
 	for _, elem := range q.UserSetLists {
 		if err := qc.ModifyUserset(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify userset %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.UserSetLists = append(modifiedConfig.UserSetLists, elem)
 	}
@@ -245,7 +258,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all projects
 	for _, elem := range q.Projects {
 		if err := qc.ModifyProject(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify project %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.Projects = append(modifiedConfig.Projects, elem)
 	}
@@ -253,7 +267,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all users
 	for _, elem := range q.Users {
 		if err := qc.ModifyUser(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify user %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.Users = append(modifiedConfig.Users, elem)
 	}
@@ -261,7 +276,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all managers
 	for _, elem := range q.Managers {
 		if err := qc.AddUserToManagerList([]string{elem}); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to add user to manager list %s: %w",
+				elem, err)
 		}
 		modifiedConfig.Managers = append(modifiedConfig.Managers, elem)
 	}
@@ -269,7 +285,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all operators
 	for _, elem := range q.Operators {
 		if err := qc.AddUserToOperatorList([]string{elem}); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to add user to operator list %s: %w",
+				elem, err)
 		}
 		modifiedConfig.Operators = append(modifiedConfig.Operators, elem)
 	}
@@ -277,7 +294,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all host configurations
 	for _, elem := range q.HostConfigurations {
 		if err := qc.ModifyHostConfiguration(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify host configuration %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.HostConfigurations = append(modifiedConfig.HostConfigurations, elem)
 	}
@@ -285,7 +303,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all host groups
 	for _, elem := range q.HostGroups {
 		if err := qc.ModifyHostGroup(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify host group %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.HostGroups = append(modifiedConfig.HostGroups, elem)
 	}
@@ -293,7 +312,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all exec hosts
 	for _, elem := range q.ExecHosts {
 		if err := qc.ModifyExecHost(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify exec host %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.ExecHosts = append(modifiedConfig.ExecHosts, elem)
 	}
@@ -301,7 +321,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all complex entries
 	for _, elem := range q.ComplexEntries {
 		if err := qc.ModifyAllComplexes([]ComplexEntryConfig{elem}); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify complex entry %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.ComplexEntries = append(modifiedConfig.ComplexEntries, elem)
 	}
@@ -309,7 +330,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all calendars
 	for _, elem := range q.Calendars {
 		if err := qc.ModifyCalendar(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify calendar %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.Calendars = append(modifiedConfig.Calendars, elem)
 	}
@@ -317,21 +339,23 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all ckpt interfaces
 	for _, elem := range q.CkptInterfaces {
 		if err := qc.ModifyCkptInterface(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify ckpt interface %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.CkptInterfaces = append(modifiedConfig.CkptInterfaces, elem)
 	}
 
 	// Modify all admin hosts
 	if err := qc.AddAdminHost(q.AdminHosts); err != nil {
-		return modifiedConfig, err
+		return modifiedConfig, fmt.Errorf("failed to add admin hosts: %w", err)
 	}
 	modifiedConfig.AdminHosts = q.AdminHosts
 
 	// Modify all resource quota sets
 	for _, elem := range q.ResourceQuotaSets {
 		if err := qc.ModifyResourceQuotaSet(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify resource quota set %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.ResourceQuotaSets = append(modifiedConfig.ResourceQuotaSets, elem)
 	}
@@ -339,7 +363,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all parallel environments
 	for _, elem := range q.ParallelEnvironments {
 		if err := qc.ModifyParallelEnvironment(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify parallel environment %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.ParallelEnvironments = append(modifiedConfig.ParallelEnvironments, elem)
 	}
@@ -347,7 +372,8 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	// Modify all cluster queues
 	for _, elem := range q.ClusterQueues {
 		if err := qc.ModifyClusterQueue(elem.Name, elem); err != nil {
-			return modifiedConfig, err
+			return modifiedConfig, fmt.Errorf("failed to modify cluster queue %s: %w",
+				elem.Name, err)
 		}
 		modifiedConfig.ClusterQueues = append(modifiedConfig.ClusterQueues, elem)
 	}
