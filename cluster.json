@@ -7,7 +7,7 @@
     "sge_execd_port": 6445
   },
   "global_config": {
-    "execd_spool_dir": "/new/spool/dir",
+    "execd_spool_dir": "/opt/cs-install/default/spool/execd",
     "mailer": "/bin/mail",
     "xterm": "/usr/bin/X11/xterm",
     "load_sensor": null,
@@ -21,13 +21,13 @@
     "xuser_lists": null,
     "projects": null,
     "xprojects": null,
-    "enforce_project": "true",
+    "enforce_project": "false",
     "enforce_user": "auto",
     "load_report_time": "00:00:15",
     "max_unheard": "00:05:00",
     "reschedule_unknown": "00:00:00",
     "loglevel": "log_warning",
-    "administrator_mail": "admin@example.com",
+    "administrator_mail": "none",
     "set_token_cmd": "none",
     "pag_cmd": "none",
     "token_extend_time": "none",
@@ -42,7 +42,7 @@
       "sharelog=00:00:00"
     ],
     "finished_jobs": 0,
-    "gid_range": ["20000-20100"],
+    "gid_range": ["20000-200"],
     "qlogin_command": "builtin",
     "qlogin_daemon": "builtin",
     "rlogin_command": "builtin",
@@ -52,20 +52,57 @@
     "max_aj_instances": 2000,
     "max_aj_tasks": 75000,
     "max_u_jobs": 0,
-    "max_jobs": 4,
+    "max_jobs": 0,
     "max_advance_reservations": 0,
     "auto_user_oticket": 0,
     "auto_user_fshare": 0,
     "auto_user_default_project": "none",
-    "auto_user_delete_time": 3600,
+    "auto_user_delete_time": 86400,
     "delegated_file_staging": false,
     "reprioritize": 0,
     "jsv_url": "none",
     "jsv_allowed_mod": ["ac", "h", "i", "e", "o", "j", "M", "N", "p", "w"]
   },
-  "calendars": null,
-  "complex_entries": [
-    {
+  "scheduler_config": {
+    "algorithm": "default",
+    "schedule_interval": "0:0:10",
+    "maxujobs": 0,
+    "queue_sort_method": "load",
+    "job_load_adjustments": ["np_load_avg=0.50"],
+    "load_adjustment_decay_time": "0:7:30",
+    "load_formula": "np_load_avg",
+    "schedd_job_info": "false",
+    "flush_submit_sec": 1,
+    "flush_finish_sec": 1,
+    "params": null,
+    "reprioritize_interval": "0:0:0",
+    "halftime": 168,
+    "usage_weight_list": ["cpu=1.000000", "mem=0.000000", "io=0.000000"],
+    "compensation_factor": 5,
+    "weight_user": 0.25,
+    "weight_project": 0.25,
+    "weight_department": 0.25,
+    "weight_job": 0.25,
+    "weight_tickets_functional": 0,
+    "weight_tickets_share": 0,
+    "share_override_tickets": true,
+    "share_functional_shares": true,
+    "max_functional_jobs_to_schedule": 200,
+    "report_pjob_tickets": true,
+    "max_pending_tasks_per_job": 50,
+    "halflife_decay_list": null,
+    "policy_hierarchy": "OFS",
+    "weight_ticket": 0.01,
+    "weight_waiting_time": 0,
+    "weight_deadline": 3600000,
+    "weight_urgency": 0.1,
+    "weight_priority": 1,
+    "max_reservation": 0,
+    "default_duration": "INFINITY"
+  },
+  "calendars": {},
+  "complex_entries": {
+    "arch": {
       "name": "arch",
       "shortcut": "a",
       "type": "RESTRING",
@@ -75,7 +112,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "calendar": {
       "name": "calendar",
       "shortcut": "c",
       "type": "RESTRING",
@@ -85,7 +122,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "cpu": {
       "name": "cpu",
       "shortcut": "cpu",
       "type": "DOUBLE",
@@ -95,7 +132,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "display_win_gui": {
       "name": "display_win_gui",
       "shortcut": "dwg",
       "type": "BOOL",
@@ -105,7 +142,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "h_core": {
       "name": "h_core",
       "shortcut": "h_core",
       "type": "MEMORY",
@@ -115,7 +152,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "h_cpu": {
       "name": "h_cpu",
       "shortcut": "h_cpu",
       "type": "TIME",
@@ -125,7 +162,7 @@
       "default": "0:0:0",
       "urgency": 0
     },
-    {
+    "h_data": {
       "name": "h_data",
       "shortcut": "h_data",
       "type": "MEMORY",
@@ -135,7 +172,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "h_fsize": {
       "name": "h_fsize",
       "shortcut": "h_fsize",
       "type": "MEMORY",
@@ -145,7 +182,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "h_rss": {
       "name": "h_rss",
       "shortcut": "h_rss",
       "type": "MEMORY",
@@ -155,7 +192,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "h_rt": {
       "name": "h_rt",
       "shortcut": "h_rt",
       "type": "TIME",
@@ -165,7 +202,7 @@
       "default": "0:0:0",
       "urgency": 0
     },
-    {
+    "h_stack": {
       "name": "h_stack",
       "shortcut": "h_stack",
       "type": "MEMORY",
@@ -175,7 +212,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "h_vmem": {
       "name": "h_vmem",
       "shortcut": "h_vmem",
       "type": "MEMORY",
@@ -185,7 +222,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "hostname": {
       "name": "hostname",
       "shortcut": "h",
       "type": "HOST",
@@ -195,7 +232,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "load_avg": {
       "name": "load_avg",
       "shortcut": "la",
       "type": "DOUBLE",
@@ -205,7 +242,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "load_long": {
       "name": "load_long",
       "shortcut": "ll",
       "type": "DOUBLE",
@@ -215,7 +252,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "load_medium": {
       "name": "load_medium",
       "shortcut": "lm",
       "type": "DOUBLE",
@@ -225,7 +262,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "load_short": {
       "name": "load_short",
       "shortcut": "ls",
       "type": "DOUBLE",
@@ -235,7 +272,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "m_core": {
       "name": "m_core",
       "shortcut": "core",
       "type": "INT",
@@ -245,7 +282,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "m_socket": {
       "name": "m_socket",
       "shortcut": "socket",
       "type": "INT",
@@ -255,7 +292,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "m_thread": {
       "name": "m_thread",
       "shortcut": "thread",
       "type": "INT",
@@ -265,7 +302,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "m_topology": {
       "name": "m_topology",
       "shortcut": "topo",
       "type": "RESTRING",
@@ -275,7 +312,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "m_topology_inuse": {
       "name": "m_topology_inuse",
       "shortcut": "utopo",
       "type": "RESTRING",
@@ -285,7 +322,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "mem_free": {
       "name": "mem_free",
       "shortcut": "mf",
       "type": "MEMORY",
@@ -295,7 +332,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "mem_total": {
       "name": "mem_total",
       "shortcut": "mt",
       "type": "MEMORY",
@@ -305,7 +342,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "mem_used": {
       "name": "mem_used",
       "shortcut": "mu",
       "type": "MEMORY",
@@ -315,7 +352,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "min_cpu_interval": {
       "name": "min_cpu_interval",
       "shortcut": "mci",
       "type": "TIME",
@@ -325,7 +362,7 @@
       "default": "0:0:0",
       "urgency": 0
     },
-    {
+    "np_load_avg": {
       "name": "np_load_avg",
       "shortcut": "nla",
       "type": "DOUBLE",
@@ -335,7 +372,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "np_load_long": {
       "name": "np_load_long",
       "shortcut": "nll",
       "type": "DOUBLE",
@@ -345,7 +382,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "np_load_medium": {
       "name": "np_load_medium",
       "shortcut": "nlm",
       "type": "DOUBLE",
@@ -355,7 +392,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "np_load_short": {
       "name": "np_load_short",
       "shortcut": "nls",
       "type": "DOUBLE",
@@ -365,7 +402,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "num_proc": {
       "name": "num_proc",
       "shortcut": "p",
       "type": "INT",
@@ -375,7 +412,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "qname": {
       "name": "qname",
       "shortcut": "q",
       "type": "RESTRING",
@@ -385,7 +422,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "rerun": {
       "name": "rerun",
       "shortcut": "re",
       "type": "BOOL",
@@ -395,7 +432,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "s_core": {
       "name": "s_core",
       "shortcut": "s_core",
       "type": "MEMORY",
@@ -405,7 +442,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "s_cpu": {
       "name": "s_cpu",
       "shortcut": "s_cpu",
       "type": "TIME",
@@ -415,7 +452,7 @@
       "default": "0:0:0",
       "urgency": 0
     },
-    {
+    "s_data": {
       "name": "s_data",
       "shortcut": "s_data",
       "type": "MEMORY",
@@ -425,7 +462,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "s_fsize": {
       "name": "s_fsize",
       "shortcut": "s_fsize",
       "type": "MEMORY",
@@ -435,7 +472,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "s_rss": {
       "name": "s_rss",
       "shortcut": "s_rss",
       "type": "MEMORY",
@@ -445,7 +482,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "s_rt": {
       "name": "s_rt",
       "shortcut": "s_rt",
       "type": "TIME",
@@ -455,7 +492,7 @@
       "default": "0:0:0",
       "urgency": 0
     },
-    {
+    "s_stack": {
       "name": "s_stack",
       "shortcut": "s_stack",
       "type": "MEMORY",
@@ -465,7 +502,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "s_vmem": {
       "name": "s_vmem",
       "shortcut": "s_vmem",
       "type": "MEMORY",
@@ -475,7 +512,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "seq_no": {
       "name": "seq_no",
       "shortcut": "seq",
       "type": "INT",
@@ -485,7 +522,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "slots": {
       "name": "slots",
       "shortcut": "s",
       "type": "INT",
@@ -495,7 +532,7 @@
       "default": "1",
       "urgency": 1000
     },
-    {
+    "swap_free": {
       "name": "swap_free",
       "shortcut": "sf",
       "type": "MEMORY",
@@ -505,7 +542,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "swap_rate": {
       "name": "swap_rate",
       "shortcut": "sr",
       "type": "MEMORY",
@@ -515,7 +552,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "swap_rsvd": {
       "name": "swap_rsvd",
       "shortcut": "srsv",
       "type": "MEMORY",
@@ -525,7 +562,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "swap_total": {
       "name": "swap_total",
       "shortcut": "st",
       "type": "MEMORY",
@@ -535,7 +572,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "swap_used": {
       "name": "swap_used",
       "shortcut": "su",
       "type": "MEMORY",
@@ -545,7 +582,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "tmpdir": {
       "name": "tmpdir",
       "shortcut": "tmp",
       "type": "RESTRING",
@@ -555,7 +592,7 @@
       "default": "NONE",
       "urgency": 0
     },
-    {
+    "virtual_free": {
       "name": "virtual_free",
       "shortcut": "vf",
       "type": "MEMORY",
@@ -565,7 +602,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "virtual_total": {
       "name": "virtual_total",
       "shortcut": "vt",
       "type": "MEMORY",
@@ -575,7 +612,7 @@
       "default": "0",
       "urgency": 0
     },
-    {
+    "virtual_used": {
       "name": "virtual_used",
       "shortcut": "vu",
       "type": "MEMORY",
@@ -585,17 +622,17 @@
       "default": "0",
       "urgency": 0
     }
-  ],
-  "ckpt_interfaces": null,
-  "host_configurations": [
-    {
+  },
+  "ckpt_interfaces": {},
+  "host_configurations": {
+    "master": {
       "Name": "master",
-      "mailer": "/mailer",
-      "xterm": "/xterm"
+      "mailer": "/bin/mail",
+      "xterm": "/usr/bin/X11/xterm"
     }
-  ],
-  "exec_hosts": [
-    {
+  },
+  "exec_hosts": {
+    "master": {
       "hostname": "master",
       "load_scaling": {},
       "usage_scaling": {},
@@ -606,7 +643,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim1": {
       "hostname": "sim1",
       "load_scaling": {},
       "usage_scaling": {},
@@ -617,7 +654,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim2": {
       "hostname": "sim2",
       "load_scaling": {},
       "usage_scaling": {},
@@ -628,7 +665,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim3": {
       "hostname": "sim3",
       "load_scaling": {},
       "usage_scaling": {},
@@ -639,7 +676,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim4": {
       "hostname": "sim4",
       "load_scaling": {},
       "usage_scaling": {},
@@ -650,7 +687,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim5": {
       "hostname": "sim5",
       "load_scaling": {},
       "usage_scaling": {},
@@ -661,7 +698,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim6": {
       "hostname": "sim6",
       "load_scaling": {},
       "usage_scaling": {},
@@ -672,7 +709,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim7": {
       "hostname": "sim7",
       "load_scaling": {},
       "usage_scaling": {},
@@ -683,7 +720,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim8": {
       "hostname": "sim8",
       "load_scaling": {},
       "usage_scaling": {},
@@ -694,7 +731,7 @@
       "xprojects": null,
       "report_variables": null
     },
-    {
+    "sim9": {
       "hostname": "sim9",
       "load_scaling": {},
       "usage_scaling": {},
@@ -704,63 +741,70 @@
       "projects": null,
       "xprojects": null,
       "report_variables": null
+    },
+    "sim10": {
+      "hostname": "sim10",
+      "load_scaling": {},
+      "usage_scaling": {},
+      "complex_values": {},
+      "user_lists": null,
+      "xuser_lists": null,
+      "projects": null,
+      "xprojects": null,
+      "report_variables": null
+    },
+    "sim11": {
+      "hostname": "sim11",
+      "load_scaling": {},
+      "usage_scaling": {},
+      "complex_values": {},
+      "user_lists": null,
+      "xuser_lists": null,
+      "projects": null,
+      "xprojects": null,
+      "report_variables": null
+    },
+    "sim12": {
+      "hostname": "sim12",
+      "load_scaling": {},
+      "usage_scaling": {},
+      "complex_values": {},
+      "user_lists": null,
+      "xuser_lists": null,
+      "projects": null,
+      "xprojects": null,
+      "report_variables": null
     }
-  ],
+  },
   "admin_hosts": ["master"],
-  "host_groups": [
-    {
+  "host_groups": {
+    "@allhosts": {
       "group_name": "@allhosts",
-      "hostlist": ["master"]
-    }
-  ],
-  "resource_quota_sets": [
-    {
-      "name": "test_q_limit",
-      "description": "This is a very detailed description",
-      "enabled": false,
-      "limits": [
-        "users @allusers queues all.q to slots=2000",
-        "users @arusers queues all.q to slots=1331",
-        "users {@allusers} queues all.q to slots=333"
+      "hostlist": [
+        "master",
+        "sim1",
+        "sim2",
+        "sim3",
+        "sim4",
+        "sim5",
+        "sim6",
+        "sim7",
+        "sim8",
+        "sim9",
+        "sim10",
+        "sim11",
+        "sim12"
       ]
     }
-  ],
+  },
+  "resource_quota_sets": {},
   "managers": ["root"],
-  "operators": [],
-  "parallel_environments": [
-    {
-      "pe_name": "make",
-      "slots": 0,
-      "user_lists": ["arusers", "deadlineusers"],
-      "xuser_lists": null,
-      "start_proc_args": "/bin/true",
-      "stop_proc_args": "/bin/true",
-      "allocation_rule": "$pe_slots",
-      "control_slaves": "FALSE",
-      "job_is_first_task": true,
-      "urgency_slots": "min",
-      "accounting_summary": false
-    }
-  ],
-  "projects": [
-    {
-      "name": "p1",
-      "oticket": 0,
-      "fshare": 0,
-      "acl": null,
-      "xacl": null
-    },
-    {
-      "name": "p2",
-      "oticket": 0,
-      "fshare": 0,
-      "acl": null,
-      "xacl": null
-    }
-  ],
-  "users": null,
-  "cluster_queues": [
-    {
+  "operators": ["root"],
+  "parallel_environments": {},
+  "projects": {},
+  "users": {},
+  "cluster_queues": {
+    "all.q": {
       "qname": "all.q",
       "hostlist": ["@allhosts"],
       "seq_no": 0,
@@ -811,155 +855,29 @@
       "h_rss": "INFINITY",
       "s_vmem": "INFINITY",
       "h_vmem": "INFINITY"
-    },
-    {
-      "qname": "gpu.q",
-      "hostlist": ["@allhosts"],
-      "seq_no": 0,
-      "load_thresholds": "np_load_avg=1.75",
-      "suspend_thresholds": "NONE",
-      "nsuspend": 1,
-      "suspend_interval": "00:05:00",
-      "priority": 0,
-      "min_cpu_interval": "00:05:00",
-      "processors": "UNDEFINED",
-      "qtype": ["BATCH", "INTERACTIVE"],
-      "ckpt_list": null,
-      "pe_list": ["make"],
-      "rerun": false,
-      "slots": 10,
-      "tmpdir": "/tmp",
-      "shell": "/bin/sh",
-      "prolog": "NONE",
-      "epilog": "NONE",
-      "shell_start_mode": "unix_behavior",
-      "starter_method": "NONE",
-      "suspend_method": "NONE",
-      "resume_method": "NONE",
-      "terminate_method": "NONE",
-      "notify": "00:00:60",
-      "owner_list": null,
-      "user_lists": null,
-      "xuser_lists": null,
-      "subordinate_list": null,
-      "complex_values": null,
-      "projects": null,
-      "xprojects": null,
-      "calendar": "NONE",
-      "initial_state": "default",
-      "s_rt": "INFINITY",
-      "h_rt": "INFINITY",
-      "s_cpu": "INFINITY",
-      "h_cpu": "INFINITY",
-      "s_fsize": "INFINITY",
-      "h_fsize": "INFINITY",
-      "s_data": "INFINITY",
-      "h_data": "INFINITY",
-      "s_stack": "INFINITY",
-      "h_stack": "INFINITY",
-      "s_core": "INFINITY",
-      "h_core": "INFINITY",
-      "s_rss": "INFINITY",
-      "h_rss": "INFINITY",
-      "s_vmem": "INFINITY",
-      "h_vmem": "INFINITY"
-    },
-    {
-      "qname": "x.q",
-      "hostlist": ["@allhosts"],
-      "seq_no": 0,
-      "load_thresholds": "np_load_avg=1.75",
-      "suspend_thresholds": "NONE",
-      "nsuspend": 1,
-      "suspend_interval": "00:05:00",
-      "priority": 0,
-      "min_cpu_interval": "00:05:00",
-      "processors": "UNDEFINED",
-      "qtype": ["BATCH"],
-      "ckpt_list": null,
-      "pe_list": ["make"],
-      "rerun": false,
-      "slots": 10,
-      "tmpdir": "/tmp",
-      "shell": "/bin/sh",
-      "prolog": "NONE",
-      "epilog": "NONE",
-      "shell_start_mode": "unix_behavior",
-      "starter_method": "NONE",
-      "suspend_method": "NONE",
-      "resume_method": "NONE",
-      "terminate_method": "NONE",
-      "notify": "00:00:60",
-      "owner_list": null,
-      "user_lists": null,
-      "xuser_lists": null,
-      "subordinate_list": null,
-      "complex_values": null,
-      "projects": null,
-      "xprojects": null,
-      "calendar": "NONE",
-      "initial_state": "default",
-      "s_rt": "INFINITY",
-      "h_rt": "INFINITY",
-      "s_cpu": "INFINITY",
-      "h_cpu": "INFINITY",
-      "s_fsize": "INFINITY",
-      "h_fsize": "INFINITY",
-      "s_data": "INFINITY",
-      "h_data": "INFINITY",
-      "s_stack": "INFINITY",
-      "h_stack": "INFINITY",
-      "s_core": "INFINITY",
-      "h_core": "INFINITY",
-      "s_rss": "INFINITY",
-      "h_rss": "INFINITY",
-      "s_vmem": "INFINITY",
-      "h_vmem": "INFINITY"
     }
-  ],
-  "user_set_lists": [
-    {
+  },
+  "user_set_lists": {
+    "arusers": {
       "name": "arusers",
       "type": "ACL",
       "fshare": 0,
       "oticket": 0,
       "entries": null
     },
-    {
-      "name": "defaultdepartment",
-      "type": "DEPT",
-      "fshare": 0,
-      "oticket": 0,
-      "entries": null
-    },
-    {
+    "deadlineusers": {
       "name": "deadlineusers",
       "type": "ACL",
       "fshare": 0,
       "oticket": 0,
       "entries": null
     },
-    {
-      "name": "dep1",
-      "type": "DEPT",
-      "fshare": 0,
-      "oticket": 0,
-      "entries": null
-    },
-    {
-      "name": "dep2",
-      "type": "DEPT",
-      "fshare": 0,
-      "oticket": 0,
-      "entries": null
-    },
-    {
-      "name": "dep3",
+    "defaultdepartment": {
+      "name": "defaultdepartment",
       "type": "DEPT",
       "fshare": 0,
       "oticket": 0,
       "entries": null
     }
-  ],
-  "user_config": null
+  }
 }

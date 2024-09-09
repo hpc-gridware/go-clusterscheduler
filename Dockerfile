@@ -55,6 +55,6 @@ RUN go install github.com/onsi/ginkgo/v2/ginkgo@latest
 WORKDIR /root/go/src/github.com/dgruber
 
 ENV SGE_ROOT=/opt/cs-install
-ENV LD_LIBRARY_PATH ${SGE_ROOT}/lib/lx-amd64
+ENV LD_LIBRARY_PATH=${SGE_ROOT}/lib/lx-amd64
 
 ENTRYPOINT [ "/entrypoint.sh" ]

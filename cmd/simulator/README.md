@@ -1,7 +1,7 @@
 # Simulate a Grid Engine Cluster in a Open Cluster Scheduler Container
 
 Do you want to simulate your Grid Engine or Open Cluster Scheduler?
-
+This is the right place for you.
 
 Benefits:
 - Testing new configurations without affecting your production cluster.
@@ -10,7 +10,8 @@ Benefits:
 - Note, that jobs are simulated as well and never executed. The first
   parameter of the job defines the runtime.
 
-This is the right place for you.
+Note, that only execution hosts are simulated meaning they are not actually
+running and also the simulated jobs are not really executed.
 
 This repository contains a Dockerfile that builds a container with
 Open Cluster Scheduler (OCS). Using the simulator application, you can
