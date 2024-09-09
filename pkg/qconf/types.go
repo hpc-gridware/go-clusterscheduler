@@ -21,24 +21,24 @@ package qconf
 
 // ClusterConfig represents the complete configuration of a cluster.
 type ClusterConfig struct {
-	ClusterEnvironment   ClusterEnvironment          `json:"cluster_environment"`
-	GlobalConfig         GlobalConfig                `json:"global_config"`
-	Calendars            []CalendarConfig            `json:"calendars"`
-	ComplexEntries       []ComplexEntryConfig        `json:"complex_entries"`
-	CkptInterfaces       []CkptInterfaceConfig       `json:"ckpt_interfaces"`
-	HostConfigurations   []HostConfiguration         `json:"host_configurations"`
-	ExecHosts            []HostExecConfig            `json:"exec_hosts"`
-	AdminHosts           []string                    `json:"admin_hosts"`
-	HostGroups           []HostGroupConfig           `json:"host_groups"`
-	ResourceQuotaSets    []ResourceQuotaSetConfig    `json:"resource_quota_sets"`
-	Managers             []string                    `json:"managers"`
-	Operators            []string                    `json:"operators"`
-	ParallelEnvironments []ParallelEnvironmentConfig `json:"parallel_environments"`
-	Projects             []ProjectConfig             `json:"projects"`
-	Users                []UserConfig                `json:"users"`
-	ClusterQueues        []ClusterQueueConfig        `json:"cluster_queues"`
-	UserSetLists         []UserSetListConfig         `json:"user_set_lists"`
-	UserConfig           []UserConfig                `json:"user_config"`
+	ClusterEnvironment   *ClusterEnvironment                  `json:"cluster_environment"`
+	GlobalConfig         *GlobalConfig                        `json:"global_config"`
+	SchedulerConfig      *SchedulerConfig                     `json:"scheduler_config"`
+	Calendars            map[string]CalendarConfig            `json:"calendars"`
+	ComplexEntries       map[string]ComplexEntryConfig        `json:"complex_entries"`
+	CkptInterfaces       map[string]CkptInterfaceConfig       `json:"ckpt_interfaces"`
+	HostConfigurations   map[string]HostConfiguration         `json:"host_configurations"`
+	ExecHosts            map[string]HostExecConfig            `json:"exec_hosts"`
+	AdminHosts           []string                             `json:"admin_hosts"`
+	HostGroups           map[string]HostGroupConfig           `json:"host_groups"`
+	ResourceQuotaSets    map[string]ResourceQuotaSetConfig    `json:"resource_quota_sets"`
+	Managers             []string                             `json:"managers"`
+	Operators            []string                             `json:"operators"`
+	ParallelEnvironments map[string]ParallelEnvironmentConfig `json:"parallel_environments"`
+	Projects             map[string]ProjectConfig             `json:"projects"`
+	Users                map[string]UserConfig                `json:"users"`
+	ClusterQueues        map[string]ClusterQueueConfig        `json:"cluster_queues"`
+	UserSetLists         map[string]UserSetListConfig         `json:"user_set_lists"`
 }
 
 // ClusterEnvironment provides information about the

@@ -30,7 +30,12 @@ COPY entrypoint.sh /entrypoint.sh
 ARG GOLANG_VERSION=1.22.4
 
 RUN apt-get update && \
-    apt-get install -y wget git gcc make vim libhwloc-dev hwloc
+    apt-get install -y wget git gcc make vim libhwloc-dev hwloc software-properties-common && \
+    add-apt-repository -y ppa:apptainer/ppa && \
+    apt-get update && \
+    apt-get install -y apptainer
+
+RUN touch /etc/localtime
 
 RUN wget https://go.dev/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && \

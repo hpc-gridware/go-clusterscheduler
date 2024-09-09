@@ -51,7 +51,7 @@ type QConf interface {
 	ShowHostConfigurations() ([]string, error)
 	ModifyHostConfiguration(configName string, c HostConfiguration) error
 
-	ShowGlobalConfiguration() (GlobalConfig, error)
+	ShowGlobalConfiguration() (*GlobalConfig, error)
 	ModifyGlobalConfig(g GlobalConfig) error
 
 	AddExecHost(hostExecConfig HostExecConfig) error
@@ -139,4 +139,7 @@ type QConf interface {
 	ModifyAttribute(objName, attrName, val, objIDList string) error
 	DeleteAttribute(objName, attrName, val, objIDList string) error
 	AddAttribute(objName, attrName, val, objIDList string) error
+
+	ModifySchedulerConfig(cfg SchedulerConfig) error
+	ShowSchedulerConfiguration() (*SchedulerConfig, error)
 }

@@ -85,42 +85,39 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	// Go through each host and add it to the cluster
-	for i := range config.ExecHosts {
+	//
+	for key := range config.ExecHosts {
 		// add "master" host (here in the container) to be load
 		// report host for the simulated host
-		if config.ExecHosts[i].ComplexValues == nil {
-			config.ExecHosts[i].ComplexValues = make(map[string]string)
+		if config.ExecHosts[key].ComplexValues == nil {
+			//
 		}
-		config.ExecHosts[i].ComplexValues["load_report_host"] = "master"
+		config.ExecHosts[key].ComplexValues["load_report_host"] = "master"
 		// add to @allhosts
-		allhosts.Hosts = append(allhosts.Hosts, config.ExecHosts[i].Name)
+		allhosts.Hosts = append(allhosts.Hosts, config.ExecHosts[key].Name)
 	}
 
 	// add @allhosts to the list of host groups (TODO should be map)
-	found := false
-	for i, hg := range config.HostGroups {
-		if hg.Name == "@allhosts" {
-			config.HostGroups[i] = allhosts
-			found = true
-			break
-		}
-	}
-	if !found {
-		config.HostGroups = append(config.HostGroups, allhosts)
+	if _, ok := config.HostGroups["@allhosts"]; !ok {
+		config.HostGroups["@allhosts"] = allhosts
 	}
 
 	// append "master" host to the list of hosts as it severs
 	// the fake load for all simulated hosts and is not in the
 	// list of hosts from the JSON file
-	config.ExecHosts = append(config.ExecHosts, qconf.HostExecConfig{
+	if config.ExecHosts == nil {
+		config.ExecHosts = make(map[string]qconf.HostExecConfig)
+	}
+	config.ExecHosts["master"] = qconf.HostExecConfig{
 		Name: "master",
-	})
-
+	}
 	// add root as operator
-	config.Users = append(config.Users,
-		qconf.UserConfig{
-			Name: "root",
-		})
+	if config.Users == nil {
+		config.Users = make(map[string]qconf.UserConfig)
+	}
+	config.Users["root"] = qconf.UserConfig{
+		Name: "root",
+	}
 	config.Operators = append(config.Operators, "root")
 	config.Managers = append(config.Managers, "root")
 
@@ -157,6 +154,8 @@ func RestartQmaster(config qconf.ClusterConfig, cs *qconf.CommandLineQConf) erro
 	if err != nil {
 		return fmt.Errorf("Error shutting down qmaster: %s", err)
 	}
+	<-time.After(5 * time.Second)
+	cs.ShutdownMasterDaemon()
 	fmt.Printf("waiting for qmaster to shut down...\n")
 	<-time.After(30 * time.Second)
 	sgemaster := filepath.Join(config.ClusterEnvironment.Root,
@@ -185,7 +184,8 @@ func AddHostsToEtcHosts(config qconf.ClusterConfig) error {
 	baseIP := [4]int{10, 0, 0, 0}
 
 	// Add simulated hosts to /etc/hosts so that they are resolvable
-	for i, host := range config.ExecHosts {
+	i := 0
+	for _, host := range config.ExecHosts {
 		thirdOctet := i / 256
 		fourthOctet := i % 256
 		ip := fmt.Sprintf("10.%d.%d.%d", baseIP[1], baseIP[2]+thirdOctet, fourthOctet)
@@ -200,6 +200,7 @@ func AddHostsToEtcHosts(config qconf.ClusterConfig) error {
 			baseIP[1]++
 			baseIP[2] = 0
 		}
+		i++
 	}
 	return nil
 }
@@ -235,18 +236,16 @@ func addComplexToConfig(config *qconf.ClusterConfig) {
 			return
 		}
 	}
-	config.ComplexEntries = append(config.ComplexEntries,
-		qconf.ComplexEntryConfig{
-			Name:        "load_report_host",
-			Shortcut:    "lrh",
-			Type:        "STRING",
-			Relop:       "==",
-			Requestable: "YES",
-			Consumable:  "NO",
-			Default:     "NONE",
-			Urgency:     0,
-		})
-
+	config.ComplexEntries["load_report_host"] = qconf.ComplexEntryConfig{
+		Name:        "load_report_host",
+		Shortcut:    "lrh",
+		Type:        "STRING",
+		Relop:       "==",
+		Requestable: "YES",
+		Consumable:  "NO",
+		Default:     "NONE",
+		Urgency:     0,
+	}
 }
 
 func addGlobalConfig(cs *qconf.CommandLineQConf) error {
@@ -256,7 +255,7 @@ func addGlobalConfig(cs *qconf.CommandLineQConf) error {
 	}
 	global.QmasterParams = append(global.QmasterParams, "SIMULATE_EXECDS=TRUE")
 	global.ExecdParams = append(global.ExecdParams, "SIMULATE_JOBS=TRUE")
-	return cs.ModifyGlobalConfig(global)
+	return cs.ModifyGlobalConfig(*global)
 }
 
 func addGlobalConfigToConfig(config *qconf.ClusterConfig) {

@@ -12,9 +12,10 @@ The Go API offers a range of powerful features, including:
 - **`qconf` Command Line Wrapper**: This primary feature enables
 developers to build robust applications to configure the Open/Gridware
 Cluster Scheduler effortlessly.
-- **`simulator` Application**: This example application implements a
+- **`simulator` Application**: This application implements a
 container based simulator of a real "Grid Engine" cluster. It can
-dump the configuration and apply changes to a simulated cluster.
+dump the configuration of a SGE or Open Grid Engine cluster and
+apply changes to a cluster simulated within a container.
 (See the `cmd/simulator` directory for more information.)
 
 ## Go API Development Container

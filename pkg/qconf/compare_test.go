@@ -32,28 +32,36 @@ var _ = Describe("CompareTo", func() {
 		It("should correctly identify added, modified, and removed entries", func() {
 			// Setup initial and new ClusterConfig instances
 			initial := qconf.ClusterConfig{
-				ComplexEntries: []qconf.ComplexEntryConfig{
-					{Name: "InitialComplex1"},
-					{Name: "InitialComplex2"},
+				ComplexEntries: map[string]qconf.ComplexEntryConfig{
+					"InitialComplex1": {Name: "InitialComplex1"},
+					"InitialComplex2": {Name: "InitialComplex2"},
 				},
-				Calendars: []qconf.CalendarConfig{
-					{Name: "InitialCalendar1"},
+				GlobalConfig: &qconf.GlobalConfig{
+					LoadSensors: []string{"/path/to/sensor1", "/path/to/sensor2"},
+					LoginShells: []string{"/bin/zsh", "/bin/bash"},
+				},
+				Calendars: map[string]qconf.CalendarConfig{
+					"InitialCalendar1": {Name: "InitialCalendar1"},
 				},
 				AdminHosts: []string{"InitialAdminHost1", "InitialAdminHost2"},
 				// Initialize other fields as necessary
 			}
 
 			new := qconf.ClusterConfig{
-				ComplexEntries: []qconf.ComplexEntryConfig{
-					{Name: "InitialComplex1"},
-					{Name: "NewComplex3"},
+				ComplexEntries: map[string]qconf.ComplexEntryConfig{
+					"InitialComplex1": {Name: "InitialComplex1"},
+					"NewComplex3":     {Name: "NewComplex3"},
 				},
-				Calendars: []qconf.CalendarConfig{
-					{
+				GlobalConfig: &qconf.GlobalConfig{
+					LoadSensors: []string{"/path/to/sensor1", "/path/to/sensor2"},
+					LoginShells: []string{"/bin/bash", "/bin/zsh"},
+				},
+				Calendars: map[string]qconf.CalendarConfig{
+					"InitialCalendar1": {
 						Name: "InitialCalendar1",                                                                                       // update
 						Year: "1.1.1999,6.1.1999,28.3.1999,30.3.1999-31.3.1999,18.5.1999-19.5.1999,3.10.1999,25.12.1999,26.12.1999=on", // party time
 					},
-					{Name: "NewCalendar2"},
+					"NewCalendar2": {Name: "NewCalendar2"},
 				},
 				AdminHosts: []string{"NewAdminHost1", "InitialAdminHost1"}, // update
 				// Initialize other fields as necessary
@@ -65,22 +73,22 @@ var _ = Describe("CompareTo", func() {
 
 			// Validate the DiffAdded section
 			Expect(comparison.DiffAdded.ComplexEntries).To(HaveLen(1))
-			Expect(comparison.DiffAdded.ComplexEntries[0].Name).To(Equal("NewComplex3"))
+			Expect(comparison.DiffAdded.ComplexEntries["NewComplex3"].Name).To(Equal("NewComplex3"))
 
 			Expect(comparison.DiffAdded.Calendars).To(HaveLen(1))
-			Expect(comparison.DiffAdded.Calendars[0].Name).To(Equal("NewCalendar2"))
+			Expect(comparison.DiffAdded.Calendars["NewCalendar2"].Name).To(Equal("NewCalendar2"))
 
 			Expect(comparison.DiffAdded.AdminHosts).To(HaveLen(1))
 			Expect(comparison.DiffAdded.AdminHosts[0]).To(Equal("NewAdminHost1"))
 
 			// Validate the DiffModified section
 			Expect(comparison.DiffModified.Calendars).To(HaveLen(1))
-			Expect(comparison.DiffModified.Calendars[0].Name).To(Equal("InitialCalendar1"))
-			Expect(comparison.DiffModified.Calendars[0].Year).To(Equal("1.1.1999,6.1.1999,28.3.1999,30.3.1999-31.3.1999,18.5.1999-19.5.1999,3.10.1999,25.12.1999,26.12.1999=on"))
+			Expect(comparison.DiffModified.Calendars["InitialCalendar1"].Name).To(Equal("InitialCalendar1"))
+			Expect(comparison.DiffModified.Calendars["InitialCalendar1"].Year).To(Equal("1.1.1999,6.1.1999,28.3.1999,30.3.1999-31.3.1999,18.5.1999-19.5.1999,3.10.1999,25.12.1999,26.12.1999=on"))
 
 			// Validate the DiffRemoved section
 			Expect(comparison.DiffRemoved.ComplexEntries).To(HaveLen(1))
-			Expect(comparison.DiffRemoved.ComplexEntries[0].Name).To(Equal("InitialComplex2"))
+			Expect(comparison.DiffRemoved.ComplexEntries["InitialComplex2"].Name).To(Equal("InitialComplex2"))
 			Expect(comparison.DiffRemoved.AdminHosts).To(HaveLen(1))
 			Expect(comparison.DiffRemoved.AdminHosts[0]).To(Equal("InitialAdminHost2"))
 

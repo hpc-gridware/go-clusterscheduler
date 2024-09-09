@@ -2,21 +2,34 @@
 
 Do you want to simulate your Grid Engine or Open Cluster Scheduler?
 
+
+Benefits:
+- Testing new configurations without affecting your production cluster.
+- Testing new versions of Open Cluster Scheduler with your existing configuration.
+- Testing scheduler strategies and policies, JSV scripts, and more.
+- Note, that jobs are simulated as well and never executed. The first
+  parameter of the job defines the runtime.
+
 This is the right place for you.
 
 This repository contains a Dockerfile that builds a container with
 Open Cluster Scheduler (OCS). Using the simulator application, you can
-dump the configuration of your Grid Engine cluster and load it into
-the Open Cluster Scheduler inside this container.
+dump the configuration of your existing Grid Engine cluster and load
+it into the Open Cluster Scheduler inside this container.
 
 This simulator application allows you to do 2 things:
 * Dump the configuration of your Grid Engine cluster into JSON format.
 * Load the JSON configuration into the cluster inside the container.
 
 Note, depending on the version of your Grid Engine cluster, it
-might or might not work. Please report and issues you find to
-get the dump function it stable accross different distributions
-and Grid Engine implementations.
+might or might not work. Resons for configuration dumping might
+not work: Lists which have different separation characters. We
+need to catch all of them. Resons for configuration loading might
+not work: The configuration file is not complete or has new mandatory
+fields. We need to catch all of them.
+
+Please report and issues you find to get the dump function it stable
+accross different distributions and Grid Engine implementations.
 
 ## Build the simulation Go Application
 
