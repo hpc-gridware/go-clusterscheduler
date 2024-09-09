@@ -283,7 +283,7 @@ gid_range                    20000-20100`, "\n")
 		var qc *qconf.CommandLineQConf
 		var err error
 
-		var global qconf.GlobalConfig
+		var global *qconf.GlobalConfig
 
 		BeforeEach(func() {
 			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
@@ -294,7 +294,7 @@ gid_range                    20000-20100`, "\n")
 		})
 
 		AfterEach(func() {
-			qc.ModifyGlobalConfig(global)
+			qc.ModifyGlobalConfig(*global)
 		})
 
 		It("should show and modify the global configuration", func() {
@@ -319,7 +319,7 @@ gid_range                    20000-20100`, "\n")
 			//modifiedConfig.XProjects = []string{"p1", "p2"}
 
 			// Apply the modified configuration
-			err = qc.ModifyGlobalConfig(modifiedConfig)
+			err = qc.ModifyGlobalConfig(*modifiedConfig)
 			Expect(err).To(BeNil())
 
 			// Verify that the global configuration was correctly modified
@@ -340,7 +340,7 @@ gid_range                    20000-20100`, "\n")
 			modifiedConfig.MaxJobs = globalConfig.MaxJobs + 1
 
 			// Apply the modified configuration
-			err = qc.ModifyGlobalConfig(modifiedConfig)
+			err = qc.ModifyGlobalConfig(*modifiedConfig)
 			Expect(err).To(BeNil())
 
 			// Verify that the bool and int fields are modified correctly
@@ -1354,7 +1354,7 @@ gid_range                    20000-20100`, "\n")
 
 	Context("Scheduler Configuration", func() {
 
-		var backup qconf.SchedulerConfig
+		var backup *qconf.SchedulerConfig
 
 		var qc *qconf.CommandLineQConf
 		var err error
@@ -1368,7 +1368,7 @@ gid_range                    20000-20100`, "\n")
 		})
 
 		AfterEach(func() {
-			err = qc.ModifySchedulerConfig(backup)
+			err = qc.ModifySchedulerConfig(*backup)
 			Expect(err).To(BeNil())
 		})
 
@@ -1398,7 +1398,7 @@ gid_range                    20000-20100`, "\n")
 			// Update policy hierarchy
 			schedulerConfig.PolicyHierarchy = "OFS"
 
-			err = qc.ModifySchedulerConfig(schedulerConfig)
+			err = qc.ModifySchedulerConfig(*schedulerConfig)
 			Expect(err).To(BeNil())
 
 			// Show the modified scheduler configuration
@@ -1407,7 +1407,7 @@ gid_range                    20000-20100`, "\n")
 			Expect(modifiedSchedulerConfig).To(Equal(schedulerConfig))
 
 			// revert to original configuration
-			err = qc.ModifySchedulerConfig(backup)
+			err = qc.ModifySchedulerConfig(*backup)
 			Expect(err).To(BeNil())
 
 			revertedConfig, err := qc.ShowSchedulerConfiguration()

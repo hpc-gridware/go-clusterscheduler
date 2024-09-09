@@ -65,55 +65,60 @@ func (c *ClusterConfig) CompareTo(new ClusterConfig) (*ClusterConfigComparison, 
 		comparison.DiffModified.GlobalConfig = new.GlobalConfig
 	}
 
+	// Scheduler config comparison
+	if !reflect.DeepEqual(c.SchedulerConfig, new.SchedulerConfig) {
+		comparison.DiffModified.SchedulerConfig = new.SchedulerConfig
+	}
+
 	// Calendars comparison
-	resultCalendars, err := FindDifferences(c.Calendars, new.Calendars, "Name")
+	resultCalendars, err := FindDifferencesMap(c.Calendars, new.Calendars)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for calendars: %w", err)
 	}
 
-	comparison.DiffAdded.Calendars = append(comparison.DiffAdded.Calendars, resultCalendars.Added...)
-	comparison.DiffModified.Calendars = append(comparison.DiffModified.Calendars, resultCalendars.Modified...)
-	comparison.DiffRemoved.Calendars = append(comparison.DiffRemoved.Calendars, resultCalendars.Removed...)
+	comparison.DiffAdded.Calendars = resultCalendars.Added
+	comparison.DiffModified.Calendars = resultCalendars.Modified
+	comparison.DiffRemoved.Calendars = resultCalendars.Removed
 
 	// Complexes comparison
-	resultComplexes, err := FindDifferences(c.ComplexEntries, new.ComplexEntries, "Name")
+	resultComplexes, err := FindDifferencesMap(c.ComplexEntries, new.ComplexEntries)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for complex entries: %w", err)
 	}
 
-	comparison.DiffAdded.ComplexEntries = append(comparison.DiffAdded.ComplexEntries, resultComplexes.Added...)
-	comparison.DiffModified.ComplexEntries = append(comparison.DiffModified.ComplexEntries, resultComplexes.Modified...)
-	comparison.DiffRemoved.ComplexEntries = append(comparison.DiffRemoved.ComplexEntries, resultComplexes.Removed...)
+	comparison.DiffAdded.ComplexEntries = resultComplexes.Added
+	comparison.DiffModified.ComplexEntries = resultComplexes.Modified
+	comparison.DiffRemoved.ComplexEntries = resultComplexes.Removed
 
 	// CkptInterfaces comparison
-	resultCkptInterfaces, err := FindDifferences(c.CkptInterfaces, new.CkptInterfaces, "Name")
+	resultCkptInterfaces, err := FindDifferencesMap(c.CkptInterfaces, new.CkptInterfaces)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for checkpoint interfaces: %w", err)
 	}
 
-	comparison.DiffAdded.CkptInterfaces = append(comparison.DiffAdded.CkptInterfaces, resultCkptInterfaces.Added...)
-	comparison.DiffModified.CkptInterfaces = append(comparison.DiffModified.CkptInterfaces, resultCkptInterfaces.Modified...)
-	comparison.DiffRemoved.CkptInterfaces = append(comparison.DiffRemoved.CkptInterfaces, resultCkptInterfaces.Removed...)
+	comparison.DiffAdded.CkptInterfaces = resultCkptInterfaces.Added
+	comparison.DiffModified.CkptInterfaces = resultCkptInterfaces.Modified
+	comparison.DiffRemoved.CkptInterfaces = resultCkptInterfaces.Removed
 
 	// HostConfigurations comparison
-	resultHostConfigurations, err := FindDifferences(c.HostConfigurations, new.HostConfigurations, "Name")
+	resultHostConfigurations, err := FindDifferencesMap(c.HostConfigurations, new.HostConfigurations)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for host configurations: %w", err)
 	}
 
-	comparison.DiffAdded.HostConfigurations = append(comparison.DiffAdded.HostConfigurations, resultHostConfigurations.Added...)
-	comparison.DiffModified.HostConfigurations = append(comparison.DiffModified.HostConfigurations, resultHostConfigurations.Modified...)
-	comparison.DiffRemoved.HostConfigurations = append(comparison.DiffRemoved.HostConfigurations, resultHostConfigurations.Removed...)
+	comparison.DiffAdded.HostConfigurations = resultHostConfigurations.Added
+	comparison.DiffModified.HostConfigurations = resultHostConfigurations.Modified
+	comparison.DiffRemoved.HostConfigurations = resultHostConfigurations.Removed
 
 	// ExecHosts comparison
-	resultExecHosts, err := FindDifferences(c.ExecHosts, new.ExecHosts, "Name")
+	resultExecHosts, err := FindDifferencesMap(c.ExecHosts, new.ExecHosts)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for exec hosts: %w", err)
 	}
 
-	comparison.DiffAdded.ExecHosts = append(comparison.DiffAdded.ExecHosts, resultExecHosts.Added...)
-	comparison.DiffModified.ExecHosts = append(comparison.DiffModified.ExecHosts, resultExecHosts.Modified...)
-	comparison.DiffRemoved.ExecHosts = append(comparison.DiffRemoved.ExecHosts, resultExecHosts.Removed...)
+	comparison.DiffAdded.ExecHosts = resultExecHosts.Added
+	comparison.DiffModified.ExecHosts = resultExecHosts.Modified
+	comparison.DiffRemoved.ExecHosts = resultExecHosts.Removed
 
 	// AdminHosts comparison
 	resultAdminHosts, err := FindDifferences(c.AdminHosts, new.AdminHosts, "")
@@ -125,22 +130,24 @@ func (c *ClusterConfig) CompareTo(new ClusterConfig) (*ClusterConfigComparison, 
 	comparison.DiffRemoved.AdminHosts = append(comparison.DiffRemoved.AdminHosts, resultAdminHosts.Removed...)
 
 	// HostGroups comparison
-	resultHostGroups, err := FindDifferences(c.HostGroups, new.HostGroups, "Name")
+	resultHostGroups, err := FindDifferencesMap(c.HostGroups, new.HostGroups)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for host groups: %w", err)
 	}
-	comparison.DiffAdded.HostGroups = append(comparison.DiffAdded.HostGroups, resultHostGroups.Added...)
-	comparison.DiffModified.HostGroups = append(comparison.DiffModified.HostGroups, resultHostGroups.Modified...)
-	comparison.DiffRemoved.HostGroups = append(comparison.DiffRemoved.HostGroups, resultHostGroups.Removed...)
+
+	comparison.DiffAdded.HostGroups = resultHostGroups.Added
+	comparison.DiffModified.HostGroups = resultHostGroups.Modified
+	comparison.DiffRemoved.HostGroups = resultHostGroups.Removed
 
 	// ResourceQuotaSets comparison
-	resultResourceQuotaSets, err := FindDifferences(c.ResourceQuotaSets, new.ResourceQuotaSets, "Name")
+	resultResourceQuotaSets, err := FindDifferencesMap(c.ResourceQuotaSets, new.ResourceQuotaSets)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for resource quota sets: %w", err)
 	}
-	comparison.DiffAdded.ResourceQuotaSets = append(comparison.DiffAdded.ResourceQuotaSets, resultResourceQuotaSets.Added...)
-	comparison.DiffModified.ResourceQuotaSets = append(comparison.DiffModified.ResourceQuotaSets, resultResourceQuotaSets.Modified...)
-	comparison.DiffRemoved.ResourceQuotaSets = append(comparison.DiffRemoved.ResourceQuotaSets, resultResourceQuotaSets.Removed...)
+
+	comparison.DiffAdded.ResourceQuotaSets = resultResourceQuotaSets.Added
+	comparison.DiffModified.ResourceQuotaSets = resultResourceQuotaSets.Modified
+	comparison.DiffRemoved.ResourceQuotaSets = resultResourceQuotaSets.Removed
 
 	// Managers comparison
 	resultManagers, err := FindDifferences(c.Managers, new.Managers, "")
@@ -159,58 +166,54 @@ func (c *ClusterConfig) CompareTo(new ClusterConfig) (*ClusterConfigComparison, 
 	comparison.DiffRemoved.Operators = append(comparison.DiffRemoved.Operators, resultOperators.Removed...)
 
 	// ParallelEnvironments comparison
-	resultParallelEnvironments, err := FindDifferences(c.ParallelEnvironments, new.ParallelEnvironments, "Name")
+	resultParallelEnvironments, err := FindDifferencesMap(c.ParallelEnvironments, new.ParallelEnvironments)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for parallel environments: %w", err)
 	}
-	comparison.DiffAdded.ParallelEnvironments = append(comparison.DiffAdded.ParallelEnvironments, resultParallelEnvironments.Added...)
-	comparison.DiffModified.ParallelEnvironments = append(comparison.DiffModified.ParallelEnvironments, resultParallelEnvironments.Modified...)
-	comparison.DiffRemoved.ParallelEnvironments = append(comparison.DiffRemoved.ParallelEnvironments, resultParallelEnvironments.Removed...)
+
+	comparison.DiffAdded.ParallelEnvironments = resultParallelEnvironments.Added
+	comparison.DiffModified.ParallelEnvironments = resultParallelEnvironments.Modified
+	comparison.DiffRemoved.ParallelEnvironments = resultParallelEnvironments.Removed
 
 	// Projects comparison
-	resultProjects, err := FindDifferences(c.Projects, new.Projects, "Name")
+	resultProjects, err := FindDifferencesMap(c.Projects, new.Projects)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for projects: %w", err)
 	}
-	comparison.DiffAdded.Projects = append(comparison.DiffAdded.Projects, resultProjects.Added...)
-	comparison.DiffModified.Projects = append(comparison.DiffModified.Projects, resultProjects.Modified...)
-	comparison.DiffRemoved.Projects = append(comparison.DiffRemoved.Projects, resultProjects.Removed...)
+
+	comparison.DiffAdded.Projects = resultProjects.Added
+	comparison.DiffModified.Projects = resultProjects.Modified
+	comparison.DiffRemoved.Projects = resultProjects.Removed
 
 	// Users comparison
-	resultUsers, err := FindDifferences(c.Users, new.Users, "Name")
+	resultUsers, err := FindDifferencesMap(c.Users, new.Users)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for users: %w", err)
 	}
-	comparison.DiffAdded.Users = append(comparison.DiffAdded.Users, resultUsers.Added...)
-	comparison.DiffModified.Users = append(comparison.DiffModified.Users, resultUsers.Modified...)
-	comparison.DiffRemoved.Users = append(comparison.DiffRemoved.Users, resultUsers.Removed...)
+
+	comparison.DiffAdded.Users = resultUsers.Added
+	comparison.DiffModified.Users = resultUsers.Modified
+	comparison.DiffRemoved.Users = resultUsers.Removed
 
 	// ClusterQueues comparison
-	resultClusterQueues, err := FindDifferences(c.ClusterQueues, new.ClusterQueues, "Name")
+	resultClusterQueues, err := FindDifferencesMap(c.ClusterQueues, new.ClusterQueues)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for cluster queues: %w", err)
 	}
-	comparison.DiffAdded.ClusterQueues = append(comparison.DiffAdded.ClusterQueues, resultClusterQueues.Added...)
-	comparison.DiffModified.ClusterQueues = append(comparison.DiffModified.ClusterQueues, resultClusterQueues.Modified...)
-	comparison.DiffRemoved.ClusterQueues = append(comparison.DiffRemoved.ClusterQueues, resultClusterQueues.Removed...)
+
+	comparison.DiffAdded.ClusterQueues = resultClusterQueues.Added
+	comparison.DiffModified.ClusterQueues = resultClusterQueues.Modified
+	comparison.DiffRemoved.ClusterQueues = resultClusterQueues.Removed
 
 	// UserSetLists comparison
-	resultUserSetLists, err := FindDifferences(c.UserSetLists, new.UserSetLists, "Name")
+	resultUserSetLists, err := FindDifferencesMap(c.UserSetLists, new.UserSetLists)
 	if err != nil {
 		return nil, fmt.Errorf("error finding differences for user set lists: %w", err)
 	}
-	comparison.DiffAdded.UserSetLists = append(comparison.DiffAdded.UserSetLists, resultUserSetLists.Added...)
-	comparison.DiffModified.UserSetLists = append(comparison.DiffModified.UserSetLists, resultUserSetLists.Modified...)
-	comparison.DiffRemoved.UserSetLists = append(comparison.DiffRemoved.UserSetLists, resultUserSetLists.Removed...)
 
-	// UserConfig comparison (if necessary, adjust accordingly)
-	resultUserConfig, err := FindDifferences(c.UserConfig, new.UserConfig, "Name")
-	if err != nil {
-		return nil, fmt.Errorf("error finding differences for user config: %w", err)
-	}
-	comparison.DiffAdded.UserConfig = append(comparison.DiffAdded.UserConfig, resultUserConfig.Added...)
-	comparison.DiffModified.UserConfig = append(comparison.DiffModified.UserConfig, resultUserConfig.Modified...)
-	comparison.DiffRemoved.UserConfig = append(comparison.DiffRemoved.UserConfig, resultUserConfig.Removed...)
+	comparison.DiffAdded.UserSetLists = resultUserSetLists.Added
+	comparison.DiffModified.UserSetLists = resultUserSetLists.Modified
+	comparison.DiffRemoved.UserSetLists = resultUserSetLists.Removed
 
 	return comparison, nil
 }
@@ -219,6 +222,36 @@ type DiffResult[T any] struct {
 	Added    []T
 	Modified []T
 	Removed  []T
+}
+
+type DiffResultMap[T any] struct {
+	Added    map[string]T
+	Modified map[string]T
+	Removed  map[string]T
+}
+
+func FindDifferencesMap[T any](oldMap, newMap map[string]T) (DiffResultMap[T], error) {
+	added := make(map[string]T)
+	modified := make(map[string]T)
+	removed := make(map[string]T)
+
+	for key, newItem := range newMap {
+		oldItem, ok := oldMap[key]
+		if !ok {
+			added[key] = newItem
+		} else if !reflect.DeepEqual(oldItem, newItem) {
+			modified[key] = newItem
+		}
+	}
+
+	for key, oldItem := range oldMap {
+		_, ok := newMap[key]
+		if !ok {
+			removed[key] = oldItem
+		}
+	}
+
+	return DiffResultMap[T]{Added: added, Modified: modified, Removed: removed}, nil
 }
 
 // FindDifferences finds differences between old and new lists. In case

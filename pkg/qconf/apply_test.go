@@ -29,50 +29,51 @@ var _ = Describe("Apply", func() {
 
 	Context("AddAllElements", func() {
 
+		add := qconf.ClusterConfig{
+			ComplexEntries: map[string]qconf.ComplexEntryConfig{
+				"addedComplex": {
+					Name:        "addedComplex",
+					Shortcut:    "addedc",
+					Type:        "INT",
+					Relop:       "<=",
+					Requestable: "YES",
+					Consumable:  "YES",
+					Default:     "0",
+					Urgency:     1000,
+				},
+			},
+			Calendars: map[string]qconf.CalendarConfig{
+				"InitialCalendar1": {
+					Name: "InitialCalendar1",
+					Year: "1.1.2024,6.1.2024,28.3.2024,30.3.2024-31.3.2024,18.5.2024-19.5.2024,3.10.2024,25.12.2024,26.12.2024=on",
+				},
+			},
+			ClusterQueues: map[string]qconf.ClusterQueueConfig{
+				"InitialQueue1": {
+					Name:      "InitialQueue1",
+					Slots:     1,
+					XProjects: []string{"NewProject1"},
+				},
+			},
+			Projects: map[string]qconf.ProjectConfig{
+				"NewProject1": {
+					Name: "NewProject1",
+					ACL:  []string{"UserList1"},
+				},
+			},
+			UserSetLists: map[string]qconf.UserSetListConfig{
+				"UserList1": {
+					Name:    "UserList1",
+					Type:    "ACL",
+					Entries: []string{"root", "peter"},
+				},
+			},
+
+			// Initialize other fields as necessary
+		}
+
 		It("should add all elements in correct order", func() {
 			// Setup initial and new ClusterConfig instances
-			add := qconf.ClusterConfig{
-				ComplexEntries: []qconf.ComplexEntryConfig{
-					{
-						Name:        "addedComplex",
-						Shortcut:    "addedc",
-						Type:        "INT",
-						Relop:       "<=",
-						Requestable: "YES",
-						Consumable:  "YES",
-						Default:     "0",
-						Urgency:     1000,
-					},
-				},
-				Calendars: []qconf.CalendarConfig{
-					{
-						Name: "InitialCalendar1",
-						Year: "1.1.2024,6.1.2024,28.3.2024,30.3.2024-31.3.2024,18.5.2024-19.5.2024,3.10.2024,25.12.2024,26.12.2024=on",
-					},
-				},
-				ClusterQueues: []qconf.ClusterQueueConfig{
-					{
-						Name:      "InitialQueue1",
-						Slots:     1,
-						XProjects: []string{"NewProject1"},
-					},
-				},
-				Projects: []qconf.ProjectConfig{
-					{
-						Name: "NewProject1",
-						ACL:  []string{"UserList1"},
-					},
-				},
-				UserSetLists: []qconf.UserSetListConfig{
-					{
-						Name:    "UserList1",
-						Type:    "ACL",
-						Entries: []string{"root", "peter"},
-					},
-				},
-
-				// Initialize other fields as necessary
-			}
 
 			qc, err := qconf.NewCommandLineQConf(
 				qconf.CommandLineQConfConfig{
@@ -97,6 +98,51 @@ var _ = Describe("Apply", func() {
 			deleted, err = qconf.DeleteAllEnries(qc, added, true)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(deleted).To(Equal(add))
+		})
+
+	})
+
+	Context("Modify all entries", func() {
+
+		var qc *qconf.CommandLineQConf
+		var err error
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{
+					Executable: "true",
+				})
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+
+		})
+
+		It("should modify the global configuration", func() {
+			modified, err := qconf.ModifyAllEntries(qc, qconf.ClusterConfig{
+				GlobalConfig: &qconf.GlobalConfig{
+					MaxJobs: 1000,
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(modified.GlobalConfig).ToNot(BeNil())
+			Expect(modified.GlobalConfig.MaxJobs).To(Equal(1000))
+			// scheduler configuration should not be modified
+			Expect(modified.SchedulerConfig).To(BeNil())
+		})
+
+		It("should modify the scheduler configuration", func() {
+			modified, err := qconf.ModifyAllEntries(qc, qconf.ClusterConfig{
+				SchedulerConfig: &qconf.SchedulerConfig{
+					Params: []string{"PROFILE=1", "MONITOR=1"},
+				},
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(modified.SchedulerConfig).ToNot(BeNil())
+			Expect(modified.SchedulerConfig.Params).NotTo(BeNil())
+			// global configuration should not be modified
+			Expect(modified.GlobalConfig).To(BeNil())
 		})
 
 	})

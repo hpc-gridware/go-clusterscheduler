@@ -59,10 +59,9 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
-	env := cmd.Environ()
 	// Set the SGE_SINGLE_LINE environment variable to true to ensure that
 	// qconf returns a single line of output for each entry.
-	cmd.Env = append(env, "SGE_SINGLE_LINE=true")
+	cmd.Env = append(cmd.Environ(), "SGE_SINGLE_LINE=true")
 	err := cmd.Run()
 	if c.config.DelayAfter != 0 {
 		<-time.After(c.config.DelayAfter)
@@ -83,14 +82,14 @@ func GetEnvInt(env string) (int, error) {
 	return strconv.Atoi(v)
 }
 
-func GetEnvironment() (ClusterEnvironment, error) {
+func GetEnvironment() (*ClusterEnvironment, error) {
 	clusterEnvironment := ClusterEnvironment{}
 	clusterEnvironment.Name = os.Getenv("SGE_CLUSTER_NAME")
 	clusterEnvironment.Root = os.Getenv("SGE_ROOT")
 	clusterEnvironment.Cell = os.Getenv("SGE_CELL")
 	clusterEnvironment.QmasterPort, _ = GetEnvInt("SGE_QMASTER_PORT")
 	clusterEnvironment.ExecdPort, _ = GetEnvInt("SGE_EXECD_PORT")
-	return clusterEnvironment, nil
+	return &clusterEnvironment, nil
 }
 
 func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
@@ -108,28 +107,36 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 		return cc, fmt.Errorf("failed to read global config: %v", err)
 	}
 
+	cc.SchedulerConfig, err = c.ShowSchedulerConfiguration()
+	if err != nil {
+		return cc, fmt.Errorf("failed to read scheduler config: %v", err)
+	}
+
 	hostConfigs, err := c.ShowHostConfigurations()
 	if err != nil {
 		return cc, fmt.Errorf("failed to read host configs: %v", err)
 	}
+	cc.HostConfigurations = make(map[string]HostConfiguration)
 	for _, host := range hostConfigs {
 		hc, err := c.ShowHostConfiguration(host)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read host config: %v", err)
 		}
-		cc.HostConfigurations = append(cc.HostConfigurations, hc)
+
+		cc.HostConfigurations[host] = hc
 	}
 
 	projectNames, err := c.ShowProjects()
 	if err != nil {
 		return cc, fmt.Errorf("failed to read projects: %v", err)
 	}
+	cc.Projects = make(map[string]ProjectConfig)
 	for _, projectName := range projectNames {
 		pc, err := c.ShowProject(projectName)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read project: %v", err)
 		}
-		cc.Projects = append(cc.Projects, pc)
+		cc.Projects[projectName] = pc
 	}
 
 	// Read Calendars
@@ -137,18 +144,23 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read calendars: %v", err)
 	}
+	cc.Calendars = make(map[string]CalendarConfig)
 	for _, calendar := range calendars {
 		ccal, err := c.ShowCalendar(calendar)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read calendar: %v", err)
 		}
-		cc.Calendars = append(cc.Calendars, ccal)
+		cc.Calendars[calendar] = ccal
 	}
 
 	// Read Complex Entries
-	cc.ComplexEntries, err = c.ShowAllComplexes()
+	complexes, err := c.ShowAllComplexes()
 	if err != nil {
 		return cc, fmt.Errorf("failed to read complex entries: %v", err)
+	}
+	cc.ComplexEntries = make(map[string]ComplexEntryConfig)
+	for _, complex := range complexes {
+		cc.ComplexEntries[complex.Name] = complex
 	}
 
 	// Read Ckpt Interfaces
@@ -156,12 +168,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read ckpt interfaces: %v", err)
 	}
+	cc.CkptInterfaces = make(map[string]CkptInterfaceConfig, 0)
 	for _, ckptInterface := range ckptInterfaces {
 		ci, err := c.ShowCkptInterface(ckptInterface)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read ckpt interface: %v", err)
 		}
-		cc.CkptInterfaces = append(cc.CkptInterfaces, ci)
+		cc.CkptInterfaces[ckptInterface] = ci
 	}
 
 	// Read Exec Hosts
@@ -169,12 +182,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read exec hosts: %v", err)
 	}
+	cc.ExecHosts = make(map[string]HostExecConfig, 0)
 	for _, execHost := range execHosts {
 		eh, err := c.ShowExecHost(execHost)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read exec host: %v", err)
 		}
-		cc.ExecHosts = append(cc.ExecHosts, eh)
+		cc.ExecHosts[execHost] = eh
 	}
 
 	// Read Admin Hosts
@@ -189,12 +203,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read host groups: %v", err)
 	}
+	cc.HostGroups = make(map[string]HostGroupConfig, 0)
 	for _, hostGroup := range hostGroups {
 		hg, err := c.ShowHostGroup(hostGroup)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read host group: %v", err)
 		}
-		cc.HostGroups = append(cc.HostGroups, hg)
+		cc.HostGroups[hostGroup] = hg
 	}
 
 	// Read Resource Quota Sets
@@ -202,12 +217,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read resource quota sets: %v", err)
 	}
+	cc.ResourceQuotaSets = make(map[string]ResourceQuotaSetConfig, 0)
 	for _, resourceQuotaSet := range resourceQuotaSets {
 		rqs, err := c.ShowResourceQuotaSet(resourceQuotaSet)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read resource quota set: %v", err)
 		}
-		cc.ResourceQuotaSets = append(cc.ResourceQuotaSets, rqs)
+		cc.ResourceQuotaSets[resourceQuotaSet] = rqs
 	}
 
 	// Read Managers
@@ -229,12 +245,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read parallel environments: %v", err)
 	}
+	cc.ParallelEnvironments = make(map[string]ParallelEnvironmentConfig, 0)
 	for _, parallelEnvironment := range parallelEnvironments {
 		pe, err := c.ShowParallelEnvironment(parallelEnvironment)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read parallel environment: %v", err)
 		}
-		cc.ParallelEnvironments = append(cc.ParallelEnvironments, pe)
+		cc.ParallelEnvironments[parallelEnvironment] = pe
 	}
 
 	// Read Users
@@ -242,12 +259,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read users: %v", err)
 	}
+	cc.Users = make(map[string]UserConfig, 0)
 	for _, user := range users {
 		u, err := c.ShowUser(user)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read user: %v", err)
 		}
-		cc.Users = append(cc.Users, u)
+		cc.Users[user] = u
 	}
 
 	// Read Cluster Queues
@@ -255,12 +273,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read cluster queues: %v", err)
 	}
+	cc.ClusterQueues = make(map[string]ClusterQueueConfig, 0)
 	for _, clusterQueue := range clusterQueues {
 		cq, err := c.ShowClusterQueue(clusterQueue)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read cluster queue: %v", err)
 		}
-		cc.ClusterQueues = append(cc.ClusterQueues, cq)
+		cc.ClusterQueues[clusterQueue] = cq
 	}
 
 	// Read User Set Lists
@@ -268,12 +287,13 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read user set lists: %v", err)
 	}
+	cc.UserSetLists = make(map[string]UserSetListConfig, 0)
 	for _, userSetList := range userSetLists {
 		usl, err := c.ShowUserSetList(userSetList)
 		if err != nil {
 			return cc, fmt.Errorf("failed to read user set list: %v", err)
 		}
-		cc.UserSetLists = append(cc.UserSetLists, usl)
+		cc.UserSetLists[userSetList] = usl
 	}
 
 	return cc, nil
@@ -731,10 +751,10 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 }
 
 // ShowGlobalConfiguration shows the global configuration.
-func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
+func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	out, err := c.RunCommand("-sconf", "global")
 	if err != nil {
-		return GlobalConfig{}, err
+		return nil, err
 	}
 	lines := strings.Split(out, "\n")
 	cfg := GlobalConfig{}
@@ -846,7 +866,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (GlobalConfig, error) {
 			cfg.JsvAllowedMod = ParseCommaSeparatedMultiLineValues(lines, i)
 		}
 	}
-	return cfg, nil
+	return &cfg, nil
 }
 
 // ShowHostConfigurations shows all host configurations.
@@ -2949,10 +2969,10 @@ func (c *CommandLineQConf) DeleteAttribute(objName, attrName, val, objIDList str
 }
 
 // ShowSchedulerConfiguration shows the scheduler configuration.
-func (c *CommandLineQConf) ShowSchedulerConfiguration() (SchedulerConfig, error) {
+func (c *CommandLineQConf) ShowSchedulerConfiguration() (*SchedulerConfig, error) {
 	out, err := c.RunCommand("-ssconf")
 	if err != nil {
-		return SchedulerConfig{}, err
+		return nil, err
 	}
 	lines := strings.Split(out, "\n")
 	cfg := SchedulerConfig{}
@@ -3036,7 +3056,7 @@ func (c *CommandLineQConf) ShowSchedulerConfiguration() (SchedulerConfig, error)
 			cfg.DefaultDuration = value
 		}
 	}
-	return cfg, nil
+	return &cfg, nil
 }
 
 // ModifySchedulerConfig modifies the scheduler configuration.
