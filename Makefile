@@ -41,6 +41,12 @@ simulate:
 	mkdir -p ./installation
 	docker run --rm -it -h master --privileged --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
 
+.PHONY: simulate
+simulate:
+	@echo "Running the container in simulation mode using cluster.json"
+	mkdir -p ./installation
+	docker run --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
+
 .PHONY: clean
 clean:
 	@echo "Removing the container..."
