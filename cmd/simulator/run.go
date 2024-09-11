@@ -74,33 +74,27 @@ func run(cmd *cobra.Command, args []string) {
 	addGlobalConfigToConfig(&config)
 
 	var allhosts qconf.HostGroupConfig
-	for _, hg := range config.HostGroups {
-		if hg.Name == "@allhosts" {
-			allhosts = hg
-			break
-		}
-	}
+
+	allhosts = config.HostGroups["@allhosts"]
 	if allhosts.Name == "" {
 		allhosts.Name = "@allhosts"
 	}
 
 	// Go through each host and add it to the cluster
-	//
-	for key := range config.ExecHosts {
+	for k, v := range config.ExecHosts {
 		// add "master" host (here in the container) to be load
 		// report host for the simulated host
-		if config.ExecHosts[key].ComplexValues == nil {
-			//
+		if v.ComplexValues == nil {
+			v.ComplexValues = make(map[string]string)
 		}
-		config.ExecHosts[key].ComplexValues["load_report_host"] = "master"
+		v.ComplexValues["load_report_host"] = "master"
+		config.ExecHosts[k] = v
 		// add to @allhosts
-		allhosts.Hosts = append(allhosts.Hosts, config.ExecHosts[key].Name)
+		allhosts.Hosts = append(allhosts.Hosts, v.Name)
 	}
 
 	// add @allhosts to the list of host groups (TODO should be map)
-	if _, ok := config.HostGroups["@allhosts"]; !ok {
-		config.HostGroups["@allhosts"] = allhosts
-	}
+	config.HostGroups["@allhosts"] = allhosts
 
 	// append "master" host to the list of hosts as it severs
 	// the fake load for all simulated hosts and is not in the
