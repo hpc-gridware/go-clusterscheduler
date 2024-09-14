@@ -17,16 +17,26 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package qacct_test
+package main
 
 import (
-	"testing"
+	"log"
+	"net/http"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/gorilla/mux"
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
 )
 
-func TestQacct(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Qacct Suite")
+func main() {
+	qc, err := qconf.NewCommandLineQConf(
+		qconf.CommandLineQConfConfig{Executable: "qconf", DryRun: false})
+	if err != nil {
+		log.Fatalf("Error creating qconf: %v", err)
+	}
+
+	router := mux.NewRouter()
+	router.Handle("/api/v0/command", NewAdapter(qc)).Methods("POST")
+
+	log.Println("Starting server on port 8282")
+	http.ListenAndServe(":8282", router)
 }

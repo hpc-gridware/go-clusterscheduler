@@ -29,23 +29,36 @@ build:
 	@echo "Building the Open Cluster Scheduler image..."
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
 
+# Running apptainers in containers requires more permissions. You can drop
+# the --privileged flag and the --cap-add SYS_ADMIN flag if you don't need
+# to run apptainers in containers.
 .PHONY: run
 run: build
 	@echo "Running the container..."
 	mkdir -p ./installation
 	docker run --rm -it -h master --privileged -v /dev/fuse:/dev/fuse --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
+# Running apptainers in containers requires more permissions. You can drop
+# the --privileged flag and the --cap-add SYS_ADMIN flag if you don't need
+# to run apptainers in containers.
 .PHONY: simulate
 simulate:
 	@echo "Running the container in simulation mode using cluster.json"
 	mkdir -p ./installation
 	docker run --rm -it -h master --privileged --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
 
-.PHONY: simulate
-simulate:
-	@echo "Running the container in simulation mode using cluster.json"
+#.PHONY: simulate
+#simulate:
+#	@echo "Running the container in simulation mode using cluster.json"
+#	mkdir -p ./installation
+#	docker run --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
+
+.PHONY: adapter
+adapter:
+	@echo "Running the adapter on port 8282...POST to http://localhost:8282/api/v0/command"
+	@echo "Example: curl -X POST http://localhost:8282/api/v0/command -d '{\"method\": \"ShowExecHosts\"}'"
 	mkdir -p ./installation
-	docker run --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
+	docker run --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/pkg/adapter && go build . && ./adapter"
 
 .PHONY: clean
 clean:
