@@ -1423,6 +1423,108 @@ gid_range                    20000-20100`, "\n")
 
 	})
 
+	Context("Share Tree Modification", func() {
+
+		var qc *qconf.CommandLineQConf
+		var err error
+
+		var originalShareTree string
+
+		BeforeEach(func() {
+			qc, err = qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+			originalShareTree, _ = qc.ShowShareTree()
+
+			// Add projects P1 and P2
+			qc.AddProject(qconf.ProjectConfig{Name: "P10"})
+			qc.AddProject(qconf.ProjectConfig{Name: "P20"})
+		})
+
+		AfterEach(func() {
+			err = qc.ModifyShareTree(originalShareTree)
+			Expect(err).To(BeNil())
+			err = qc.DeleteProject([]string{"P10", "P20"})
+			Expect(err).To(BeNil())
+		})
+
+		It("should modify the share tree", func() {
+			shareTreeConfig := `id=0
+name=Root
+type=0
+shares=1
+childnodes=1,2,3
+id=1
+name=default
+type=0
+shares=10
+childnodes=NONE
+id=2
+name=P20
+type=1
+shares=11
+childnodes=NONE
+id=3
+name=P10
+type=1
+shares=11
+childnodes=NONE
+`
+			err = qc.ModifyShareTree(shareTreeConfig)
+			Expect(err).To(BeNil())
+
+			modifiedShareTree, err := qc.ShowShareTree()
+			Expect(err).To(BeNil())
+			Expect(modifiedShareTree).To(Equal(shareTreeConfig))
+
+			nodes, err := qc.ShowShareTreeNodes(nil)
+			Expect(err).To(BeNil())
+			Expect(nodes).To(ContainElement(
+				qconf.ShareTreeNode{
+					Node: "/P10", Share: 11}))
+
+			err = qc.DeleteShareTreeNodes([]string{"P10"})
+			Expect(err).To(BeNil())
+
+			nodes, err = qc.ShowShareTreeNodes(nil)
+			Expect(err).To(BeNil())
+			Expect(nodes).NotTo(ContainElement(
+				qconf.ShareTreeNode{
+					Node: "/P10", Share: 11}))
+
+			err = qc.AddShareTreeNode(
+				qconf.ShareTreeNode{
+					Node:  "/P10",
+					Share: 11,
+				})
+			Expect(err).To(BeNil())
+
+			err = qc.ModifyShareTreeNodes(
+				[]qconf.ShareTreeNode{
+					{Node: "/P10", Share: 12},
+				})
+			Expect(err).To(BeNil())
+
+			nodes, err = qc.ShowShareTreeNodes(nil)
+			Expect(err).To(BeNil())
+			Expect(nodes).To(ContainElement(
+				qconf.ShareTreeNode{
+					Node: "/P10", Share: 12}))
+
+			err = qc.DeleteShareTree()
+			Expect(err).To(BeNil())
+
+			_, err = qc.ShowShareTree()
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should clear the share tree usage", func() {
+			err = qc.ClearShareTreeUsage()
+			Expect(err).To(BeNil())
+		})
+
+	})
+
 	/*
 		Context("Cluster Control Operations", func() {
 

@@ -322,3 +322,9 @@ type SchedulerConfig struct {
 	MaxReservation              int      `json:"max_reservation"`
 	DefaultDuration             string   `json:"default_duration"`
 }
+
+// ShareTreeNodeShare represents a node in the share tree with its share value
+type ShareTreeNode struct {
+	Node  string
+	Share int
+}
