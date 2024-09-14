@@ -106,13 +106,14 @@ type QConf interface {
 	DeleteSubmitHost(hostnames []string) error
 	ShowSubmitHosts() ([]string, error)
 
-	/* TODO: implement
-	AddShareTreeNode(nodeShareList string) (string, error)
-	DeleteShareTreeNode(nodeList string) (string, error)
-	ShowShareTreeNodes(nodeList string) ([]string, error)
+	ModifyShareTreeNodes(nodeShareList []ShareTreeNode) error
+	DeleteShareTreeNodes(nodeList []string) error
+	AddShareTreeNode(node ShareTreeNode) error
+	ShowShareTreeNodes(nodeList []string) ([]ShareTreeNode, error)
 	ShowShareTree() (string, error)
-	ModifyShareTree(shareTreeConfig ShareTreeConfig) (string, error)
-	*/
+	ModifyShareTree(shareTreeConfig string) error
+	DeleteShareTree() error
+	ClearShareTreeUsage() error
 
 	AddUserSetList(listnameList string, u UserSetListConfig) error
 	AddUserToUserSetList(userList, listnameList string) error
@@ -128,7 +129,6 @@ type QConf interface {
 	ShowUsers() ([]string, error)
 	ModifyUser(userName string, u UserConfig) error
 
-	ClearUsage() error
 	CleanQueue(destinID []string) error
 	ShutdownExecDaemons(hosts []string) error
 	ShutdownMasterDaemon() error

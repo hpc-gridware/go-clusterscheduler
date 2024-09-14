@@ -2242,7 +2242,7 @@ func (c *CommandLineQConf) ShowUserSetLists() ([]string, error) {
 }
 
 // ClearUsage clears all user/project sharetree usage.
-func (c *CommandLineQConf) ClearUsage() error {
+func (c *CommandLineQConf) ClearShareTreeUsage() error {
 	_, err := c.RunCommand("-clearusage")
 	return err
 }
@@ -3151,4 +3151,138 @@ func (c *CommandLineQConf) ModifySchedulerConfig(cfg SchedulerConfig) error {
 
 	_, err = c.RunCommand("-Msconf", file.Name())
 	return err
+}
+
+// ShowShareTree retrieves the entire share tree structure
+func (c *CommandLineQConf) ShowShareTree() (string, error) {
+	stree, err := c.RunCommand("-sstree")
+	if err != nil {
+		if strings.Contains(err.Error(), "no sharetree") {
+			return "", fmt.Errorf("no sharetree defined")
+		}
+		return "", err
+	}
+	return stree, nil
+}
+
+// ModifyShareTreeNodes modifies the share of specified nodes in the share tree
+func (c *CommandLineQConf) ModifyShareTreeNodes(nodeShareList []ShareTreeNode) error {
+	var nodeShares []string
+	for _, node := range nodeShareList {
+		nodeShares = append(nodeShares, fmt.Sprintf("%s=%d", node.Node, node.Share))
+	}
+	_, err := c.RunCommand("-mstnode", strings.Join(nodeShares, ","))
+	return err
+}
+
+// DeleteShareTreeNodes removes specified nodes from the share tree
+func (c *CommandLineQConf) DeleteShareTreeNodes(nodeList []string) error {
+	_, err := c.RunCommand(append([]string{"-dstnode"}, nodeList...)...)
+	return err
+}
+
+// AddShareTreeNode adds a new node to the share tree. The node must be a full
+// path, like /P1.
+func (c *CommandLineQConf) AddShareTreeNode(node ShareTreeNode) error {
+	_, err := c.RunCommand("-astnode", fmt.Sprintf("%s=%d", node.Node, node.Share))
+	return err
+}
+
+// ShowShareTreeNodes retrieves information about specified nodes or all
+// nodes in the share tree. The node contains the full path, like /P1.
+func (c *CommandLineQConf) ShowShareTreeNodes(nodeList []string) ([]ShareTreeNode, error) {
+	// if nodeList is empty, show all nodes
+	args := []string{"-sstnode"}
+	if len(nodeList) == 0 {
+		args = append(args, "/")
+	} else {
+		args = append(args, nodeList...)
+	}
+	output, err := c.RunCommand(args...)
+	if err != nil {
+		return nil, err
+	}
+	return parseShareTreeNodes(output), nil
+}
+
+// ModifyShareTree modifies the entire share tree configuration. If the
+// shareTreeConfig is empty, the share tree is deleted.
+// A share tree has typically the following format:
+// id=0
+// name=Root
+// type=0
+// shares=1
+// childnodes=1,2,3
+// where childnodes is a comma separated list of child nodes.
+func (c *CommandLineQConf) ModifyShareTree(shareTreeConfig string) error {
+	// if shareTreeConfig is empty, delete the share tree
+	if shareTreeConfig == "" {
+		// qconf -dstree
+		_, err := c.RunCommand("-dstree")
+		if err != nil {
+			// Ignore "sharetree does not exist"
+			if !strings.Contains(err.Error(), "sharetree does not exist") {
+				return err
+			}
+		}
+		return nil
+	}
+
+	file, err := createTempDirWithFileName("sharetree")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(filepath.Dir(file.Name()))
+
+	_, err = file.WriteString(shareTreeConfig)
+	if err != nil {
+		return err
+	}
+	file.Close()
+
+	_, err = c.RunCommand("-Mstree", file.Name())
+	return err
+}
+
+// DeleteShareTree deletes the share tree
+func (c *CommandLineQConf) DeleteShareTree() error {
+	// check if share tree exists
+	_, err := c.ShowShareTree()
+	if err != nil {
+		if !strings.Contains(err.Error(), "no sharetree") {
+			return err
+		}
+		return nil
+	}
+	_, err = c.RunCommand("-dstree")
+	return err
+}
+
+// Helper function to parse the output of ShowShareTreeNodes,
+// like:
+// /=1
+// /default=10
+// /P2=11
+// /P1=11
+func parseShareTreeNodes(output string) []ShareTreeNode {
+	lines := strings.Split(output, "\n")
+	var nodes []ShareTreeNode
+	for _, line := range lines {
+		parts := strings.Split(line, "=")
+		if len(parts) >= 2 {
+			share, _ := strconv.Atoi(parts[1])
+			// convert node path to node name, like /P1 to P1
+			// always after the last /
+			/*node := parts[0]
+			slashIndex := strings.LastIndex(node, "/")
+			if slashIndex != -1 && slashIndex < len(node)-1 {
+				node = node[slashIndex+1:]
+			}*/
+			nodes = append(nodes, ShareTreeNode{
+				Node:  parts[0],
+				Share: share,
+			})
+		}
+	}
+	return nodes
 }
