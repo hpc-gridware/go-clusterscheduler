@@ -17,7 +17,7 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package main
+package adapter
 
 import (
 	"context"
@@ -70,7 +70,7 @@ type CommandRequest struct {
 	Args       []json.RawMessage `json:"args"`
 }
 
-// NewAdapter creates an http.Handler that for any Go interface.
+// NewAdapter creates an http.Handler for any Go interface.
 // The method name and arguments are expected in the JSON request body.
 // The response is the return value of the method also in JSON format.
 // The arguments and the return values must have a JSON serializable format.
@@ -120,7 +120,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.InfoContext(ctx, "request", req.MethodName)
+	logger.InfoContext(ctx, "request", "method", req.MethodName)
 
 	method := reflect.ValueOf(a.instance).MethodByName(req.MethodName)
 	if !method.IsValid() {
@@ -158,7 +158,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(results) > 1 {
 		if err, ok := results[1].Interface().(error); ok && err != nil {
 			logErr := fmt.Errorf("method call %s failed: %w", req.MethodName,
-				results[0].Interface().(error))
+				results[1].Interface().(error))
 			a.fail(ctx, w, r, http.StatusInternalServerError, logErr.Error(), err)
 			return
 		}
@@ -166,7 +166,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if len(results) > 0 {
 		// check if the result is an error
-		if _, ok := results[0].Interface().(error); ok {
+		if err, ok := results[0].Interface().(error); ok && err != nil {
 			logErr := fmt.Errorf("method call %s failed: %w", req.MethodName,
 				results[0].Interface().(error))
 			a.fail(ctx, w, r, http.StatusInternalServerError, logErr.Error(),
@@ -174,6 +174,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// if there is no error, encode the result
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(results[0].Interface()); err != nil {
 			logErr := fmt.Errorf("failed to encode response for method %s: %w",
@@ -183,7 +184,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	logger.InfoContext(ctx, "request successfully processed", req.MethodName)
+	logger.InfoContext(ctx, "request successfully processed", "method", req.MethodName)
 }
 
 func (a *adapter) fail(ctx context.Context, w http.ResponseWriter, r *http.Request, status int, message string, err error) {
@@ -191,7 +192,7 @@ func (a *adapter) fail(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	response := map[string]string{"error": message}
 	logger.InfoContext(ctx, message, "URL", r.URL.Path)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.ErrorContext(ctx, "Failed to encode error response", err)
+		logger.ErrorContext(ctx, "Failed to encode error response", "error", err)
 	}
 	// write the error to the response body
 	w.Write([]byte(message))

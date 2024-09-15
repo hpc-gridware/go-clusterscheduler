@@ -56,9 +56,9 @@ simulate:
 .PHONY: adapter
 adapter:
 	@echo "Running the adapter on port 8282...POST to http://localhost:8282/api/v0/command"
-	@echo "Example: curl -X POST http://localhost:8282/api/v0/command -d '{\"method\": \"ShowExecHosts\"}'"
+	@echo "Example: curl -X POST http://localhost:8282/api/v0/command -d '{\"method\": \"ShowSchedulerConfiguration\"}'"
 	mkdir -p ./installation
-	docker run --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/pkg/adapter && go build . && ./adapter"
+	docker run --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter"
 
 .PHONY: clean
 clean:
