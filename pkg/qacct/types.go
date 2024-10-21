@@ -126,7 +126,7 @@ type JobDetail struct {
 	RuNiVCSw          int64   `json:"ru_nivcsw"`
 	WallClock         float64 `json:"wallclock"`
 	CPU               float64 `json:"cpu"`
-	Memory            int64   `json:"mem"`
+	Memory            float64 `json:"mem"`
 	IO                float64 `json:"io"`
 	IOWait            float64 `json:"iow"`
 	MaxVMem           int64   `json:"maxvmem"`

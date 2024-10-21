@@ -182,17 +182,20 @@ type ResourceQuotaSetConfig struct {
 
 // ParallelEnvironmentConfig represents the configuration for a parallel environment.
 type ParallelEnvironmentConfig struct {
-	Name              string   `json:"pe_name"`
-	Slots             int      `json:"slots"`
-	UserLists         []string `json:"user_lists"`
-	XUserLists        []string `json:"xuser_lists"`
-	StartProcArgs     string   `json:"start_proc_args"`
-	StopProcArgs      string   `json:"stop_proc_args"`
-	AllocationRule    string   `json:"allocation_rule"`
-	ControlSlaves     string   `json:"control_slaves"`
-	JobIsFirstTask    bool     `json:"job_is_first_task"`
-	UrgencySlots      string   `json:"urgency_slots"`
-	AccountingSummary bool     `json:"accounting_summary"`
+	Name                           string   `json:"pe_name"`
+	Slots                          int      `json:"slots"`
+	UserLists                      []string `json:"user_lists"`
+	XUserLists                     []string `json:"xuser_lists"`
+	StartProcArgs                  string   `json:"start_proc_args"`
+	StopProcArgs                   string   `json:"stop_proc_args"`
+	AllocationRule                 string   `json:"allocation_rule"`
+	ControlSlaves                  string   `json:"control_slaves"`
+	JobIsFirstTask                 bool     `json:"job_is_first_task"`
+	UrgencySlots                   string   `json:"urgency_slots"`
+	AccountingSummary              bool     `json:"accounting_summary"`
+	IgnoreSlaveReqestsOnMasterhost bool     `json:"ign_sreq_on_mhost"`
+	MasterForksSlaves              bool     `json:"master_forks_slaves"`
+	DaemonForksSlaves              bool     `json:"daemon_forks_slaves"`
 }
 
 // ProjectConfig represents the configuration for a project.

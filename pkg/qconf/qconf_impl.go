@@ -1385,6 +1385,18 @@ func writePE(file *os.File, pe ParallelEnvironmentConfig) error {
 	if err != nil {
 		return err
 	}
+	_, err = file.WriteString(fmt.Sprintf("ign_sreq_on_mhost  %s\n", MakeBoolCfg(pe.IgnoreSlaveReqestsOnMasterhost)))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("master_forks_slaves  %s\n", MakeBoolCfg(pe.MasterForksSlaves)))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("daemon_forks_slaves  %s\n", MakeBoolCfg(pe.DaemonForksSlaves)))
+	if err != nil {
+		return err
+	}
 	file.Close()
 	return nil
 }
@@ -1431,6 +1443,12 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 			cfg.UrgencySlots = fields[1]
 		case "accounting_summary":
 			cfg.AccountingSummary, _ = strconv.ParseBool(fields[1])
+		case "ign_sreq_on_mhost":
+			cfg.IgnoreSlaveReqestsOnMasterhost, _ = strconv.ParseBool(fields[1])
+		case "master_forks_slaves":
+			cfg.MasterForksSlaves, _ = strconv.ParseBool(fields[1])
+		case "daemon_forks_slaves":
+			cfg.DaemonForksSlaves, _ = strconv.ParseBool(fields[1])
 		}
 	}
 	return cfg, nil

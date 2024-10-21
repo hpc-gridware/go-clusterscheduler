@@ -22,6 +22,9 @@ package qstat
 // QStat defines the methods for interacting with the Open Cluster Scheduler
 // to retrieve job and queue status information using the qstat command.
 type QStat interface {
+	// NativeSpecification calls qstat with the native specification of args
+	// and returns the raw output
+	NativeSpecification(args []string) (string, error)
 	// qstat -ext
 	ShowAdditionalAttributes() ([]ExtendedJobInfo, error)
 	// qstat -explain <reason> a|c|A|E

@@ -27,6 +27,9 @@ package qacct
 type QAcct interface {
 	WithAlternativeAccountingFile(accountingFile string) error
 	WithDefaultAccountingFile()
+	// NativeSpecification calls qacct with the givene command and args
+	// and returns the raw unparsed output.
+	NativeSpecification(args []string) (string, error)
 	ListAdvanceReservations(arID string) ([]ReservationUsage, error)
 	JobsAccountedTo(accountString string) (Usage, error)
 	JobsStartedAfter(beginTime string) (Usage, error)
