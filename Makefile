@@ -21,7 +21,7 @@
 # This Makefile is used for development and testing purposes only.
 
 IMAGE_NAME = $(shell basename $(CURDIR))
-IMAGE_TAG = latest
+IMAGE_TAG = V901_TAG
 CONTAINER_NAME = $(IMAGE_NAME)
 
 .PHONY: build
@@ -32,11 +32,17 @@ build:
 # Running apptainers in containers requires more permissions. You can drop
 # the --privileged flag and the --cap-add SYS_ADMIN flag if you don't need
 # to run apptainers in containers.
+.PHONY: run-privileged
+run-privileged: build
+	@echo "Running the container..."
+	mkdir -p ./installation
+	docker run -p 7070:7070 --rm -it -h master --privileged -v /dev/fuse:/dev/fuse --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
+
 .PHONY: run
 run: build
 	@echo "Running the container..."
 	mkdir -p ./installation
-	docker run --rm -it -h master --privileged -v /dev/fuse:/dev/fuse --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
+	docker run -p 7070:7070 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
 # Running apptainers in containers requires more permissions. You can drop
 # the --privileged flag and the --cap-add SYS_ADMIN flag if you don't need

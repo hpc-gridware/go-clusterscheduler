@@ -19,7 +19,7 @@
 #___INFO__MARK_END_NEW__
 
 #FROM hpcgridware/clusterscheduler-latest-ubuntu2204:latest
-FROM hpcgridware/clusterscheduler-latest-ubuntu2204:c245a267a
+FROM hpcgridware/clusterscheduler-latest-ubuntu2204:V901_TAG
 
 RUN mkdir -p /opt/helpers
 
