@@ -17,47 +17,16 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package main
+package qacct_test
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"time"
+	"testing"
 
-	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
-	"github.com/spf13/cobra"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func dump(cmd *cobra.Command, args []string) {
-	cs, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
-		Executable: "qconf",
-		// be friendly and prevent too many requests on the qmaster
-		DelayAfter: time.Millisecond * 50,
-	})
-	FatalOnError(err)
-
-	clusterConfig, err := cs.GetClusterConfiguration()
-	FatalOnError(err)
-
-	prettyPrint(clusterConfig)
-}
-
-func prettyPrint(v interface{}) {
-	js, err := json.MarshalIndent(v, "", "  ")
-	FatalOnError(err)
-	fmt.Println(string(js))
-}
-
-func FatalOnError(err error) {
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
-func PrintOnError(err error) {
-	if err != nil {
-		fmt.Println(err)
-	}
+func TestQacct(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Qacct Suite")
 }

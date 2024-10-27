@@ -20,8 +20,11 @@
 package qstat
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
+	"strings"
+	"time"
 )
 
 type QStatImpl struct {
@@ -47,11 +50,81 @@ func NewCommandLineQstat(config CommandLineQStatConfig) (*QStatImpl, error) {
 	return &QStatImpl{config: config}, nil
 }
 
+// WatchJobs returns a channel that emits SchedulerJobInfo objects for
+// the given job ids. The channel is closed when all jobs left the system,
+// or when the context is cancelled.
+func (q *QStatImpl) WatchJobs(ctx context.Context, jobIds []int64) (chan SchedulerJobInfo, error) {
+	// Convert jobIds from []int64 to []string
+	jobIdStrings := make([]string, len(jobIds))
+	for i, id := range jobIds {
+		jobIdStrings[i] = fmt.Sprintf("%d", id)
+	}
+
+	jobId := strings.Join(jobIdStrings, ",")
+
+	var jobs []SchedulerJobInfo
+
+	// wait until the job is in the system
+	for i := 0; i < 3; i++ {
+		out, err := q.NativeSpecification([]string{"-j", jobId})
+		if err != nil {
+			if i >= 2 {
+				fmt.Printf("error getting qstat output: %v\n", err)
+				return nil, fmt.Errorf("error getting qstat output: %w", err)
+			}
+			// wait 1 second and try again
+			<-time.After(1 * time.Second)
+			continue
+		}
+		// found job
+		jobs, err = parseJobs(out)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing jobs: %w", err)
+		}
+		break
+	}
+
+	ch := make(chan SchedulerJobInfo)
+	go func() {
+		defer close(ch)
+
+		for {
+			for _, job := range jobs {
+				// check if the context is cancelled
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					// Send job to channel only if context is not cancelled
+					ch <- job
+				}
+			}
+			// it does not make sense to check more often than
+			// the load report time interval
+			<-time.After(15 * time.Second)
+			out, err := q.NativeSpecification([]string{"-j", jobId})
+			if err != nil {
+				// all jobs left the system
+				break
+			}
+			// found jobs
+			jobs, err = parseJobs(out)
+			if err != nil || len(jobs) == 0 {
+				// all jobs left the system
+				break
+			}
+		}
+	}()
+	return ch, nil
+}
+
+// NativeSpecification returns the output of the qstat command for the given
+// arguments. The arguments are passed to the qstat command as is.
+// The output is returned as a string.
 func (q *QStatImpl) NativeSpecification(args []string) (string, error) {
 	if q.config.DryRun {
 		return fmt.Sprintf("Dry run: qstat %v", args), nil
 	}
-
 	command := exec.Command(q.config.Executable, args...)
 	out, err := command.Output()
 	if err != nil {
