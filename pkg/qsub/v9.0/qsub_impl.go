@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // qsubClient is a concrete implementation of the Qsub interface.
@@ -37,6 +38,13 @@ type CommandLineQSubConfig struct {
 	QsubPath string
 	DryRun   bool
 }
+
+const ResourceRequestTypeHard = "hard"
+const ResourceRequestTypeSoft = "soft"
+
+const ResourceRequestScopeGlobal = "global"
+const ResourceRequestScopeMaster = "master"
+const ResourceRequestScopeSlave = "slave"
 
 // NewCommandLineQSub creates a new Qsub client.
 // If qsubPath is empty, it defaults to "qsub".
@@ -79,8 +87,7 @@ func (c *qsubClient) Submit(ctx context.Context, opts JobOptions) (int64, string
 	// (if terse is not specified, qsub does not return the job ID, it
 	// returns the full output of the qsub command)
 	if opts.Terse == nil {
-		opts.Terse = new(bool)
-		*opts.Terse = true
+		opts.Terse = &True
 	}
 
 	cmdArgs, err := buildQsubArgs(opts)
@@ -100,8 +107,15 @@ func (c *qsubClient) Submit(ctx context.Context, opts JobOptions) (int64, string
 
 	// if terse is specified, qsub returns just the job ID, so we need to
 	// strip any trailing newlines
-	if *opts.Terse {
+	if *opts.Terse && c.config.DryRun == false {
 		outputStr = strings.TrimRight(outputStr, "\n")
+		if opts.Synchronize != nil && *opts.Synchronize {
+			// special output for synchronize, we need
+			// the first line of the output:
+			// 105
+			// Job 105 exited with exit code 0.
+			outputStr = strings.Split(outputStr, "\n")[0]
+		}
 		// jobid could be a number or like 7.1-100:2
 		jobidstr := strings.Split(outputStr, ".")[0]
 		// parse the job ID as an int64
@@ -117,12 +131,13 @@ func (c *qsubClient) Submit(ctx context.Context, opts JobOptions) (int64, string
 
 // SubmitSimple submits a job with just the command (expected to be a
 // script in the path of the execution host) and arguments.
-func (c *qsubClient) SubmitSimple(ctx context.Context, command string, args ...string) (int64, string, error) {
-	opts := JobOptions{
-		Command:     command,
-		CommandArgs: args,
+func (c *qsubClient) SubmitSimple(ctx context.Context, additionalOptions *JobOptions, command string, args ...string) (int64, string, error) {
+	if additionalOptions == nil {
+		additionalOptions = &JobOptions{}
 	}
-	return c.Submit(ctx, opts)
+	additionalOptions.Command = command
+	additionalOptions.CommandArgs = args
+	return c.Submit(ctx, *additionalOptions)
 }
 
 // SubmitSimpleBinary submits a simple executable with minimal options.
@@ -134,12 +149,6 @@ func (c *qsubClient) SubmitSimpleBinary(ctx context.Context, command string, arg
 		CommandArgs: args,
 		Binary:      &binary,
 	}
-	return c.Submit(ctx, opts)
-}
-
-// SubmitWithQueue submits a job to a specific queue.
-func (c *qsubClient) SubmitWithQueue(ctx context.Context, queue string, opts JobOptions) (int64, string, error) {
-	opts.Queue = append(opts.Queue, queue)
 	return c.Submit(ctx, opts)
 }
 
@@ -158,10 +167,10 @@ func buildQsubArgs(opts JobOptions) ([]string, error) {
 
 	// Time options
 	if opts.StartTime != nil {
-		addFlag("-a", *opts.StartTime)
+		addFlag("-a", ConvertTimeToQsubDateTime(*opts.StartTime))
 	}
 	if opts.Deadline != nil {
-		addFlag("-dl", *opts.Deadline)
+		addFlag("-dl", ConvertTimeToQsubDateTime(*opts.Deadline))
 	}
 	if opts.AdvanceReservationID != nil {
 		addFlag("-ar", *opts.AdvanceReservationID)
@@ -177,27 +186,47 @@ func buildQsubArgs(opts JobOptions) ([]string, error) {
 	if opts.Priority != nil {
 		addFlag("-p", fmt.Sprintf("%d", *opts.Priority))
 	}
-	if len(opts.ResourcesHardRequest) > 0 {
-		var res []string
-		for k, v := range opts.ResourcesHardRequest {
-			res = append(res, fmt.Sprintf("%s=%s", k, v))
+
+	// Handle scoped resources
+	if len(opts.ScopedResources) > 0 {
+		// first global, then master, then slave
+		scopes := []string{ResourceRequestScopeGlobal, ResourceRequestScopeMaster, ResourceRequestScopeSlave}
+
+		for _, scope := range scopes {
+			if requests, ok := opts.ScopedResources[scope]; ok {
+				addFlag("-scope", scope)
+				// first hard, then soft
+				reqTypes := []string{ResourceRequestTypeHard,
+					ResourceRequestTypeSoft}
+				for _, reqType := range reqTypes {
+
+					if resourceRequest, ok := requests[reqType]; ok {
+						if reqType == ResourceRequestTypeHard {
+							addFlag("-hard", "")
+						} else if reqType == ResourceRequestTypeSoft {
+							addFlag("-soft", "")
+						} else {
+							return nil, fmt.Errorf(
+								"invalid resource request type (expected hard or soft): %s",
+								reqType)
+						}
+						var res []string
+						for k, v := range resourceRequest.Resources {
+							res = append(res, fmt.Sprintf("%s=%s", k, v))
+						}
+						addFlag("-l", strings.Join(res, ","))
+					}
+				}
+			}
+
 		}
-		addFlag("-hard", "")
-		addFlag("-l", strings.Join(res, ","))
 	}
-	if len(opts.ResourcesSoftRequest) > 0 {
-		var res []string
-		for k, v := range opts.ResourcesSoftRequest {
-			res = append(res, fmt.Sprintf("%s=%s", k, v))
-		}
-		addFlag("-soft", "")
-		addFlag("-l", strings.Join(res, ","))
-	}
+
 	if len(opts.Queue) > 0 {
 		addFlag("-q", strings.Join(opts.Queue, ","))
 	}
-	if opts.Slots != nil {
-		addFlag("-pe", *opts.Slots)
+	if opts.ParallelEnvironment != nil {
+		addFlag("-pe", *opts.ParallelEnvironment)
 	}
 
 	// Output/Input options
@@ -220,7 +249,8 @@ func buildQsubArgs(opts JobOptions) ([]string, error) {
 		}
 	}
 	if opts.WorkingDir != nil {
-		addFlag("-cwd", *opts.WorkingDir)
+		addFlag("-cwd", "")
+		addFlag("-wd", *opts.WorkingDir)
 	}
 	if opts.CommandPrefix != nil {
 		addFlag("-C", *opts.CommandPrefix)
@@ -281,12 +311,12 @@ func buildQsubArgs(opts JobOptions) ([]string, error) {
 	if opts.Verify != nil && *opts.Verify {
 		addFlag("-verify", "")
 	}
-	if opts.ExportAllEnv {
+	if opts.ExportAllEnv != nil && *opts.ExportAllEnv {
 		addFlag("-V", "")
 	}
-	if len(opts.ExportVariables) > 0 {
+	if len(opts.EnvVariables) > 0 {
 		var envVars []string
-		for k, v := range opts.ExportVariables {
+		for k, v := range opts.EnvVariables {
 			envVars = append(envVars, fmt.Sprintf("%s=%s", k, v))
 		}
 		addFlag("-v", strings.Join(envVars, ","))
@@ -326,6 +356,71 @@ func buildQsubArgs(opts JobOptions) ([]string, error) {
 		}
 	}
 
+	// Context Options
+	if len(opts.AddContextVariables) > 0 {
+		addFlag("-ac", strings.Join(opts.AddContextVariables, ","))
+	}
+	if len(opts.DeleteContextVariables) > 0 {
+		addFlag("-dc", strings.Join(opts.DeleteContextVariables, ","))
+	}
+	if len(opts.SetJobContext) > 0 {
+		var contextPairs []string
+		for k, v := range opts.SetJobContext {
+			contextPairs = append(contextPairs, fmt.Sprintf("%s=%s", k, v))
+		}
+		addFlag("-sc", strings.Join(contextPairs, ","))
+	}
+
+	// Processor Binding
+	if opts.ProcessorBinding != nil {
+		addFlag("-binding", *opts.ProcessorBinding)
+	}
+
+	// Job Hold and Priority Options
+	if opts.JobShare != nil {
+		addFlag("-js", fmt.Sprintf("%d", *opts.JobShare))
+	}
+	if opts.JobSubmissionVerificationScript != nil {
+		addFlag("-jsv", *opts.JobSubmissionVerificationScript)
+	}
+
+	// Scope and Environment Verification
+	if opts.ScopeName != nil {
+		addFlag("-scope", *opts.ScopeName)
+	}
+	if opts.VerifyMode != nil {
+		addFlag("-w", *opts.VerifyMode)
+	}
+
+	// Immediate and Reservation Options
+	if opts.StartImmediately != nil {
+		if *opts.StartImmediately {
+			addFlag("-now", "y")
+		} else {
+			addFlag("-now", "n")
+		}
+	}
+
+	// Command Options
+	if opts.CommandFile != nil {
+		addFlag("-@", *opts.CommandFile)
+	}
+
+	// Queue Master
+	if len(opts.MasterQueue) > 0 {
+		addFlag("-masterq", strings.Join(opts.MasterQueue, ","))
+	}
+
+	// Checkpointing Details
+	if opts.CheckpointInterval != nil {
+		addFlag("-ckpt_selector", *opts.CheckpointInterval)
+	}
+
+	// Synchronization and Job Start
+	if opts.NotifyBeforeSuspend != nil && *opts.NotifyBeforeSuspend {
+		addFlag("-notify", "")
+	}
+
 	// Command and arguments
 	if opts.Command != "" {
 		args = append(args, opts.Command)
@@ -335,4 +430,22 @@ func buildQsubArgs(opts JobOptions) ([]string, error) {
 	}
 
 	return args, nil
+}
+
+// ConvertTimeToQsubDateTime converts a Go time.Time to the qsub date_time
+// format [[CC]YY]MMDDhhmm[.SS]
+func ConvertTimeToQsubDateTime(t time.Time) string {
+	// Construct the format string for qsub date_time
+	// The format layout is based on Mon Jan 2 15:04:05 MST 2006, which is Go's reference time.
+	// We'll use "200601021504.05" for [[CC]YY]MMDDhhmm[.SS]
+
+	// Format without seconds
+	dateTimeWithoutSec := t.Format("200601021504")
+
+	// If seconds are non-zero, include them in the format
+	if t.Second() != 0 {
+		return t.Format("200601021504.05")
+	}
+
+	return dateTimeWithoutSec
 }

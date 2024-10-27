@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
+	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 )
 
 var _ = Describe("QconfImpl", func() {

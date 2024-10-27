@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qstat"
+	qstat "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
 )
 
 var _ = Describe("QstatImpl", func() {

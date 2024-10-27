@@ -22,7 +22,7 @@ package cs
 import (
 	"path/filepath"
 
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
+	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 )
 
 type CommandLineInterface struct {

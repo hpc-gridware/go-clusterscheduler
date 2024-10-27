@@ -25,7 +25,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/adapter"
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
+	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 )
 
 func main() {

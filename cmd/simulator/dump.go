@@ -25,7 +25,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
+	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 	"github.com/spf13/cobra"
 )
 

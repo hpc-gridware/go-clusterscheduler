@@ -22,7 +22,7 @@ package cs
 import (
 	"fmt"
 
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qconf"
+	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 )
 
 // ClusterScheduler defines the methods that a cluster scheduler connection should implement.

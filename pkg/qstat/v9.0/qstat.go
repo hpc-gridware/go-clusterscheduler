@@ -21,7 +21,15 @@ package qstat
 
 // QStat defines the methods for interacting with the Open Cluster Scheduler
 // to retrieve job and queue status information using the qstat command.
+//
+// Most of the methods are wrappers around the qstat command line tool arguments
+// for testing and replicating the qstat command line tool.
 type QStat interface {
+	// WatchJob returns a channel that will receive the current status of the
+	// job with the given job ID. It waits up to 3 seconds for the job status
+	// to appear in the system. When the job left the system (due to job end),
+	// the channel will be closed.
+	WatchJob(jobId int) (chan SchedulerJobInfo, error)
 	// NativeSpecification calls qstat with the native specification of args
 	// and returns the raw output
 	NativeSpecification(args []string) (string, error)

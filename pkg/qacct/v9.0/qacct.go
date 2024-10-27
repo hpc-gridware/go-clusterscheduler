@@ -27,7 +27,7 @@ package qacct
 type QAcct interface {
 	WithAlternativeAccountingFile(accountingFile string) error
 	WithDefaultAccountingFile()
-	// NativeSpecification calls qacct with the givene command and args
+	// NativeSpecification calls qacct with the given command and args
 	// and returns the raw unparsed output.
 	NativeSpecification(args []string) (string, error)
 	ListAdvanceReservations(arID string) ([]ReservationUsage, error)
@@ -48,5 +48,5 @@ type QAcct interface {
 	ListTasks(jobID, taskIDRange string) ([]TaskUsage, error)
 	ShowHelp() (string, error)
 	ShowTotalSystemUsage() (Usage, error)
-	ShowJobDetails(jobID int) (JobDetail, error)
+	ShowJobDetails(jobID []int64) ([]JobDetail, error)
 }
