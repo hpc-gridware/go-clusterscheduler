@@ -150,28 +150,31 @@ type JobPriority struct {
 // SchedulerJobInfo represents detailed information about a scheduled job
 // retrieved with the qstat -j <job_id> command.
 type SchedulerJobInfo struct {
-	JobNumber      int           `json:"job_number"`
-	ExecFile       string        `json:"exec_file"`
-	SubmissionTime string        `json:"submission_time"`
-	Owner          string        `json:"owner"`
-	UID            int           `json:"uid"`
-	Group          string        `json:"group"`
-	GID            int           `json:"gid"`
-	SgeOHome       string        `json:"sge_o_home"`
-	SgeOPath       string        `json:"sge_o_path"`
-	SgeOWorkDir    string        `json:"sge_o_workdir"`
-	SgeOHost       string        `json:"sge_o_host"`
-	Account        string        `json:"account"`
-	MailList       string        `json:"mail_list"`
-	Notify         bool          `json:"notify"`
-	JobName        string        `json:"job_name"`
-	JobShare       int           `json:"jobshare"`
-	EnvList        string        `json:"env_list"`
-	JobArgs        string        `json:"job_args"`
-	ScriptFile     string        `json:"script_file"`
-	Binding        string        `json:"binding"`
-	Usage          []UsageDetail `json:"usage"`
-	SchedulingInfo string        `json:"scheduling_info"`
+	JobNumber              int           `json:"job_number"`
+	ExecFile               string        `json:"exec_file"`
+	SubmissionTime         string        `json:"submission_time"`
+	SubmitCmdLine          string        `json:"submit_cmd_line"`
+	EffectiveSubmitCmdLine string        `json:"effective_submit_cmd_line"`
+	Owner                  string        `json:"owner"`
+	UID                    int           `json:"uid"`
+	Group                  string        `json:"group"`
+	GID                    int           `json:"gid"`
+	SgeOHome               string        `json:"sge_o_home"`
+	SgeOPath               string        `json:"sge_o_path"`
+	SgeOWorkDir            string        `json:"sge_o_workdir"`
+	SgeOHost               string        `json:"sge_o_host"`
+	Account                string        `json:"account"`
+	MailList               string        `json:"mail_list"`
+	Notify                 bool          `json:"notify"`
+	JobName                string        `json:"job_name"`
+	JobShare               int           `json:"jobshare"`
+	EnvList                string        `json:"env_list"`
+	JobArgs                string        `json:"job_args"`
+	ScriptFile             string        `json:"script_file"`
+	ParallelEnvironment    string        `json:"parallel_environment"`
+	Binding                string        `json:"binding"`
+	Usage                  []UsageDetail `json:"usage"`
+	SchedulingInfo         string        `json:"scheduling_info"`
 }
 
 type UsageDetail struct {

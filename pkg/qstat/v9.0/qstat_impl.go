@@ -77,7 +77,7 @@ func (q *QStatImpl) WatchJobs(ctx context.Context, jobIds []int64) (chan Schedul
 			continue
 		}
 		// found job
-		jobs, err = parseJobs(out)
+		jobs, err = ParseSchedulerJobInfo(out)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing jobs: %w", err)
 		}
@@ -108,7 +108,7 @@ func (q *QStatImpl) WatchJobs(ctx context.Context, jobIds []int64) (chan Schedul
 				break
 			}
 			// found jobs
-			jobs, err = parseJobs(out)
+			jobs, err = ParseSchedulerJobInfo(out)
 			if err != nil || len(jobs) == 0 {
 				// all jobs left the system
 				break

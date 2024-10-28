@@ -19,6 +19,8 @@
 
 package qstat
 
+import "context"
+
 // QStat defines the methods for interacting with the Open Cluster Scheduler
 // to retrieve job and queue status information using the qstat command.
 //
@@ -29,7 +31,7 @@ type QStat interface {
 	// job with the given job ID. It waits up to 3 seconds for the job status
 	// to appear in the system. When the job left the system (due to job end),
 	// the channel will be closed.
-	WatchJob(jobId int) (chan SchedulerJobInfo, error)
+	WatchJobs(ctx context.Context, jobIds []int64) (chan SchedulerJobInfo, error)
 	// NativeSpecification calls qstat with the native specification of args
 	// and returns the raw output
 	NativeSpecification(args []string) (string, error)
