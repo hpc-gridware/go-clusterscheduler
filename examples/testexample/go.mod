@@ -10,4 +10,7 @@ require (
 	google.golang.org/protobuf v1.35.1
 )
 
-require go.uber.org/multierr v1.10.0 // indirect
+require (
+	github.com/goccy/go-json v0.10.3 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
+)

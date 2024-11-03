@@ -3,6 +3,7 @@ module github.com/hpc-gridware/go-clusterscheduler
 go 1.22.4
 
 require (
+	github.com/goccy/go-json v0.10.3
 	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.1
 	go.opentelemetry.io/contrib/bridges/otelslog v0.5.0

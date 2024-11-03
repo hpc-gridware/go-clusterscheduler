@@ -128,6 +128,14 @@ func (q *QStatImpl) NativeSpecification(args []string) (string, error) {
 	command := exec.Command(q.config.Executable, args...)
 	out, err := command.Output()
 	if err != nil {
+		// convert error in exit error
+		ee, ok := err.(*exec.ExitError)
+		if ok {
+			if !ee.Success() {
+				return "", fmt.Errorf("qstat command failed with exit code %d", ee.ExitCode())
+			}
+			return "", nil
+		}
 		return "", fmt.Errorf("failed to get output of qstat: %w", err)
 	}
 	return string(out), nil

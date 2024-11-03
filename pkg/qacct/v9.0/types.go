@@ -85,53 +85,58 @@ type TaskUsage struct {
 	JobDetail JobDetail
 }
 
+// sampleOutput := `{"job_number":10,"task_number":1,"start_time":1730532913429415,"end_time":1730532913979016,"owner":"root","group":"root","account":"sge","qname":"all.q","hostname":"master","department":"defaultdepartment","slots":1,"job_name":"echo","priority":0,"submission_time":1730532912874519,"submit_cmd_line":"qsub -b y -terse echo 'job 1'","category":"","failed":0,"exit_status":0,"usage":{"rusage":{"ru_wallclock":0,"ru_utime":0.355821,"ru_stime":0.161309,"ru_maxrss":10284,"ru_ixrss":0,"ru_ismrss":0,"ru_idrss":0,"ru_isrss":0,"ru_minflt":504,"ru_majflt":0,"ru_nswap":0,"ru_inblock":0,"ru_oublock":11,"ru_msgsnd":0,"ru_msgrcv":0,"ru_nsignals":0,"ru_nvcsw":248,"ru_nivcsw":14},"usage":{"wallclock":2.022342,"cpu":0.51713,"mem":0.0043125152587890625,"io":0.000008341856300830841,"iow":0.0,"maxvmem":21049344.0,"maxrss":10530816.0}}}`
+
 type JobDetail struct {
-	QName             string  `json:"qname"`
-	HostName          string  `json:"hostname"`
-	Group             string  `json:"group"`
-	Owner             string  `json:"owner"`
-	Project           string  `json:"project"`
-	Department        string  `json:"department"`
-	JobName           string  `json:"jobname"`
-	JobNumber         int64   `json:"jobnumber"`
-	TaskID            int64   `json:"taskid"`
-	PETaskID          string  `json:"pe_taskid"`
-	Account           string  `json:"account"`
-	Priority          int64   `json:"priority"`
-	QSubTime          string  `json:"qsub_time"`
-	SubmitCommandLine string  `json:"submit_command_line"`
-	StartTime         string  `json:"start_time"`
-	EndTime           string  `json:"end_time"`
-	GrantedPE         string  `json:"granted_pe"`
-	Slots             int64   `json:"slots"`
-	Failed            int64   `json:"failed"`
-	ExitStatus        int64   `json:"exit_status"`
-	RuWallClock       float64 `json:"ru_wallclock"`
-	RuUTime           float64 `json:"ru_utime"`
-	RuSTime           float64 `json:"ru_stime"`
-	RuMaxRSS          int64   `json:"ru_maxrss"`
-	RuIXRSS           int64   `json:"ru_ixrss"`
-	RuISMRSS          int64   `json:"ru_ismrss"`
-	RuIDRSS           int64   `json:"ru_idrss"`
-	RuISRss           int64   `json:"ru_isrss"`
-	RuMinFlt          int64   `json:"ru_minflt"`
-	RuMajFlt          int64   `json:"ru_majflt"`
-	RuNSwap           int64   `json:"ru_nswap"`
-	RuInBlock         int64   `json:"ru_inblock"`
-	RuOuBlock         int64   `json:"ru_oublock"`
-	RuMsgSend         int64   `json:"ru_msgsnd"`
-	RuMsgRcv          int64   `json:"ru_msgrcv"`
-	RuNSignals        int64   `json:"ru_nsignals"`
-	RuNVCSw           int64   `json:"ru_nvcsw"`
-	RuNiVCSw          int64   `json:"ru_nivcsw"`
-	WallClock         float64 `json:"wallclock"`
-	CPU               float64 `json:"cpu"`
-	Memory            float64 `json:"mem"`
-	IO                float64 `json:"io"`
-	IOWait            float64 `json:"iow"`
-	MaxVMem           int64   `json:"maxvmem"`
-	MaxRSS            int64   `json:"maxrss"`
-	ArID              string  `json:"arid"`
+	QName             string   `json:"qname"`
+	HostName          string   `json:"hostname"`
+	Group             string   `json:"group"`
+	Owner             string   `json:"owner"`
+	Project           string   `json:"project"`
+	Department        string   `json:"department"`
+	JobName           string   `json:"job_name"`
+	JobNumber         int64    `json:"job_number"`
+	TaskID            int64    `json:"task_number"`
+	PETaskID          string   `json:"pe_taskid"`
+	Account           string   `json:"account"`
+	Priority          int64    `json:"priority"`
+	SubmitTime        int64    `json:"submission_time"`
+	SubmitCommandLine string   `json:"submit_cmd_line"`
+	StartTime         int64    `json:"start_time"`
+	EndTime           int64    `json:"end_time"`
+	GrantedPE         string   `json:"granted_pe"`
+	Slots             int64    `json:"slots"`
+	Failed            int64    `json:"failed"`
+	ExitStatus        int64    `json:"exit_status"`
+	ArID              string   `json:"arid"`
+	JobUsage          JobUsage `json:"usage"`
+}
+
+type JobUsage struct {
+	Usage  Usage  `json:"usage"`
+	RUsage RUsage `json:"rusage"`
+}
+
+// RUsage represents the resource usage data structure.
+type RUsage struct {
+	RuWallclock int64   `json:"ru_wallclock"`
+	RuUtime     float64 `json:"ru_utime"`
+	RuStime     float64 `json:"ru_stime"`
+	RuMaxrss    int64   `json:"ru_maxrss"`
+	RuIxrss     int64   `json:"ru_ixrss"`
+	RuIsmrss    int64   `json:"ru_ismrss"`
+	RuIdrss     int64   `json:"ru_idrss"`
+	RuIsrss     int64   `json:"ru_isrss"`
+	RuMinflt    int64   `json:"ru_minflt"`
+	RuMajflt    int64   `json:"ru_majflt"`
+	RuNswap     int64   `json:"ru_nswap"`
+	RuInblock   int64   `json:"ru_inblock"`
+	RuOublock   int64   `json:"ru_oublock"`
+	RuMsgsnd    int64   `json:"ru_msgsnd"`
+	RuMsgrcv    int64   `json:"ru_msgrcv"`
+	RuNsignals  int64   `json:"ru_nsignals"`
+	RuNvcsw     int64   `json:"ru_nvcsw"`
+	RuNivcsw    int64   `json:"ru_nivcsw"`
 }
 
 type PeUsage struct {
@@ -144,7 +149,9 @@ type Usage struct {
 	UserTime   float64 `json:"utime"`
 	SystemTime float64 `json:"stime"`
 	CPU        float64 `json:"cpu"`
-	Memory     float64 `json:"memory"`
+	Memory     float64 `json:"mem"`
 	IO         float64 `json:"io"`
 	IOWait     float64 `json:"iow"`
+	MaxVMem    float64 `json:"maxvmem"`
+	MaxRSS     float64 `json:"maxrss"`
 }
