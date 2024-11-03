@@ -16,5 +16,5 @@ jobs:
         uses: mattzcarey/code-review-gpt@v0.1.10
         with:
           OPENAI_API_KEY: ${{ secrets.GPTREVIEWKEY }}
-          MODEL: 'gpt-4o-mini'
+          MODEL: 'gpt-4o'
           GITHUB_TOKEN: ${{ github.token }}
