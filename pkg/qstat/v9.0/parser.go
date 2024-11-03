@@ -60,6 +60,11 @@ func ParseGroupByTask(input string) ([]ParallelJobTask, error) {
 func parseFixedWidthJobs(input string) ([]ParallelJobTask, error) {
 	var tasks []ParallelJobTask
 
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return tasks, nil
+	}
+
 	// Correct column positions based on your description
 	columnPositions := []struct {
 		start int

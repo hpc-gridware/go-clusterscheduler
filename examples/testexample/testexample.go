@@ -17,21 +17,34 @@ import (
 var qacctClient qacct.QAcct
 var qstatClient qstat.QStat
 
+var newlyFinishedJobs <-chan qacct.JobDetail
+
 var log *zap.Logger
 
 func init() {
 	var err error
 	log, _ = zap.NewProduction()
-	qacctClient, err = qacct.NewCommandLineQAcct(qacct.CommandLineQAcctConfig{})
-	if err != nil {
-		log.Fatal("Failed to initialize qacct client", zap.String("error",
-			err.Error()))
-	}
+
 	qstatClient, err = qstat.NewCommandLineQstat(qstat.CommandLineQStatConfig{})
 	if err != nil {
 		log.Fatal("Failed to initialize qstat client", zap.String("error",
 			err.Error()))
 	}
+
+	qacctClient, err = qacct.NewCommandLineQAcct(qacct.CommandLineQAcctConfig{})
+	if err != nil {
+		log.Fatal("Failed to initialize qacct client", zap.String("error",
+			err.Error()))
+	}
+
+	// watch for newly finished jobs
+	newlyFinishedJobs, err = qacct.WatchFile(context.Background(),
+		qacct.GetDefaultQacctFile(), 1024)
+	if err != nil {
+		log.Fatal("Failed to initialize job watcher",
+			zap.String("error", err.Error()))
+	}
+
 }
 
 func main() {
@@ -48,7 +61,7 @@ func run(ctx context.Context) {
 			log.Info("Context cancelled, stopping ClusterScheduler")
 			return
 		default:
-			finishedJobs, err := GetFinishedJobs()
+			finishedJobs, err := GetFinishedJobsWithWatcher()
 			if err != nil {
 				log.Error("Error getting finished jobs", zap.String("error",
 					err.Error()))
@@ -107,10 +120,47 @@ type SimpleJob struct {
 	MasterNode string                 `json:"master_node"`
 }
 
+func GetFinishedJobsWithWatcher() ([]*SimpleJob, error) {
+	jobs := []*SimpleJob{}
+
+	for {
+		// get next job or timeout after 0.1s of there is no new job
+		select {
+		case fjob := <-newlyFinishedJobs:
+			state := fmt.Sprintf("%d", fjob.ExitStatus)
+			if state == "0" {
+				state = "done"
+			} else {
+				state = "failed"
+			}
+			simpleJob := SimpleJob{
+				// ignore job arrays for now
+				JobId:      fmt.Sprintf("%d", fjob.JobNumber),
+				Cluster:    fjob.QName,
+				JobName:    fjob.JobName,
+				Partition:  fjob.GrantedPE,
+				Account:    fjob.Account,
+				User:       fjob.Owner,
+				State:      state,
+				ExitCode:   fmt.Sprintf("%d", fjob.ExitStatus),
+				Submit:     parseTimestampInt64(fjob.SubmitTime),
+				Start:      parseTimestampInt64(fjob.StartTime),
+				End:        parseTimestampInt64(fjob.EndTime),
+				MasterNode: fjob.HostName,
+			}
+			jobs = append(jobs, &simpleJob)
+		case <-time.After(100 * time.Millisecond):
+			return jobs, nil
+		}
+	}
+	return jobs, nil
+}
+
 func GetFinishedJobs() ([]*SimpleJob, error) {
 	// Use qacct NativeSpecification to get finished jobs
 	qacctOutput, err := qacctClient.NativeSpecification([]string{"-j", "*"})
 	if err != nil {
+		// no job are command failed
 		return nil, fmt.Errorf("error running qacct command: %v", err)
 	}
 
@@ -137,9 +187,9 @@ func GetFinishedJobs() ([]*SimpleJob, error) {
 			User:       job.Owner,
 			State:      state,
 			ExitCode:   fmt.Sprintf("%d", job.ExitStatus),
-			Submit:     parseTimestamp(job.QSubTime),
-			Start:      parseTimestamp(job.StartTime),
-			End:        parseTimestamp(job.EndTime),
+			Submit:     parseTimestampInt64(job.SubmitTime),
+			Start:      parseTimestampInt64(job.StartTime),
+			End:        parseTimestampInt64(job.EndTime),
 			MasterNode: job.HostName,
 		}
 	}
@@ -150,7 +200,8 @@ func GetRunningJobs() ([]*SimpleJob, error) {
 
 	qstatOverview, err := qstatClient.NativeSpecification([]string{"-g", "t"})
 	if err != nil {
-		return nil, fmt.Errorf("error running qstat command: %v", err)
+		// no jobs running
+		return nil, nil
 	}
 	jobsByTask, err := qstat.ParseGroupByTask(qstatOverview)
 	if err != nil {
@@ -193,7 +244,8 @@ func GetRunningJobs() ([]*SimpleJob, error) {
 	// get running jobs
 	qstatOutput, err := qstatClient.NativeSpecification([]string{"-j", "*"})
 	if err != nil {
-		return nil, fmt.Errorf("error running qstat command: %v", err)
+		// no jobs running; qstat -j * found 0 jobs (TODO)
+		return nil, nil
 	}
 
 	jobs, err := qstat.ParseSchedulerJobInfo(qstatOutput)
@@ -240,6 +292,14 @@ func SendJobs(ctx context.Context, jobs []*SimpleJob) (int, error) {
 		fmt.Println(string(json))
 	}
 	return len(jobs), nil
+}
+
+func parseTimestampInt64(ts int64) *timestamppb.Timestamp {
+	// ts is 6 digits behind the second (microseconds)
+	sec := ts / 1e6
+	nsec := (ts - sec*1e6) * 1e3
+	t := time.Unix(sec, nsec)
+	return timestamppb.New(t)
 }
 
 // 2024-10-24 09:49:59.911136

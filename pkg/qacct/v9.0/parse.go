@@ -21,8 +21,10 @@ package qacct
 
 import (
 	"bufio"
+	"encoding/json"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error) {
@@ -73,13 +75,13 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 		case "priority":
 			job.Priority = parseInt64(value)
 		case "qsub_time":
-			job.QSubTime = value
+			job.SubmitTime = parseTime(value)
 		case "submit_cmd_line":
 			job.SubmitCommandLine = value
 		case "start_time":
-			job.StartTime = value
+			job.StartTime = parseTime(value)
 		case "end_time":
-			job.EndTime = value
+			job.EndTime = parseTime(value)
 		case "granted_pe":
 			job.GrantedPE = value
 		case "slots":
@@ -89,55 +91,53 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 		case "exit_status":
 			job.ExitStatus = parseInt64(value)
 		case "ru_wallclock":
-			job.RuWallClock = parseFloat(value)
+			job.JobUsage.RUsage.RuWallclock = parseInt64(value)
 		case "ru_utime":
-			job.RuUTime = parseFloat(value)
+			job.JobUsage.RUsage.RuUtime = parseFloat(value)
 		case "ru_stime":
-			job.RuSTime = parseFloat(value)
+			job.JobUsage.RUsage.RuStime = parseFloat(value)
 		case "ru_maxrss":
-			job.RuMaxRSS = parseInt64(value)
+			job.JobUsage.RUsage.RuMaxrss = parseInt64(value)
 		case "ru_ixrss":
-			job.RuIXRSS = parseInt64(value)
+			job.JobUsage.RUsage.RuIxrss = parseInt64(value)
 		case "ru_ismrss":
-			job.RuISMRSS = parseInt64(value)
+			job.JobUsage.RUsage.RuIsmrss = parseInt64(value)
 		case "ru_idrss":
-			job.RuIDRSS = parseInt64(value)
+			job.JobUsage.RUsage.RuIdrss = parseInt64(value)
 		case "ru_isrss":
-			job.RuISRss = parseInt64(value)
+			job.JobUsage.RUsage.RuIsrss = parseInt64(value)
 		case "ru_minflt":
-			job.RuMinFlt = parseInt64(value)
+			job.JobUsage.RUsage.RuMinflt = parseInt64(value)
 		case "ru_majflt":
-			job.RuMajFlt = parseInt64(value)
+			job.JobUsage.RUsage.RuMajflt = parseInt64(value)
 		case "ru_nswap":
-			job.RuNSwap = parseInt64(value)
+			job.JobUsage.RUsage.RuNswap = parseInt64(value)
 		case "ru_inblock":
-			job.RuInBlock = parseInt64(value)
+			job.JobUsage.RUsage.RuInblock = parseInt64(value)
 		case "ru_oublock":
-			job.RuOuBlock = parseInt64(value)
+			job.JobUsage.RUsage.RuOublock = parseInt64(value)
 		case "ru_msgsnd":
-			job.RuMsgSend = parseInt64(value)
+			job.JobUsage.RUsage.RuMsgsnd = parseInt64(value)
 		case "ru_msgrcv":
-			job.RuMsgRcv = parseInt64(value)
+			job.JobUsage.RUsage.RuMsgrcv = parseInt64(value)
 		case "ru_nsignals":
-			job.RuNSignals = parseInt64(value)
+			job.JobUsage.RUsage.RuNsignals = parseInt64(value)
 		case "ru_nvcsw":
-			job.RuNVCSw = parseInt64(value)
-		case "ru_nivcsw":
-			job.RuNiVCSw = parseInt64(value)
+			job.JobUsage.RUsage.RuNvcsw = parseInt64(value)
 		case "wallclock":
-			job.WallClock = parseFloat(value)
+			job.JobUsage.Usage.WallClock = parseFloat(value)
 		case "cpu":
-			job.CPU = parseFloat(value)
+			job.JobUsage.Usage.CPU = parseFloat(value)
 		case "mem":
-			job.Memory = parseFloat(value)
+			job.JobUsage.Usage.Memory = parseFloat(value)
 		case "io":
-			job.IO = parseFloat(value)
+			job.JobUsage.Usage.IO = parseFloat(value)
 		case "iow":
-			job.IOWait = parseFloat(value)
+			job.JobUsage.Usage.IOWait = parseFloat(value)
 		case "maxvmem":
-			job.MaxVMem = parseInt64(value)
+			job.JobUsage.Usage.MaxVMem = parseFloat(value)
 		case "maxrss":
-			job.MaxRSS = parseInt64(value)
+			job.JobUsage.Usage.MaxRSS = parseFloat(value)
 		case "arid":
 			job.ArID = value
 		}
@@ -161,6 +161,22 @@ func ParseQAcctJobOutput(output string) ([]JobDetail, error) {
 	return jobs, nil
 }
 
+/*
+qsub_time                          2024-09-27 07:41:44.421951
+submit_cmd_line                    qsub -b y -t 1-100:2 sleep 0
+start_time                         2024-09-27 07:42:07.265733
+end_time                           2024-09-27 07:42:08.796845
+*/
+func parseTime(value string) int64 {
+	// fix layout to match the output: "2024-09-27 07:42:08.796845"
+	layout := "2006-01-02 15:04:05.999999" // Correct layout for the given examples
+	t, err := time.Parse(layout, value)
+	if err != nil {
+		return 0
+	}
+	return t.UnixNano() / 1000
+}
+
 func parseInt(value string) int {
 	i, _ := strconv.Atoi(value)
 	return i
@@ -174,4 +190,13 @@ func parseInt64(value string) int64 {
 func parseFloat(value string) float64 {
 	f, _ := strconv.ParseFloat(value, 64)
 	return f
+}
+
+func ParseAccountingJSONLine(line string) (JobDetail, error) {
+	var job JobDetail
+	err := json.Unmarshal([]byte(line), &job)
+	if err != nil {
+		return JobDetail{}, err
+	}
+	return job, nil
 }
