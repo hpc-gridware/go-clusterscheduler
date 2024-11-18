@@ -46,6 +46,9 @@ type CommandLineQConfConfig struct {
 
 // NewCommandLineQConf creates a new instance of CommandLineQConf.
 func NewCommandLineQConf(config CommandLineQConfConfig) (*CommandLineQConf, error) {
+	if config.Executable == "" {
+		config.Executable = "qconf"
+	}
 	return &CommandLineQConf{config: config}, nil
 }
 
@@ -122,7 +125,6 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 		if err != nil {
 			return cc, fmt.Errorf("failed to read host config: %v", err)
 		}
-
 		cc.HostConfigurations[host] = hc
 	}
 
@@ -1115,7 +1117,9 @@ func (c *CommandLineQConf) DeleteHostGroup(groupName string) error {
 	return err
 }
 
-// ShowHostGroup shows the specified host group.
+// ShowHostGroup shows the host list of a particular host group. The host
+// list can contain other host groups. Use ShowHowGroupResolved() for
+// getting a list of all hosts.
 func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, error) {
 	out, err := c.RunCommand("-shgrp", groupName)
 	if err != nil {
@@ -1137,6 +1141,15 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 		}
 	}
 	return cfg, nil
+}
+
+// ShowHostGroupResolved shows all hosts in a host group and all sub-groups.
+func (c *CommandLineQConf) ShowHostGroupResolved(groupName string) ([]string, error) {
+	out, err := c.RunCommand("-shgrp_resolved", groupName)
+	if err != nil {
+		return nil, err
+	}
+	return splitWithoutEmptyLines(out, "\n"), nil
 }
 
 // ShowHostGroups shows all host groups.
