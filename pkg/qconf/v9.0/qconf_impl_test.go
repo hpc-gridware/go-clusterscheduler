@@ -699,7 +699,12 @@ gid_range                    20000-20100`, "\n")
 			Expect(groups).NotTo(BeNil())
 			Expect(groups).To(ContainElement(groupName))
 
-			// Show the specific host group configuration and verify its details
+			// Show a list of all hosts in the host group
+			hosts, err := qc.ShowHostGroupResolved(groupName)
+			Expect(err).To(BeNil())
+			Expect(hosts).NotTo(BeNil())
+			Expect(hosts).To(ContainElement("master"))
+
 			retrievedHostGroupConfig, err := qc.ShowHostGroup(groupName)
 			Expect(err).To(BeNil())
 			Expect(retrievedHostGroupConfig).To(Equal(hostGroupConfig))
@@ -1157,7 +1162,8 @@ gid_range                    20000-20100`, "\n")
 		var err error
 
 		BeforeEach(func() {
-			qc, err = qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			qc, err = qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 		})
 
