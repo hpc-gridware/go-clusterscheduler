@@ -68,6 +68,7 @@ type QConf interface {
 	ModifyHostGroup(hostGroupName string, hg HostGroupConfig) error
 	DeleteHostGroup(groupName string) error
 	ShowHostGroup(groupName string) (HostGroupConfig, error)
+	ShowHostGroupResolved(groupName string) ([]string, error)
 	ShowHostGroups() ([]string, error)
 
 	AddResourceQuotaSet(rqs ResourceQuotaSetConfig) error
