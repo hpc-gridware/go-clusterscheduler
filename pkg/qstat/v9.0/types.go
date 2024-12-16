@@ -19,16 +19,19 @@
 
 package qstat
 
+import "time"
+
 type JobInfo struct {
-	JobID         int     `json:"job_id"`
-	Priority      float64 `json:"prior"`
-	Name          string  `json:"name"`
-	User          string  `json:"user"`
-	State         string  `json:"state"`
-	SubmitStartAt string  `json:"submit_start_at"`
-	Queue         string  `json:"queue"`
-	Slots         int     `json:"slots"`
-	TaskID        string  `json:"ja_task_id"`
+	JobID      int       `json:"job_id"`
+	Priority   float64   `json:"prior"`
+	Name       string    `json:"name"`
+	User       string    `json:"user"`
+	State      string    `json:"state"`
+	SubmitTime time.Time `json:"submit_start_at"`
+	StartTime  time.Time `json:"start_time"`
+	Queue      string    `json:"queue"`
+	Slots      int       `json:"slots"`
+	JaTaskIDs  []int64   `json:"ja_task_ids"`
 }
 
 type ExtendedJobInfo struct {

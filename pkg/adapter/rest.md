@@ -7,7 +7,7 @@ to execute `qconf` commands through http POST calls.
 
 ## Canonical Example of a qconf REST API
 
-This is another example of exposing qconf trough a REST API.
+This is another example of exposing qconf through a REST API.
 
 ### Cluster Configuration
 
