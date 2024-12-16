@@ -36,7 +36,7 @@ type QStat interface {
 	// and returns the raw output
 	NativeSpecification(args []string) (string, error)
 	// qstat -ext
-	ShowAdditionalAttributes() ([]ExtendedJobInfo, error)
+	ShowJobsWithAdditionalAttributes() ([]ExtendedJobInfo, error)
 	// qstat -explain <reason> a|c|A|E
 	ShowQueueExplanation(reason string) ([]QueueExplanation, error)
 	// qstat -f
