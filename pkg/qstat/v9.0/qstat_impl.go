@@ -141,8 +141,20 @@ func (q *QStatImpl) NativeSpecification(args []string) (string, error) {
 	return string(out), nil
 }
 
-func (q *QStatImpl) ShowAdditionalAttributes() ([]ExtendedJobInfo, error) {
-	return nil, fmt.Errorf("not implemented")
+func (q *QStatImpl) ShowJobs() ([]JobInfo, error) {
+	out, err := q.NativeSpecification(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get output of qstat: %w", err)
+	}
+	return ParseJobInfo(out)
+}
+
+func (q *QStatImpl) ShowJobsWithAdditionalAttributes() ([]ExtendedJobInfo, error) {
+	out, err := q.NativeSpecification([]string{"-ext"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get output of qstat: %w", err)
+	}
+	return ParseExtendedJobInfo(out)
 }
 
 func (q *QStatImpl) ShowQueueExplanation(reason string) ([]QueueExplanation, error) {

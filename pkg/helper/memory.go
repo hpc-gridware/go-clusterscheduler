@@ -17,13 +17,13 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package qacct
+package helper
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 // ParseMemoryFromString takes a string like "4.078G".
@@ -36,32 +36,36 @@ import (
 // 1000, K multiply by 1024, m multiply by 1000*1000, M multiply by 1024*1024,
 // g multiply by 1000*1000*1000 and G multiply by 1024*1024*1024. If no
 // multiplier is present, the value is just counted in bytes.""
+// Example: "15.6G" -> 15.6 * 1024 * 1024 * 1024
 func ParseMemoryFromString(m string) (int64, error) {
 	if len(m) == 0 {
 		return 0, errors.New("empty string")
 	}
 
-	// Find position of the first non-digit character
-	var i int
-	for i = len(m) - 1; i >= 0; i-- {
-		if !unicode.IsDigit(rune(m[i])) && m[i] != '.' {
-			break
-		}
+	if m == "0" || m == "0.0" || m == "0.00" || m == "0.000" {
+		return 0, nil
 	}
 
-	// Separate the number part and the multiplier part
-	numberStr := m[:i+1]
-	unit := m[i+1:]
+	// last character must be a multiplier
+	if !strings.HasSuffix(m, "k") && !strings.HasSuffix(m, "K") &&
+		!strings.HasSuffix(m, "m") && !strings.HasSuffix(m, "M") &&
+		!strings.HasSuffix(m, "g") && !strings.HasSuffix(m, "G") {
+		// no unit, return the number as is
+		return strconv.ParseInt(m, 10, 64)
+	}
+
+	unit := m[len(m)-1]
+	numberStr := m[:len(m)-1]
 
 	// Parse the number part
 	number, err := strconv.ParseFloat(numberStr, 64)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("invalid number: %s: %v", numberStr, err)
 	}
 
 	// Determine the multiplier
 	multiplier := int64(1) // Default is bytes if no unit
-	switch strings.ToUpper(unit) {
+	switch strings.ToUpper(string(unit)) {
 	case "K":
 		multiplier = 1024
 	case "M":
@@ -80,10 +84,7 @@ func ParseMemoryFromString(m string) (int64, error) {
 		return 0, errors.New("invalid unit")
 	}
 
-	// Calculate the result
-	result := int64(number * float64(multiplier))
-
-	return result, nil
+	return int64(number * float64(multiplier)), nil
 }
 
 func MemoryToString(m int64) string {
