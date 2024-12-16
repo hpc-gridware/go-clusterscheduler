@@ -91,3 +91,9 @@ run `make run` again.
 
 If you encounter any issues or have questions, please open an issue in
 this repository. We'll be happy to assist.
+
+- No jobs are scheduled: When using a laptop and closing and re-opening, the
+  scheduler thread times out. To protect the qmaster, the scheduler thread
+  gets disconnect. To get it running again either restart the container or
+  remove and attach the scheduler thread manually ("qconf -kt scheduler" and
+  then "qconf -at scheduler").
