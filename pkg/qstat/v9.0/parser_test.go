@@ -420,4 +420,36 @@ var _ = Describe("Parser", func() {
 
 	})
 
+	Describe("ClusterQueueSummary", func() {
+
+		It("should parse the output of qstat -g c", func() {
+			input := `CLUSTER QUEUE                   CQLOAD   USED    RES  AVAIL  TOTAL aoACDS  cdsuE
+--------------------------------------------------------------------------------
+all.q                             0.08      0      0      4      4      0      0
+test.q                            0.08      0      0      2      2      0      0`
+			summary, err := qstat.ParseClusterQueueSummary(input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(summary)).To(Equal(2))
+
+			Expect(summary[0].ClusterQueue).To(Equal("all.q"))
+			Expect(summary[0].CQLoad).To(Equal(0.08))
+			Expect(summary[0].Used).To(Equal(0))
+			Expect(summary[0].Reserved).To(Equal(0))
+			Expect(summary[0].Available).To(Equal(4))
+			Expect(summary[0].Total).To(Equal(4))
+			Expect(summary[0].AoACDS).To(Equal(0))
+			Expect(summary[0].CdsuE).To(Equal(0))
+
+			Expect(summary[1].ClusterQueue).To(Equal("test.q"))
+			Expect(summary[1].CQLoad).To(Equal(0.08))
+			Expect(summary[1].Used).To(Equal(0))
+			Expect(summary[1].Reserved).To(Equal(0))
+			Expect(summary[1].Available).To(Equal(2))
+			Expect(summary[1].Total).To(Equal(2))
+			Expect(summary[1].AoACDS).To(Equal(0))
+			Expect(summary[1].CdsuE).To(Equal(0))
+		})
+
+	})
+
 })

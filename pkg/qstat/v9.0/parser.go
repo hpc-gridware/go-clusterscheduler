@@ -766,3 +766,67 @@ func ParseJobInfo(out string) ([]JobInfo, error) {
 	}
 	return jobInfos, nil
 }
+
+// ParseClusterQueueSummary parses the output of qstat -g c
+func ParseClusterQueueSummary(out string) ([]ClusterQueueSummary, error) {
+	var summaries []ClusterQueueSummary
+	lines := strings.Split(out, "\n")
+
+	// Skip the header lines
+	for _, line := range lines[2:] {
+		fields := strings.Fields(line)
+		if len(fields) != 8 {
+			continue // Skip lines that don't have the expected number of fields
+		}
+
+		cqLoad, err := strconv.ParseFloat(fields[1], 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse CQLoad: %v", err)
+		}
+
+		used, err := strconv.Atoi(fields[2])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Used: %v", err)
+		}
+
+		reserved, err := strconv.Atoi(fields[3])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Reserved: %v", err)
+		}
+
+		available, err := strconv.Atoi(fields[4])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Available: %v", err)
+		}
+
+		total, err := strconv.Atoi(fields[5])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse Total: %v", err)
+		}
+
+		aoACDS, err := strconv.Atoi(fields[6])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse AoACDS: %v", err)
+		}
+
+		cdsuE, err := strconv.Atoi(fields[7])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse CdsuE: %v", err)
+		}
+
+		summary := ClusterQueueSummary{
+			ClusterQueue: fields[0],
+			CQLoad:       cqLoad,
+			Used:         used,
+			Reserved:     reserved,
+			Available:    available,
+			Total:        total,
+			AoACDS:       aoACDS,
+			CdsuE:        cdsuE,
+		}
+
+		summaries = append(summaries, summary)
+	}
+
+	return summaries, nil
+}
