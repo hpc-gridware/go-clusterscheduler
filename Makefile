@@ -42,7 +42,7 @@ run-privileged: build
 run: build
 	@echo "Running the container..."
 	mkdir -p ./installation
-	docker run -p 7070:7070 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
+	docker run -p 7070:7070 -p 9464:9464 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
 # Running apptainers in containers requires more permissions. You can drop
 # the --privileged flag and the --cap-add SYS_ADMIN flag if you don't need

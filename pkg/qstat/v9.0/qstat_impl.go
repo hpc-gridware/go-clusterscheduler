@@ -169,8 +169,13 @@ func (q *QStatImpl) ShowFullOutputWithResources(resourceAttributes string) ([]Jo
 	return nil, fmt.Errorf("not implemented")
 }
 
+// DisplayClusterQueueSummary is equivalent to "qstat -g c"
 func (q *QStatImpl) DisplayClusterQueueSummary() ([]ClusterQueueSummary, error) {
-	return nil, fmt.Errorf("not implemented")
+	out, err := q.NativeSpecification([]string{"-g", "c"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get output of qstat: %w", err)
+	}
+	return ParseClusterQueueSummary(out)
 }
 
 func (q *QStatImpl) DisplayAllJobArrayTasks() ([]JobArrayTask, error) {
