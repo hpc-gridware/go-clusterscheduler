@@ -27,7 +27,7 @@ COPY autoinstall.template /opt/helpers/
 COPY installer.sh /opt/helpers/
 COPY entrypoint.sh /entrypoint.sh
 
-ARG GOLANG_VERSION=1.22.4
+ARG GOLANG_VERSION=1.23.1
 
 RUN apt-get update && \
     apt-get install -y curl wget git gcc make vim libhwloc-dev hwloc software-properties-common && \
