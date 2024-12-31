@@ -34,13 +34,14 @@ build:
 # to run apptainers in containers.
 .PHONY: run-privileged
 run-privileged: build
-	@echo "Running the container..."
+	@echo "Running the Open Cluster Scheduler container in privileged mode..."
 	mkdir -p ./installation
 	docker run -p 7070:7070 --rm -it -h master --privileged -v /dev/fuse:/dev/fuse --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
 .PHONY: run
 run: build
-	@echo "Running the container..."
+	@echo "Running the Open Cluster Scheduler container..."
+	@echo "For a new installation, you need to remove the ./installation subdirectory first."
 	mkdir -p ./installation
 	docker run -p 7070:7070 -p 9464:9464 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
@@ -50,6 +51,9 @@ run: build
 .PHONY: simulate
 simulate:
 	@echo "Running the container in simulation mode using cluster.json"
+	@echo "Removing subdirectory with old installation..."
+	rm -rf ./installation
+	@echo "Creating new subdirectory for installation..."
 	mkdir -p ./installation
 	docker run --rm -it -h master --privileged --cap-add SYS_ADMIN -p 9464:9464 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
 
