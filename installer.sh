@@ -38,7 +38,11 @@ fi
 echo "Open Cluster Scheduler is not yet installed in ${MOUNT_DIR}. Starting installation."
 
 # Copy unpacked Open Cluster Scheduler package to ${MOUNT_DIR}
-cp -r /opt/cs/* ${MOUNT_DIR}
+if [ -d /opt/ocs ]; then
+  cp -r /opt/ocs/* "${MOUNT_DIR}"
+else
+  cp -r /opt/cs/* "${MOUNT_DIR}"
+fi
 
 cd ${MOUNT_DIR}
 

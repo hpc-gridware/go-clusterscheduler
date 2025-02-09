@@ -19,7 +19,9 @@
 #___INFO__MARK_END_NEW__
 
 #FROM hpcgridware/clusterscheduler-latest-ubuntu2204:latest
-FROM hpcgridware/clusterscheduler-latest-ubuntu2204:V901_TAG
+#FROM hpcgridware/clusterscheduler-latest-ubuntu2204:V901_TAG
+#FROM hpcgridware/ocs-ubuntu2204:9.0.2
+FROM hpcgridware/ocs-ubuntu2204-nightly:20250203
 
 RUN mkdir -p /opt/helpers
 
@@ -27,10 +29,10 @@ COPY autoinstall.template /opt/helpers/
 COPY installer.sh /opt/helpers/
 COPY entrypoint.sh /entrypoint.sh
 
-ARG GOLANG_VERSION=1.23.1
+ARG GOLANG_VERSION=1.23.5
 
 RUN apt-get update && \
-    apt-get install -y curl wget git gcc make vim libhwloc-dev hwloc software-properties-common && \
+    apt-get install -y curl wget git gcc make vim libhwloc-dev hwloc software-properties-common man-db  && \
     add-apt-repository -y ppa:apptainer/ppa && \
     apt-get update && \
     apt-get install -y apptainer
