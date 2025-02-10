@@ -178,8 +178,18 @@ func (q *QStatImpl) DisplayClusterQueueSummary() ([]ClusterQueueSummary, error) 
 	return ParseClusterQueueSummary(out)
 }
 
+// DisplayAllJobArrayTasks is equivalent to "qstat -g d"
 func (q *QStatImpl) DisplayAllJobArrayTasks() ([]JobArrayTask, error) {
-	return nil, fmt.Errorf("not implemented")
+	out, err := q.NativeSpecification([]string{"-g", "d"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get output of qstat: %w", err)
+	}
+	jobArrayTasks, err := ParseJobArrayTask(out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse job array tasks: %w", err)
+	}
+
+	return jobArrayTasks, nil
 }
 
 func (q *QStatImpl) DisplayAllParallelJobTasks() ([]ParallelJobTask, error) {
