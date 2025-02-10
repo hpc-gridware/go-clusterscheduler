@@ -830,3 +830,111 @@ func ParseClusterQueueSummary(out string) ([]ClusterQueueSummary, error) {
 
 	return summaries, nil
 }
+
+/*
+qstat -g d
+job-ID  prior   name       user         state submit/start at     queue                          slots ja-task-ID
+-----------------------------------------------------------------------------------------------------------------
+
+	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 1
+	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 3
+	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 5
+	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 7
+	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 25
+	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 27
+	36 0.60500 sleep      root         qw    2025-02-10 16:52:21                                    2
+	37 0.60500 sleep      root         qw    2025-02-10 16:52:35                                    2
+	38 0.60500 sleep      root         qw    2025-02-10 16:52:49                                    2
+	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 1
+	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 2
+	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 3
+	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 8
+	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 9
+	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 10
+	33 0.50500 sleep      root         qw    2025-02-10 16:47:18                                    1 29
+	33 0.50500 sleep      root         qw    2025-02-10 16:47:18                                    1 31
+	33 0.50500 sleep      root         qw    2025-02-10 16:47:18                                    1 99
+	34 0.50500 sleep      root         qw    2025-02-10 16:51:51                                    1
+*/
+func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
+	lines := strings.Split(out, "\n")
+
+	jobArrayTasks := make([]JobArrayTask, 0, len(lines)-3)
+
+	for _, line := range lines[2:] {
+		fields := strings.Fields(line)
+		if len(fields) < 8 {
+			continue
+		}
+		jobID, err := strconv.Atoi(fields[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse jobID: %v", err)
+		}
+		priority, err := strconv.ParseFloat(fields[1], 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse priority: %v", err)
+		}
+		name := fields[2]
+		user := fields[3]
+		state := fields[4]
+		timeString := fields[5] + " " + fields[6]
+		jobTime, err := time.Parse("2006-01-02 15:04:05", timeString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse submit time: %v", err)
+		}
+		var submitTime time.Time
+		var startTime time.Time
+		if strings.Contains(state, "qw") {
+			startTime = jobTime
+		} else {
+			submitTime = jobTime
+		}
+
+		// if fields[7] is not a number, it is the queue name
+		var slots int
+		var taskID int
+		var queue string
+
+		// when waiting there is no queue name
+		if slotsInt, err := strconv.Atoi(fields[7]); err != nil {
+			queue = fields[7]
+			if len(fields) > 8 {
+				slots, _ = strconv.Atoi(fields[8])
+			}
+			if len(fields) > 9 {
+				taskID, _ = strconv.Atoi(fields[9])
+			}
+		} else {
+			slots = slotsInt
+			// waiting jobs
+			if len(fields) > 8 {
+				slots, _ = strconv.Atoi(fields[8])
+			}
+			if len(fields) > 9 {
+				taskID, err = strconv.Atoi(fields[9])
+				if err != nil {
+					// a single job and parallel job has no taskID
+					taskID = 0
+				}
+			}
+		}
+
+		jobInfo := JobInfo{
+			JobID:      jobID,
+			Priority:   priority,
+			Name:       name,
+			User:       user,
+			State:      state,
+			SubmitTime: submitTime,
+			StartTime:  startTime,
+			Queue:      queue,
+			Slots:      slots,
+			JaTaskIDs:  []int64{int64(taskID)},
+		}
+		jobArrayTasks = append(jobArrayTasks, JobArrayTask{
+			JobInfo: jobInfo,
+		})
+
+	}
+	return jobArrayTasks, nil
+}
