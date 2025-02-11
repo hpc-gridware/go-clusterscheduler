@@ -859,7 +859,11 @@ job-ID  prior   name       user         state submit/start at     queue         
 func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 	lines := strings.Split(out, "\n")
 
-	jobArrayTasks := make([]JobArrayTask, 0, len(lines)-3)
+	jobArrayTasks := make([]JobArrayTask, 0, len(lines))
+
+	if len(lines) < 2 {
+		return jobArrayTasks, nil
+	}
 
 	for _, line := range lines[2:] {
 		fields := strings.Fields(line)
@@ -884,7 +888,7 @@ func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 		}
 		var submitTime time.Time
 		var startTime time.Time
-		if strings.Contains(state, "qw") {
+		if !strings.Contains(state, "qw") {
 			startTime = jobTime
 		} else {
 			submitTime = jobTime
