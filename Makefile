@@ -21,7 +21,7 @@
 # This Makefile is used for development and testing purposes only.
 
 IMAGE_NAME = $(shell basename $(CURDIR))
-IMAGE_TAG = V901_TAG
+IMAGE_TAG = V902_TAG
 CONTAINER_NAME = $(IMAGE_NAME)
 
 .PHONY: build

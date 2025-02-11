@@ -484,13 +484,37 @@ test.q                            0.08      0      0      2      2      0      0
 					Name:       "sleep",
 					User:       "root",
 					State:      "r",
-					SubmitTime: time.Date(2025, 2, 10, 16, 47, 18, 0, time.UTC),
-					StartTime:  time.Time{},
+					StartTime:  time.Date(2025, 2, 10, 16, 47, 18, 0, time.UTC),
+					SubmitTime: time.Time{},
 					Queue:      "all.q@master",
 					Slots:      1,
 					JaTaskIDs:  []int64{1},
 				},
 			}))
+
+			Expect(jobArrayTasks).To(ContainElement(qstat.JobArrayTask{
+				JobInfo: qstat.JobInfo{
+					JobID:      36,
+					Priority:   0.605,
+					Name:       "sleep",
+					User:       "root",
+					State:      "qw",
+					SubmitTime: time.Date(2025, 2, 10, 16, 52, 21, 0, time.UTC),
+					StartTime:  time.Time{},
+					Queue:      "",
+					Slots:      2,
+					JaTaskIDs:  []int64{0},
+				},
+			}))
+
+		})
+
+		It("should parse an empty input", func() {
+			input := ""
+			jobArrayTasks, err := qstat.ParseJobArrayTask(input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(jobArrayTasks)).To(Equal(0))
+
 		})
 
 	})
