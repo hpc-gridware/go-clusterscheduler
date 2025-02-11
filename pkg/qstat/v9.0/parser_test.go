@@ -514,6 +514,7 @@ test.q                            0.08      0      0      2      2      0      0
 			jobArrayTasks, err := qstat.ParseJobArrayTask(input)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(jobArrayTasks)).To(Equal(0))
+
 		})
 
 	})
