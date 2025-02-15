@@ -65,7 +65,7 @@ func ParseMemoryFromString(m string) (int64, error) {
 
 	// Determine the multiplier
 	multiplier := int64(1) // Default is bytes if no unit
-	switch strings.ToUpper(string(unit)) {
+	switch string(unit) {
 	case "K":
 		multiplier = 1024
 	case "M":
