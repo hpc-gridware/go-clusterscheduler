@@ -33,6 +33,7 @@ var _ = Describe("QstatImpl", func() {
 		It("should return the command line", func() {
 			var err error
 			var q qstat.QStat
+
 			q, err = qstat.NewCommandLineQstat(
 				qstat.CommandLineQStatConfig{
 					DryRun: true,

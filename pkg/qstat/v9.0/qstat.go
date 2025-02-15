@@ -40,7 +40,7 @@ type QStat interface {
 	// qstat -explain <reason> a|c|A|E
 	ShowQueueExplanation(reason string) ([]QueueExplanation, error)
 	// qstat -f
-	ShowFullOutput() ([]JobInfo, error)
+	ShowFullOutput() ([]FullQueueInfo, error)
 	// qstat -F <resource_attributes>
 	ShowFullOutputWithResources(resourceAttributes string) ([]JobInfo, error)
 	// qstat -g c

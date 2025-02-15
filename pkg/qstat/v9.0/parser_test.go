@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2024-2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -448,6 +448,74 @@ test.q                            0.08      0      0      2      2      0      0
 			Expect(summary[1].Total).To(Equal(2))
 			Expect(summary[1].AoACDS).To(Equal(0))
 			Expect(summary[1].CdsuE).To(Equal(0))
+		})
+
+	})
+
+	Describe("FullQueueInfo", func() {
+
+		It("should parse the output of qstat -f", func() {
+			input := `queuename                      qtype resv/used/tot. load_avg arch          states
+---------------------------------------------------------------------------------
+all.q@master                   BIP   0/2/14         0.59     lx-amd64
+     12 0.50500 sleep      root         r     2025-02-15 07:29:31     2
+---------------------------------------------------------------------------------
+test.q@master                  BIP   0/2/10         0.59     lx-amd64
+     13 0.50500 sleep      root         r     2025-02-15 07:29:35     2
+
+############################################################################
+ - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS
+############################################################################
+     14 0.60500 sleep      root         qw    2025-02-15 07:03:48   111`
+			full, err := qstat.ParseQstatFullOutput(input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(full)).To(Equal(2))
+
+			Expect(full[0].QueueName).To(Equal("all.q@master"))
+			Expect(full[0].QueueType).To(Equal("BIP"))
+			Expect(full[0].Reserved).To(Equal(0))
+			Expect(full[0].Used).To(Equal(2))
+			Expect(full[0].Total).To(Equal(14))
+			Expect(full[0].Jobs).To(HaveLen(1))
+			Expect(full[0].Jobs[0].JobID).To(Equal(12))
+			Expect(full[0].Jobs[0].Name).To(Equal("sleep"))
+			Expect(full[0].Jobs[0].User).To(Equal("root"))
+			Expect(full[0].Jobs[0].State).To(Equal("r"))
+			Expect(full[0].Jobs[0].StartTime).To(Equal(time.Date(2025, 2, 15, 7, 29, 31, 0, time.UTC)))
+			Expect(len(full[0].Jobs[0].JaTaskIDs)).To(Equal(0))
+
+			Expect(full[1].QueueName).To(Equal("test.q@master"))
+			Expect(full[1].QueueType).To(Equal("BIP"))
+			Expect(full[1].Reserved).To(Equal(0))
+			Expect(full[1].Used).To(Equal(2))
+			Expect(full[1].Total).To(Equal(10))
+			Expect(full[1].Jobs).To(HaveLen(1))
+			Expect(full[1].Jobs[0].JobID).To(Equal(13))
+			Expect(full[1].Jobs[0].Name).To(Equal("sleep"))
+			Expect(full[1].Jobs[0].User).To(Equal("root"))
+			Expect(full[1].Jobs[0].State).To(Equal("r"))
+			Expect(full[1].Jobs[0].StartTime).To(Equal(time.Date(2025, 2, 15, 7, 29, 35, 0, time.UTC)))
+			Expect(len(full[1].Jobs[0].JaTaskIDs)).To(Equal(0))
+
+			input2 := `queuename                      qtype resv/used/tot. load_avg arch          states
+---------------------------------------------------------------------------------
+all.q@master                   BIP   0/0/14         0.55     lx-amd64
+---------------------------------------------------------------------------------
+test.q@master                  BIP   0/0/10         0.55     lx-amd64
+
+############################################################################
+ - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS
+############################################################################
+     14 0.55500 sleep      root         qw    2025-02-15 07:03:48   111`
+			full, err = qstat.ParseQstatFullOutput(input2)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(full)).To(Equal(2))
+
+			Expect(full[0].QueueName).To(Equal("all.q@master"))
+			Expect(full[0].Jobs).To(HaveLen(0))
+
+			Expect(full[1].QueueName).To(Equal("test.q@master"))
+			Expect(full[1].Jobs).To(HaveLen(0))
 		})
 
 	})
