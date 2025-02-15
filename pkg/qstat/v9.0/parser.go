@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const QstatDateFormat = "2006-01-02 03:04:05"
@@ -68,7 +69,9 @@ func parseFixedWidthJobs(input string) ([]ParallelJobTask, error) {
 		return tasks, nil
 	}
 
-	// Correct column positions based on your description
+	// we have 9.0.0 to 9.0.2 format and 9.0.3 format with 3 more columns
+	// for the job IDs
+
 	columnPositions := []struct {
 		start int
 		end   int
@@ -941,4 +944,193 @@ func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 
 	}
 	return jobArrayTasks, nil
+}
+
+/*
+qstat -f
+queuename                      qtype resv/used/tot. load_avg arch          states
+---------------------------------------------------------------------------------
+all.q@master                   BIP   0/9/14         0.69     lx-amd64
+      2 0.50500 sleep      root         r     2025-02-15 12:28:22     1
+      3 0.50500 sleep      root         r     2025-02-15 12:28:23     1
+      4 0.50500 sleep      root         r     2025-02-15 12:28:23     1
+      5 0.50500 sleep      root         r     2025-02-15 12:28:24     1
+      6 0.50500 sleep      root         r     2025-02-15 12:28:24     1
+      7 0.50500 sleep      root         r     2025-02-15 12:28:25     1
+      8 0.50500 sleep      root         r     2025-02-15 12:28:25     1
+     12 0.60500 sleep      root         r     2025-02-15 12:29:31     2
+---------------------------------------------------------------------------------
+test.q@master                  BIP   0/6/10         0.69     lx-amd64
+      9 0.50500 sleep      root         r     2025-02-15 12:28:34     1
+     10 0.50500 sleep      root         r     2025-02-15 12:28:38     1
+     11 0.50500 sleep      root         r     2025-02-15 12:29:03     1 1
+     11 0.50500 sleep      root         r     2025-02-15 12:29:03     1 2
+     13 0.60500 sleep      root         r     2025-02-15 12:29:35     2
+*/
+
+// ParseQstatFullOutput parses the output of the "qstat -f" command and returns
+// a slice of FullQueueInfo containing queue details and associated job information.
+//
+// It expects an output with queue header lines (non-indented) followed by one or more
+// job lines (indented) until a separator (a line full of "-" characters) is encountered.
+func ParseQstatFullOutput(out string) ([]FullQueueInfo, error) {
+	lines := strings.Split(out, "\n")
+	var results []FullQueueInfo
+	var currentQueue *FullQueueInfo
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "####") {
+			break
+		}
+
+		// Skip any known header lines.
+		lower := strings.ToLower(trimmed)
+		if strings.HasPrefix(lower, "queuename") {
+			continue
+		}
+
+		// If this is a separator line, then finish the current block.
+		if isSeparatorLine(trimmed) {
+			if currentQueue != nil {
+				results = append(results, *currentQueue)
+				currentQueue = nil
+			}
+			continue
+		}
+
+		// If the line does not start with whitespace, it is a queue header.
+		if !startsWithWhitespace(line) {
+			// If an active queue exists, push it into results before starting a new block.
+			if currentQueue != nil {
+				results = append(results, *currentQueue)
+			}
+
+			fields := strings.Fields(line)
+			if len(fields) < 5 {
+				return nil, fmt.Errorf("invalid queue header format: %q", line)
+			}
+			queueName := fields[0]
+			qtype := fields[1]
+			resvUsedTot := fields[2] // Expected format: "resv/used/tot"
+			loadAvgStr := fields[3]
+			arch := fields[4]
+
+			parts := strings.Split(resvUsedTot, "/")
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("invalid resv/used/tot format in queue header: %q", line)
+			}
+			reserved, err := strconv.Atoi(parts[0])
+			if err != nil {
+				return nil, fmt.Errorf("invalid reserved value in queue header: %v", err)
+			}
+			used, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return nil, fmt.Errorf("invalid used value in queue header: %v", err)
+			}
+			total, err := strconv.Atoi(parts[2])
+			if err != nil {
+				return nil, fmt.Errorf("invalid total value in queue header: %v", err)
+			}
+			loadAvg, err := strconv.ParseFloat(loadAvgStr, 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid load_avg value in queue header: %v", err)
+			}
+			currentQueue = &FullQueueInfo{
+				QueueName: queueName,
+				QueueType: qtype,
+				Reserved:  reserved,
+				Used:      used,
+				Total:     total,
+				LoadAvg:   loadAvg,
+				Arch:      arch,
+				Jobs:      []JobInfo{},
+			}
+		} else {
+			// This is a job line. It must belong to an already parsed queue header.
+			if currentQueue == nil {
+				return nil, fmt.Errorf("job info found without preceding queue header: %q", line)
+			}
+			fields := strings.Fields(line)
+			if len(fields) < 8 {
+				return nil, fmt.Errorf("invalid job line format: %q", line)
+			}
+			jobID, err := strconv.Atoi(fields[0])
+			if err != nil {
+				return nil, fmt.Errorf("invalid job id in job line %q: %v", line, err)
+			}
+			score, err := strconv.ParseFloat(fields[1], 64)
+			if err != nil {
+				return nil, fmt.Errorf("invalid score in job line %q: %v", line, err)
+			}
+			taskName := fields[2]
+			owner := fields[3]
+			state := fields[4]
+			datetimeStr := fields[5] + " " + fields[6]
+			startTime, err := time.Parse("2006-01-02 15:04:05", datetimeStr)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to parse datetime '%s' in job line %q: %v",
+					datetimeStr, line, err)
+			}
+			var submitTime time.Time
+			if strings.Contains(state, "q") {
+				submitTime = startTime
+				startTime = time.Time{}
+			}
+			slots, err := strconv.Atoi(fields[7])
+			if err != nil {
+				return nil, fmt.Errorf("invalid slots in job line %q: %v", line, err)
+			}
+			// optional tasks
+			var taskIDs []int64
+			if len(fields) > 8 {
+				taskID, err := strconv.Atoi(fields[8])
+				if err != nil {
+					return nil, fmt.Errorf("invalid task id in job line %q: %v", line, err)
+				}
+				taskIDs = []int64{int64(taskID)}
+			}
+			job := JobInfo{
+				JobID:      jobID,
+				Priority:   score,
+				Name:       taskName,
+				User:       owner,
+				State:      state,
+				StartTime:  startTime,
+				SubmitTime: submitTime,
+				Queue:      currentQueue.QueueName,
+				Slots:      slots,
+				JaTaskIDs:  taskIDs,
+			}
+			currentQueue.Jobs = append(currentQueue.Jobs, job)
+		}
+	}
+
+	// Append the last queue block if it exists.
+	if currentQueue != nil {
+		results = append(results, *currentQueue)
+	}
+	return results, nil
+}
+
+// startsWithWhitespace returns true if the first rune of the string is a whitespace.
+func startsWithWhitespace(s string) bool {
+	for _, r := range s {
+		return unicode.IsSpace(r)
+	}
+	return false
+}
+
+// isSeparatorLine checks if the provided line is made up entirely of '-' characters.
+func isSeparatorLine(s string) bool {
+	for _, r := range s {
+		if r != '-' {
+			return false
+		}
+	}
+	return true
 }

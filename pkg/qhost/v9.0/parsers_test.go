@@ -404,19 +404,73 @@ sim9                    lx-amd64        4    1    4    4  0.60   15.6G  465.8M  
    hl:np_load_long=0.110000
    hf:load_report_host=master`
 
+		qhostFOutput2 := `HOSTNAME                ARCH         NCPU NSOC NCOR NTHR  LOAD  MEMTOT  MEMUSE  SWAPTO  SWAPUS
+----------------------------------------------------------------------------------------------
+global                  -               -    -    -    -     -       -       -       -       -
+   gc:testc=100000.000000
+master                  lx-amd64       14    1   14   14  1.50    7.7G    2.0G 1024.0M   12.0K
+   gc:testc=100000.000000
+   hl:load_avg=1.500000
+   hl:load_short=1.670000
+   hl:load_medium=1.500000
+   hl:load_long=1.100000
+   hl:arch=lx-amd64
+   hl:num_proc=14.000000
+   hl:mem_free=5.621G
+   hl:swap_free=1023.984M
+   hl:virtual_free=6.621G
+   hl:mem_total=7.653G
+   hl:swap_total=1023.996M
+   hl:virtual_total=8.653G
+   hl:mem_used=2.032G
+   hl:swap_used=12.000K
+   hl:virtual_used=2.032G
+   hl:cpu=0.500000
+   hl:m_topology=SCCCCCCCCCCCCCC
+   hl:m_topology_inuse=SCCCCCCCCCCCCCC
+   hl:m_socket=1.000000
+   hl:m_core=14.000000
+   hl:m_thread=14.000000
+   hl:np_load_avg=0.107143
+   hl:np_load_short=0.119286
+   hl:np_load_medium=0.107143
+   hl:np_load_long=0.078571
+   `
+
 		It("should return error if output is invalid", func() {
 			hosts, err := qhost.ParseHostFullMetrics(sample)
 			Expect(err).To(BeNil())
-			Expect(hosts).To(HaveLen(2))
+			Expect(hosts).To(HaveLen(3))
 		})
 
 		It("should parse host full metrics", func() {
 			hosts, err := qhost.ParseHostFullMetrics(qhostFOutput1)
 			Expect(err).To(BeNil())
-			Expect(hosts).To(HaveLen(13))
-			Expect(hosts[0].Name).To(Equal("master"))
-			Expect(hosts[12].Name).To(Equal("sim9"))
+			Expect(hosts).To(HaveLen(14))
+			Expect(hosts[0].Name).To(Equal("global"))
+			Expect(hosts[1].Name).To(Equal("master"))
+			Expect(hosts[12].Name).To(Equal("sim8"))
 		})
+
+		It("should parse host full metrics with global host values", func() {
+			hosts, err := qhost.ParseHostFullMetrics(qhostFOutput2)
+			Expect(err).To(BeNil())
+			Expect(hosts).To(HaveLen(2))
+			Expect(hosts[0].Name).To(Equal("global"))
+			Expect(hosts[1].Name).To(Equal("master"))
+			Expect(len(hosts[0].Resources)).To(Equal(1))
+			Expect(hosts[0].Resources["testc"]).To(Equal(
+				qhost.ResourceAvailability{
+					Name:                          "testc",
+					StringValue:                   "100000.000000",
+					FloatValue:                    100000.000000,
+					ResourceAvailabilityLimitedBy: "g",
+					Source:                        "c",
+					FullString:                    "gc:testc=100000.000000",
+				},
+			))
+		})
+
 	})
 
 })

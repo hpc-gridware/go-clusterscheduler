@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2024-2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -452,68 +452,70 @@ test.q                            0.08      0      0      2      2      0      0
 
 	})
 
-	Describe("JobArrayTask", func() {
+	Describe("FullQueueInfo", func() {
 
-		It("should parse the output of qstat -g d", func() {
-			input := `job-ID  prior   name       user         state submit/start at     queue                          slots ja-task-ID
------------------------------------------------------------------------------------------------------------------
-	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 1
-	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 3
-	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 5
-	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 23
-	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 25
-	33 0.50500 sleep      root         r     2025-02-10 16:47:18 all.q@master                       1 27
-	36 0.60500 sleep      root         qw    2025-02-10 16:52:21                                    2
-	37 0.60500 sleep      root         qw    2025-02-10 16:52:35                                    2
-	38 0.60500 sleep      root         qw    2025-02-10 16:52:49                                    2
-	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 1
-	39 0.60500 sleep      root         qw    2025-02-10 16:53:23                                    2 2
-	33 0.50500 sleep      root         qw    2025-02-10 16:47:18                                    1 95
-	33 0.50500 sleep      root         qw    2025-02-10 16:47:18                                    1 97
-	33 0.50500 sleep      root         qw    2025-02-10 16:47:18                                    1 99
-	34 0.50500 sleep      root         qw    2025-02-10 16:51:51                                    1
-`
-			jobArrayTasks, err := qstat.ParseJobArrayTask(input)
+		It("should parse the output of qstat -f", func() {
+			input := `queuename                      qtype resv/used/tot. load_avg arch          states
+---------------------------------------------------------------------------------
+all.q@master                   BIP   0/2/14         0.59     lx-amd64
+     12 0.50500 sleep      root         r     2025-02-15 07:29:31     2
+---------------------------------------------------------------------------------
+test.q@master                  BIP   0/2/10         0.59     lx-amd64
+     13 0.50500 sleep      root         r     2025-02-15 07:29:35     2
+
+############################################################################
+ - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS
+############################################################################
+     14 0.60500 sleep      root         qw    2025-02-15 07:03:48   111`
+			full, err := qstat.ParseQstatFullOutput(input)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(jobArrayTasks)).To(Equal(15))
+			Expect(len(full)).To(Equal(2))
 
-			Expect(jobArrayTasks).To(ContainElement(qstat.JobArrayTask{
-				JobInfo: qstat.JobInfo{
-					JobID:      33,
-					Priority:   0.505,
-					Name:       "sleep",
-					User:       "root",
-					State:      "r",
-					StartTime:  time.Date(2025, 2, 10, 16, 47, 18, 0, time.UTC),
-					SubmitTime: time.Time{},
-					Queue:      "all.q@master",
-					Slots:      1,
-					JaTaskIDs:  []int64{1},
-				},
-			}))
+			Expect(full[0].QueueName).To(Equal("all.q@master"))
+			Expect(full[0].QueueType).To(Equal("BIP"))
+			Expect(full[0].Reserved).To(Equal(0))
+			Expect(full[0].Used).To(Equal(2))
+			Expect(full[0].Total).To(Equal(14))
+			Expect(full[0].Jobs).To(HaveLen(1))
+			Expect(full[0].Jobs[0].JobID).To(Equal(12))
+			Expect(full[0].Jobs[0].Name).To(Equal("sleep"))
+			Expect(full[0].Jobs[0].User).To(Equal("root"))
+			Expect(full[0].Jobs[0].State).To(Equal("r"))
+			Expect(full[0].Jobs[0].StartTime).To(Equal(time.Date(2025, 2, 15, 7, 29, 31, 0, time.UTC)))
+			Expect(len(full[0].Jobs[0].JaTaskIDs)).To(Equal(0))
 
-			Expect(jobArrayTasks).To(ContainElement(qstat.JobArrayTask{
-				JobInfo: qstat.JobInfo{
-					JobID:      36,
-					Priority:   0.605,
-					Name:       "sleep",
-					User:       "root",
-					State:      "qw",
-					SubmitTime: time.Date(2025, 2, 10, 16, 52, 21, 0, time.UTC),
-					StartTime:  time.Time{},
-					Queue:      "",
-					Slots:      2,
-					JaTaskIDs:  []int64{0},
-				},
-			}))
+			Expect(full[1].QueueName).To(Equal("test.q@master"))
+			Expect(full[1].QueueType).To(Equal("BIP"))
+			Expect(full[1].Reserved).To(Equal(0))
+			Expect(full[1].Used).To(Equal(2))
+			Expect(full[1].Total).To(Equal(10))
+			Expect(full[1].Jobs).To(HaveLen(1))
+			Expect(full[1].Jobs[0].JobID).To(Equal(13))
+			Expect(full[1].Jobs[0].Name).To(Equal("sleep"))
+			Expect(full[1].Jobs[0].User).To(Equal("root"))
+			Expect(full[1].Jobs[0].State).To(Equal("r"))
+			Expect(full[1].Jobs[0].StartTime).To(Equal(time.Date(2025, 2, 15, 7, 29, 35, 0, time.UTC)))
+			Expect(len(full[1].Jobs[0].JaTaskIDs)).To(Equal(0))
 
-		})
+			input2 := `queuename                      qtype resv/used/tot. load_avg arch          states
+---------------------------------------------------------------------------------
+all.q@master                   BIP   0/0/14         0.55     lx-amd64
+---------------------------------------------------------------------------------
+test.q@master                  BIP   0/0/10         0.55     lx-amd64
 
-		It("should parse an empty input", func() {
-			input := ""
-			jobArrayTasks, err := qstat.ParseJobArrayTask(input)
+############################################################################
+ - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS - PENDING JOBS
+############################################################################
+     14 0.55500 sleep      root         qw    2025-02-15 07:03:48   111`
+			full, err = qstat.ParseQstatFullOutput(input2)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(jobArrayTasks)).To(Equal(0))
+			Expect(len(full)).To(Equal(2))
+
+			Expect(full[0].QueueName).To(Equal("all.q@master"))
+			Expect(full[0].Jobs).To(HaveLen(0))
+
+			Expect(full[1].QueueName).To(Equal("test.q@master"))
+			Expect(full[1].Jobs).To(HaveLen(0))
 
 		})
 

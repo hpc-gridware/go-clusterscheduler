@@ -68,13 +68,15 @@ type QueueExplanation struct {
 }
 
 type FullQueueInfo struct {
-	QueueName   string    `json:"queuename"`
-	QueueType   string    `json:"qtype"`
-	ResvUsedTot string    `json:"resv_used_tot"`
-	LoadAvg     string    `json:"load_avg"`
-	Arch        string    `json:"arch"`
-	States      string    `json:"states"`
-	Jobs        []JobInfo `json:"jobs"`
+	QueueName string    `json:"queuename"`
+	QueueType string    `json:"qtype"`
+	Reserved  int       `json:"reserved"`
+	Used      int       `json:"used"`
+	Total     int       `json:"total"`
+	LoadAvg   float64   `json:"load_avg"`
+	Arch      string    `json:"arch"`
+	States    string    `json:"states"`
+	Jobs      []JobInfo `json:"jobs"`
 }
 
 type FullQueueInfoWithResources struct {

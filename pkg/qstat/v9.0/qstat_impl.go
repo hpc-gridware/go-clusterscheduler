@@ -161,8 +161,13 @@ func (q *QStatImpl) ShowQueueExplanation(reason string) ([]QueueExplanation, err
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (q *QStatImpl) ShowFullOutput() ([]JobInfo, error) {
-	return nil, fmt.Errorf("not implemented")
+// ShowFullOutput is equivalent to "qstat -f"
+func (q *QStatImpl) ShowFullOutput() ([]FullQueueInfo, error) {
+	out, err := q.NativeSpecification([]string{"-f"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get output of qstat: %w", err)
+	}
+	return ParseQstatFullOutput(out)
 }
 
 func (q *QStatImpl) ShowFullOutputWithResources(resourceAttributes string) ([]JobInfo, error) {

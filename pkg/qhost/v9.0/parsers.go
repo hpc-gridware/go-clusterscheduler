@@ -148,7 +148,6 @@ func ParseHostFullMetrics(out string) ([]HostFullMetrics, error) {
 	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 		if line == "" || strings.HasPrefix(line, "HOSTNAME") ||
-			strings.HasPrefix(line, "global") ||
 			strings.HasPrefix(line, "----") {
 			continue
 		}
