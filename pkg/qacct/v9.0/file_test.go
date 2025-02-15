@@ -25,25 +25,26 @@ var _ = Describe("File", func() {
 
 		It("returns a channel that emits JobDetail objects for 10 jobs", func() {
 
+			jobDetailsChan, err := qacct.WatchFile(context.Background(),
+				qacct.GetDefaultQacctFile(), 0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobDetailsChan).NotTo(BeNil())
+
 			qs, err := qsub.NewCommandLineQSub(qsub.CommandLineQSubConfig{})
 			Expect(err).NotTo(HaveOccurred())
 
 			jobIDs := make([]int, 10)
 			for i := 0; i < 10; i++ {
-				jobID, _, err := qs.Submit(context.Background(), qsub.JobOptions{
-					Command:     "echo",
-					CommandArgs: []string{fmt.Sprintf("job %d", i+1)},
-					Binary:      qsub.ToPtr(true),
-				})
+				jobID, _, err := qs.Submit(context.Background(),
+					qsub.JobOptions{
+						Command:     "/bin/bash",
+						CommandArgs: []string{"-c", fmt.Sprintf("echo job %d; sleep 0", i+1)},
+						Binary:      qsub.ToPtr(true),
+					})
 				Expect(err).NotTo(HaveOccurred())
 				log.Printf("jobID: %d", jobID)
 				jobIDs[i] = int(jobID)
 			}
-
-			jobDetailsChan, err := qacct.WatchFile(context.Background(),
-				qacct.GetDefaultQacctFile(), 0)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(jobDetailsChan).NotTo(BeNil())
 
 			receivedJobs := make(map[int]bool)
 			Eventually(func() bool {
@@ -52,7 +53,7 @@ var _ = Describe("File", func() {
 					log.Printf("job: %+v", jd.JobNumber)
 					// check if jobID is in the jobIDs list
 					if slices.Contains(jobIDs, int(jd.JobNumber)) {
-						Expect(jd.SubmitCommandLine).To(ContainSubstring("echo 'job"))
+						Expect(jd.SubmitCommandLine).To(ContainSubstring("bash"))
 						Expect(jd.JobUsage.Usage.Memory).To(BeNumerically(">=", 0))
 						receivedJobs[int(jd.JobNumber)] = true
 					}

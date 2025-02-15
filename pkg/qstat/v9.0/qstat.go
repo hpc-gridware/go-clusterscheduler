@@ -45,7 +45,9 @@ type QStat interface {
 	ShowFullOutputWithResources(resourceAttributes string) ([]JobInfo, error)
 	// qstat -g c
 	DisplayClusterQueueSummary() ([]ClusterQueueSummary, error)
+	// qstat -g d shows all job array tasks individually
 	DisplayAllJobArrayTasks() ([]JobArrayTask, error)
+	// qstat -g p shows all parallel job tasks individually
 	DisplayAllParallelJobTasks() ([]ParallelJobTask, error)
 	// qstat -help
 	ShowHelp() (string, error)

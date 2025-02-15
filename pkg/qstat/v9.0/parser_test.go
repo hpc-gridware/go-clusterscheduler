@@ -516,6 +516,7 @@ test.q@master                  BIP   0/0/10         0.55     lx-amd64
 
 			Expect(full[1].QueueName).To(Equal("test.q@master"))
 			Expect(full[1].Jobs).To(HaveLen(0))
+
 		})
 
 	})
