@@ -42,6 +42,11 @@ func ParseMemoryFromString(m string) (int64, error) {
 		return 0, errors.New("empty string")
 	}
 
+	// special value for unknown memory
+	if m == "-" {
+		return 0, nil
+	}
+
 	if m == "0" || m == "0.0" || m == "0.00" || m == "0.000" {
 		return 0, nil
 	}

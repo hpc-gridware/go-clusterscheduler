@@ -68,19 +68,20 @@ func ParseHosts(out string) ([]Host, error) {
 			return nil, fmt.Errorf("invalid NCPU: %s", fields[2])
 		}
 
-		host.NSOC, err = strconv.Atoi(fields[3])
+		host.NSOC, err = ParseIntOrUnknown(fields[3])
 		if err != nil {
 			return nil, fmt.Errorf("invalid NSOC: %s", fields[3])
 		}
-		host.NCOR, err = strconv.Atoi(fields[4])
+
+		host.NCOR, err = ParseIntOrUnknown(fields[4])
 		if err != nil {
 			return nil, fmt.Errorf("invalid NCOR: %s", fields[4])
 		}
-		host.NTHR, err = strconv.Atoi(fields[5])
+		host.NTHR, err = ParseIntOrUnknown(fields[5])
 		if err != nil {
 			return nil, fmt.Errorf("invalid NTHR: %s", fields[5])
 		}
-		host.LOAD, err = strconv.ParseFloat(fields[6], 64)
+		host.LOAD, err = ParseFloatOrUnknown(fields[6])
 		if err != nil {
 			return nil, fmt.Errorf("invalid LOAD: %s", fields[6])
 		}
@@ -103,6 +104,24 @@ func ParseHosts(out string) ([]Host, error) {
 		hosts = append(hosts, host)
 	}
 	return hosts, nil
+}
+
+func ParseIntOrUnknown(v string) (int, error) {
+	if v == "-" {
+		return 0, nil
+	}
+	ret, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf("no int or -: %s", v)
+	}
+	return ret, nil
+}
+
+func ParseFloatOrUnknown(v string) (float64, error) {
+	if v == "-" {
+		return 0, nil
+	}
+	return strconv.ParseFloat(v, 64)
 }
 
 /*

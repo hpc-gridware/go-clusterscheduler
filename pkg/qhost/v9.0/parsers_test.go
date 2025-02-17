@@ -16,6 +16,15 @@ global                  -               -    -    -    -     -       -       -  
 master                  lx-amd64        4    1    4    4  0.31   15.6G  422.9M    1.5G     0.0
 exec                    lx-amd64        4    1    4    4  0.31   15.6G  422.9M    1.5G     0.0
 `
+
+	sampleWithUnknownHost := `
+HOSTNAME                ARCH         NCPU NSOC NCOR NTHR  LOAD  MEMTOT  MEMUSE  SWAPTO  SWAPUS
+----------------------------------------------------------------------------------------------
+global                  -               -    -    -    -     -       -       -       -       -
+valid                   lx-amd64        4    1    4    4  0.31   15.6G  422.9M    1.5G     0.0
+unknown                 lx-amd64       14    -    -    -     -    7.7G       -    1.5G       -
+`
+
 	Context("ParseQhostOutput", func() {
 
 		It("should return error if output is invalid", func() {
@@ -44,6 +53,35 @@ exec                    lx-amd64        4    1    4    4  0.31   15.6G  422.9M  
 			Expect(hosts[1].MEMUSE).To(Equal(int64(4229 * 1024 * 1024 / 10)))
 			Expect(hosts[1].SWAPTO).To(Equal(int64(1.5 * 1024 * 1024 * 1024)))
 			Expect(hosts[1].SWAPUS).To(Equal(int64(0.0)))
+		})
+
+		It("should parse without issues when host is unknown", func() {
+			hosts, err := qhost.ParseHosts(sampleWithUnknownHost)
+			Expect(err).To(BeNil())
+			Expect(hosts).To(HaveLen(2))
+			Expect(hosts[0].Name).To(Equal("valid"))
+			Expect(hosts[0].Arch).To(Equal("lx-amd64"))
+			Expect(hosts[0].NCPU).To(Equal(4))
+			Expect(hosts[0].NSOC).To(Equal(1))
+			Expect(hosts[0].NCOR).To(Equal(4))
+			Expect(hosts[0].NTHR).To(Equal(4))
+			Expect(hosts[0].LOAD).To(Equal(0.31))
+			Expect(hosts[0].MEMTOT).To(Equal(int64(156 * 1024 * 1024 * 1024 / 10)))
+			Expect(hosts[0].MEMUSE).To(Equal(int64(4229 * 1024 * 1024 / 10)))
+			Expect(hosts[0].SWAPTO).To(Equal(int64(1.5 * 1024 * 1024 * 1024)))
+			Expect(hosts[0].SWAPUS).To(Equal(int64(0.0)))
+			Expect(hosts[1].Name).To(Equal("unknown"))
+			Expect(hosts[1].Arch).To(Equal("lx-amd64"))
+			Expect(hosts[1].NCPU).To(Equal(14))
+			Expect(hosts[1].NSOC).To(Equal(0))
+			Expect(hosts[1].NCOR).To(Equal(0))
+			Expect(hosts[1].NTHR).To(Equal(0))
+			Expect(hosts[1].LOAD).To(Equal(0.0))
+			Expect(hosts[1].MEMTOT).To(Equal(int64(77 * 1024 * 1024 * 1024 / 10)))
+			Expect(hosts[1].MEMUSE).To(Equal(int64(0)))
+			Expect(hosts[1].SWAPTO).To(Equal(int64(1.5 * 1024 * 1024 * 1024)))
+			Expect(hosts[1].SWAPUS).To(Equal(int64(0.0)))
+
 		})
 
 	})
@@ -435,6 +473,9 @@ master                  lx-amd64       14    1   14   14  1.50    7.7G    2.0G 1
    hl:np_load_short=0.119286
    hl:np_load_medium=0.107143
    hl:np_load_long=0.078571
+unknown                lx-amd64       14    -   -   -  -    7.7G    - 1024.0M   -
+   hl:arch=lx-amd64
+   hl:num_proc=14.000000
    `
 
 		It("should return error if output is invalid", func() {
@@ -455,20 +496,12 @@ master                  lx-amd64       14    1   14   14  1.50    7.7G    2.0G 1
 		It("should parse host full metrics with global host values", func() {
 			hosts, err := qhost.ParseHostFullMetrics(qhostFOutput2)
 			Expect(err).To(BeNil())
-			Expect(hosts).To(HaveLen(2))
+			Expect(hosts).To(HaveLen(3))
 			Expect(hosts[0].Name).To(Equal("global"))
 			Expect(hosts[1].Name).To(Equal("master"))
-			Expect(len(hosts[0].Resources)).To(Equal(1))
-			Expect(hosts[0].Resources["testc"]).To(Equal(
-				qhost.ResourceAvailability{
-					Name:                          "testc",
-					StringValue:                   "100000.000000",
-					FloatValue:                    100000.000000,
-					ResourceAvailabilityLimitedBy: "g",
-					Source:                        "c",
-					FullString:                    "gc:testc=100000.000000",
-				},
-			))
+			Expect(hosts[2].Name).To(Equal("unknown"))
+			Expect(len(hosts[2].Resources)).To(Equal(0))
+			Expect(hosts[2].MemUsed).To(Equal(int64(0)))
 		})
 
 	})
