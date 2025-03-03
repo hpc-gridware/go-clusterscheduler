@@ -16,7 +16,12 @@ Cluster Scheduler effortlessly.
 container based simulator of a real "Grid Engine" cluster. It can
 dump the configuration of a SGE or Open Grid Engine cluster and
 apply changes to a cluster simulated within a container.
-(See the `cmd/simulator` directory for more information.)
+(See the [`cmd/simulator`](cmd/simulator) directory for more information.)
+- **`sharetree` Application**: This application implements a
+simple web-based visualization and editing tool for Open Cluster
+Scheduler (OCS) and Gridware Cluster Scheduler (GCS) sharetree
+configurations.
+(See the [`cmd/sharetree`](cmd/sharetree) directory for more information.)
 
 ## Go API Development Container
 

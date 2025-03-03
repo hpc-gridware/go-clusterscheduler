@@ -55,7 +55,7 @@ simulate:
 	rm -rf ./installation
 	@echo "Creating new subdirectory for installation..."
 	mkdir -p ./installation
-	docker run --rm -it -h master --privileged --cap-add SYS_ADMIN -p 9464:9464 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
+	docker run --platform=linux/amd64 --rm -it -h master --privileged --cap-add SYS_ADMIN -p 9464:9464 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
 
 #.PHONY: simulate
 #simulate:
@@ -68,7 +68,7 @@ adapter:
 	@echo "Running the adapter on port 8282...POST to http://localhost:8282/api/v0/command"
 	@echo "Example: curl -X POST http://localhost:8282/api/v0/command -d '{\"method\": \"ShowSchedulerConfiguration\"}'"
 	mkdir -p ./installation
-	docker run --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter"
+	docker run --platform=linux/amd64 --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter"
 
 .PHONY: clean
 clean:
