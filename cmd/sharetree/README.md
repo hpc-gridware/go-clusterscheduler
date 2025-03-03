@@ -17,6 +17,8 @@ representation.
 not making any interaction with Cluster Scheduler. Based on
 feedback, more functionalities are being added.
 
+![ShareTree Screenshot](images/screenshot.png)
+
 ## Features
 
 - Visual tree representation of sharetree structures
