@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Cluster Scheduler Sharetree Editor</title>
+    
+    <!-- Bootstrap CSS (using CDN for latest version) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons for better UI -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- jsTree CSS from CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/themes/default/style.min.css" rel="stylesheet">
+    
+    <style>
+      body {
+        padding-top: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .container {
+        max-width: 1200px;
+      }
+      #treeContainer {
+        min-height: 500px;
+        max-height: 700px;
+        overflow: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        background-color: #fafafa;
+      }
+      .jstree-default .jstree-anchor {
+        height: auto !important;
+        padding: 2px 5px;
+      }
+      .node-container {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+      .node-name {
+        font-weight: 500;
+        margin-right: 8px;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .node-badge {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .user-badge {
+        background-color: #e3f2fd;
+        color: #0d6efd;
+        border: 1px solid #bddbfc;
+      }
+      .project-badge {
+        background-color: #e7f5e7;
+        color: #198754;
+        border: 1px solid #c9e7c9;
+      }
+      .shares-badge {
+        background-color: #fff3e0;
+        color: #fd7e14;
+        border: 1px solid #ffe0b2;
+      }
+      .card {
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .card-header {
+        background-color: #f8f9fa;
+        font-weight: 500;
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+      }
+      .btn-action {
+        margin-right: 5px;
+        margin-bottom: 5px;
+      }
+      #tempFileInfo {
+        font-size: 0.85rem;
+        padding: 8px;
+        margin-top: 10px;
+      }
+      .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .file-upload-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .file-upload-container .form-control {
+        max-width: 300px;
+      }
+      .top-controls {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #e9ecef;
+      }
+      .node-tooltip {
+        position: relative;
+        display: inline-block;
+      }
+      .node-tooltip:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 0;
+        top: 100%;
+        z-index: 999;
+        background-color: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .node-actions .btn {
+        margin-bottom: 8px;
+      }
+      .toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="mb-4">Open Cluster Scheduler Sharetree Editor</h1>
+      
+      <div id="result" class="alert alert-info">Welcome to Sharetree Editor. Upload a file or start a new sharetree.</div>
+      <div id="tempFileInfo" class="alert alert-secondary">Loading temporary file...</div>
+      
+      <div class="top-controls">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <h5>Sharetree Operations</h5>
+            <div class="action-buttons">
+              <button id="btnNewSharetree" class="btn btn-primary btn-action">
+                <i class="bi bi-file-earmark-plus"></i> New Sharetree
+              </button>
+              <button id="btnDownload" class="btn btn-success btn-action">
+                <i class="bi bi-download"></i> Download Sharetree
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h5>Upload Sharetree</h5>
+            <div class="file-upload-container">
+              <input type="file" id="fileUpload" class="form-control">
+              <button id="btnUpload" class="btn btn-info">
+                <i class="bi bi-upload"></i> Upload
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header">
+              <strong>Sharetree Structure</strong>
+            </div>
+            <div class="card-body">
+              <div id="treeContainer"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card">
+            <div class="card-header"><strong>Node Details</strong></div>
+            <div class="card-body">
+              <form id="nodeDetailsForm">
+                <input type="hidden" id="nodeId">
+                <div class="mb-3">
+                  <label for="nodeText" class="form-label">Node Name</label>
+                  <input type="text" class="form-control" id="nodeText" placeholder="Enter node name">
+                </div>
+                <div class="mb-3">
+                  <label for="nodeType" class="form-label">Node Type</label>
+                  <select class="form-select" id="nodeType">
+                    <option value="0">User</option>
+                    <option value="1">Project</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="nodeShares" class="form-label">Shares</label>
+                  <input type="number" class="form-control" id="nodeShares" min="1" value="1">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Level Percentage (read-only)</label>
+                  <input type="text" class="form-control" id="nodeLevelPercentage" readonly>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Total Percentage (read-only)</label>
+                  <input type="text" class="form-control" id="nodeTotalPercentage" readonly>
+                </div>
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-primary">Save Node</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          
+          <div class="mt-3 node-actions">
+            <div class="d-flex flex-column gap-2">
+              <button id="btnAddChildNode" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add Child Node
+              </button>
+              <button id="btnAddSiblingNode" class="btn btn-info">
+                <i class="bi bi-plus-square"></i> Add Sibling Node
+              </button>
+              <button id="btnDeleteNode" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete Node
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Toast container for notifications -->
+    <div class="toast-container"></div>
+    
+    <!-- Footer with copyright and repository information -->
+    <footer class="mt-5 pt-4 border-top">
+      <div class="container">
+        <div class="row">
+          <div class="col-12 text-center">
+            <p class="small text-muted mb-1">
+              &copy; 2025 HPC-Gridware GmbH. Freely available under Apache License 2.0.
+            </p>
+            <p class="small text-muted" style="font-size: 0.75rem;">
+              <a href="https://github.com/hpc-gridware" target="_blank" rel="noopener noreferrer">
+                github.com/hpc-gridware
+              </a>
+              &nbsp;|&nbsp;
+              <a href="https://github.com/hpc-gridware/go-clusterscheduler/cmd/sharetree" target="_blank" rel="noopener noreferrer">
+                go-clusterscheduler/cmd/sharetree
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
+    
+    <!-- jQuery (required for jsTree) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- jsTree JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.12/jstree.min.js"></script>
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript for editor functionality -->
+    <script>
+      // Keep track of current temp file
+      let currentTempFile = "";
+
+      // Format node text to display name, followed by type and shares with icons
+      function formatNodeText(name, type, shares) {
+        const typeLabel = type === 0 ? "User" : "Project";
+        const typeClass = type === 0 ? "user-badge" : "project-badge";
+        const typeIcon = type === 0 ? "bi-person" : "bi-briefcase";
+        
+        return `
+          <div class="node-container">
+            <span class="node-name">${name}</span>
+            <span class="node-badge ${typeClass}"><i class="bi ${typeIcon}"></i> ${typeLabel}</span>
+            <span class="node-badge shares-badge"><i class="bi bi-pie-chart"></i> ${shares}</span>
+          </div>
+        `;
+      }
+
+      // Function to find the highest node ID in the tree
+      function getHighestNodeId() {
+        const treeInstance = $("#treeContainer").jstree(true);
+        if (!treeInstance) {
+          return 0;
+        }
+        
+        // Get all nodes
+        const allNodes = treeInstance.get_json('#', { flat: true });
+        let highestId = 0;
+        
+        // Iterate through all nodes to find highest ID
+        allNodes.forEach(node => {
+          const nodeId = parseInt(node.id, 10);
+          if (!isNaN(nodeId) && nodeId > highestId) {
+            highestId = nodeId;
+          }
+        });
+        
+        return highestId;
+      }
+
+      // Enhanced reloadTree function with better data handling from server
+      function reloadTree(callback) {
+        // Save current selections and expansions
+        let selectedNodeId = null;
+        let expandedNodes = [];
+        
+        const currentTree = $("#treeContainer").jstree(true);
+        if (currentTree) {
+          selectedNodeId = $("#nodeId").val() || "0";
+          
+          // Check if get_open_nodes is a function before calling it
+          if (typeof currentTree.get_open_nodes === 'function') {
+            // Get all currently expanded nodes
+            expandedNodes = currentTree.get_open_nodes();
+          } else {
+            console.warn("get_open_nodes is not available on the tree instance");
+            expandedNodes = [];
+          }
+          
+          try {
+            // Safely destroy current tree
+            currentTree.destroy();
+          } catch (e) {
+            console.warn("Error destroying tree:", e);
+          }
+        }
+        
+        // Show loading message
+        $("#treeContainer").html("<div class='text-center'><div class='spinner-border text-primary' role='status'></div><div class='mt-2'>Loading tree...</div></div>");
+        
+        // Get sharetree from server with debugging info
+        console.log("Fetching sharetree from server...");
+        
+        fetch('/api/getsharetree')
+          .then(response => {
+            if (!response.ok) {
+              return response.text().then(text => {
+                throw new Error(text || 'Error loading sharetree: ' + response.statusText);
+              });
+            }
+            return response.json();
+          })
+          .then(data => {
+            // Log the received data for debugging
+            console.log("Received sharetree data from server:", data);
+            
+            // Update temp file info
+            currentTempFile = data.tempFile;
+            $("#tempFileInfo").text("Working on temporary file: " + currentTempFile);
+            
+            // Build tree data from sharetree
+            var treeData = [];
+            var nodeMap = {};
+            
+            // Handle empty sharetree or invalid data
+            if (!data.sharetree || !Array.isArray(data.sharetree) || data.sharetree.length === 0) {
+              console.warn("Empty or invalid sharetree data, creating default root node");
+              // Create a default root node
+              treeData.push({
+                id: "0",
+                text: formatNodeText("Root", 0, 1),
+                type: "0",
+                original: { realName: "Root" },
+                data: { 
+                  type: 0, 
+                  shares: 1,
+                  levelPercentage: 100,
+                  totalPercentage: 100
+                },
+                children: []
+              });
+            } else {
+              // Create a map of all nodes first
+              data.sharetree.forEach(function(node) {
+                // Ensure we have valid integers for type and shares
+                var nodeType = parseInt(node.type || 0);
+                var nodeShares = parseInt(node.shares || 1);
+                
+                // Handle invalid values
+                if (isNaN(nodeType)) nodeType = 0;
+                if (isNaN(nodeShares) || nodeShares < 1) nodeShares = 1;
+                
+                var nodeName = node.name || "Unnamed Node";
+                
+                // Ensure root node is named "Root"
+                if (node.id === 0 || node.id === "0") {
+                  nodeName = "Root";
+                }
+                
+                // Properly format the node text with name, type and shares
+                var formattedText = formatNodeText(nodeName, nodeType, nodeShares);
+                
+                // Capture percentage values from the server response
+                var levelPercentage = node.levelPercentage !== undefined ? node.levelPercentage : 0;
+                var totalPercentage = node.totalPercentage !== undefined ? node.totalPercentage : 0;
+                
+                // Log node processing for debugging
+                console.log("Processing node from server:", node.id, nodeName, nodeType, nodeShares, 
+                            "Level %:", levelPercentage, "Total %:", totalPercentage);
+                
+                nodeMap[node.id] = {
+                  id: node.id.toString(),
+                  text: formattedText,
+                  type: nodeType.toString(),
+                  original: { realName: nodeName },
+                  data: { 
+                    type: nodeType, 
+                    shares: nodeShares,
+                    levelPercentage: levelPercentage,
+                    totalPercentage: totalPercentage
+                  },
+                  children: []
+                };
+              });
+              
+              // Process parent-child relationships
+              data.sharetree.forEach(function(node) {
+                if (nodeMap[node.id]) {
+                  var nodeObj = nodeMap[node.id];
+                  
+                  if (node.childnodes && node.childnodes !== "NONE") {
+                    var childIds = node.childnodes.split(",");
+                    
+                    // Instead of just storing IDs, we need to properly set up the children array
+                    // with the actual node objects from the nodeMap
+                    nodeObj.children = childIds
+                      .filter(id => nodeMap[id]) // Only include children that exist in the nodeMap
+                      .map(id => nodeMap[id]);   // Map to the actual node objects instead of just IDs
+                  }
+                  
+                  // Root node goes directly to the tree data
+                  if (node.id === 0 || node.id === "0") {
+                    treeData.push(nodeObj);
+                  }
+                } else {
+                  console.warn("Node referenced in childnodes but not found:", node.id);
+                }
+              });
+              
+              // If no root node was found, create one
+              if (treeData.length === 0) {
+                console.warn("No root node found in data, creating default");
+                treeData.push({
+                  id: "0",
+                  text: formatNodeText("Root", 0, 1),
+                  type: "0",
+                  original: { realName: "Root" },
+                  data: { 
+                    type: 0, 
+                    shares: 1,
+                    levelPercentage: 100,
+                    totalPercentage: 100
+                  },
+                  children: []
+                });
+              }
+            }
+            
+            // Log the tree data we're about to render
+            console.log("Tree data ready for rendering:", treeData);
+            
+            // Initialize the tree with properly formatted nodes
+            $("#treeContainer").jstree({
+              "core": {
+                "data": treeData,
+                "themes": {
+                  "name": "default",
+                  "responsive": true
+                },
+                "check_callback": true
+              },
+              "types": {
+                "0": { // User type
+                  "icon": "bi bi-person"
+                },
+                "1": { // Project type
+                  "icon": "bi bi-briefcase" 
+                }
+              },
+              "plugins": ["types", "dnd", "contextmenu", "wholerow"],
+              "contextmenu": {
+                "items": function(node) {
+                  var items = {
+                    "add": {
+                      "label": "Add Child",
+                      "action": function(data) {
+                        var inst = $.jstree.reference(data.reference);
+                        var node = inst.get_node(data.reference);
+                        
+                        // Generate unique ID
+                        const highestId = getHighestNodeId();
+                        const newNodeId = (highestId + 1).toString();
+                        
+                        inst.create_node(node, {
+                          id: newNodeId,
+                          text: formatNodeText("New Node", 0, 1),
+                          original: { realName: "New Node" },
+                          data: { type: 0, shares: 1 },
+                          type: "0"
+                        }, "last", function(new_node) {
+                          // Open node if it's closed
+                          if (!inst.is_open(node)) {
+                            inst.open_node(node);
+                          }
+                          
+                          // Select the new node
+                          inst.select_node(new_node);
+                          
+                          // Save to server
+                          saveTreeToServer("Adding child node with ID " + newNodeId, false);
+                        });
+                      }
+                    },
+                    "addSibling": {
+                      "label": "Add Sibling",
+                      "action": function(data) {
+                        var inst = $.jstree.reference(data.reference);
+                        var node = inst.get_node(data.reference);
+                        
+                        // Don't allow siblings for root
+                        if (node.id === "0") {
+                          $("#result").html("<div class='alert alert-warning'>Root node cannot have siblings</div>");
+                          return;
+                        }
+                        
+                        // Get parent node
+                        var parentNode = inst.get_node(inst.get_parent(node));
+                        if (!parentNode) {
+                          $("#result").html("<div class='alert alert-danger'>Parent node not found</div>");
+                          return;
+                        }
+                        
+                        // Generate unique ID
+                        const highestId = getHighestNodeId();
+                        const newNodeId = (highestId + 1).toString();
+                        
+                        // Create sibling node
+                        inst.create_node(parentNode, {
+                          id: newNodeId,
+                          text: formatNodeText("New Sibling", 0, 1),
+                          original: { realName: "New Sibling" },
+                          data: { type: 0, shares: 1 },
+                          type: "0"
+                        }, "last", function(new_node) {
+                          // Open parent if closed
+                          if (!inst.is_open(parentNode)) {
+                            inst.open_node(parentNode);
+                          }
+                          
+                          // Select the new node
+                          inst.select_node(new_node);
+                          
+                          // Save to server
+                          saveTreeToServer("Adding sibling node", true);
+                        });
+                      },
+                      "_disabled": node.id === "0" // Disable for root node
+                    },
+                    "remove": {
+                      "label": "Delete",
+                      "action": function(data) {
+                        var inst = $.jstree.reference(data.reference);
+                        var node = inst.get_node(data.reference);
+                        
+                        // Don't allow removing root
+                        if (node.id === "0") {
+                          $("#result").html("<div class='alert alert-warning'>Cannot delete root node</div>");
+                          return;
+                        }
+                        
+                        // Check if has children and confirm
+                        if (node.children && node.children.length > 0) {
+                          if (!confirm(`This will delete node "${getNodeRealName(node)}" and all its children. Are you sure?`)) {
+                            return;
+                          }
+                        } else if (!confirm(`Are you sure you want to delete node "${getNodeRealName(node)}"?`)) {
+                          return;
+                        }
+                        
+                        // Get parent for selection after delete
+                        var parentId = inst.get_parent(node);
+                        
+                        // Delete the node
+                        inst.delete_node(node);
+                        
+                        // Ensure tree is updated internally before syncing with server
+                        setTimeout(function() {
+                          // Select parent after deletion
+                          if (parentId && inst.get_node(parentId)) {
+                            inst.select_node(parentId);
+                          }
+                          
+                          // Save to server with forced reload for consistency
+                          saveTreeToServer("Deleting node", true);
+                        }, 100);
+                      },
+                      "_disabled": node.id === "0" // Disable for root node
+                    }
+                  };
+                  return items;
+                }
+              }
+            })
+            .on('select_node.jstree', function(e, data) {
+              // Fill the form with node data
+              var node = data.node;
+              $("#nodeId").val(node.id);
+              
+              // Get the real name from node.original
+              var nodeName = node.original && node.original.realName ? 
+                             node.original.realName : "";
+              
+              // If realName is not available, extract from formatted text
+              if (!nodeName) {
+                var tempDiv = document.createElement('div');
+                tempDiv.innerHTML = node.text;
+                var nameElement = tempDiv.querySelector('.node-name');
+                if (nameElement) {
+                  nodeName = nameElement.textContent.trim();
+                } else {
+                  nodeName = node.text; // fallback
+                }
+              }
+              
+              // For root node, disable name and type fields
+              if (node.id === "0") {
+                $("#nodeText").val("Root").prop("disabled", true);
+                $("#nodeType").val("0").prop("disabled", true);
+                $("#nodeShares").prop("disabled", false).focus();
+              } else {
+                $("#nodeText").val(nodeName).prop("disabled", false);
+                $("#nodeType").val(node.data ? node.data.type : "0").prop("disabled", false);
+                $("#nodeShares").prop("disabled", false);
+              }
+              
+              $("#nodeShares").val(node.data ? node.data.shares : "1");
+              
+              // Set the level and total percentages (read-only fields)
+              // Check if node.data exists and if percentage values exist
+              if (node.data) {
+                console.log("Node data for percentages:", node.data);
+                var levelPct = typeof node.data.levelPercentage === 'number' ? 
+                              node.data.levelPercentage.toFixed(2) + "%" : "N/A";
+                var totalPct = typeof node.data.totalPercentage === 'number' ? 
+                              node.data.totalPercentage.toFixed(2) + "%" : "N/A";
+                  
+                $("#nodeLevelPercentage").val(levelPct);
+                $("#nodeTotalPercentage").val(totalPct);
+              } else {
+                $("#nodeLevelPercentage").val("N/A");
+                $("#nodeTotalPercentage").val("N/A");
+              }
+              
+              // Update action buttons
+              updateNodeActionButtons(node.id);
+            })
+            .on('ready.jstree', function() {
+              console.log("Tree ready event fired");
+              
+              // Restore expanded nodes
+              var tree = $("#treeContainer").jstree(true);
+              if (expandedNodes.length > 0) {
+                tree.close_all();
+                
+                // Open previously expanded nodes
+                expandedNodes.forEach(function(nodeId) {
+                  if (tree.get_node(nodeId)) {
+                    tree.open_node(nodeId);
+                  }
+                });
+              }
+              
+              // Select the previously selected node or root node by default
+              var nodeToSelect = selectedNodeId || "0";
+              if (tree.get_node(nodeToSelect)) {
+                tree.select_node(nodeToSelect);
+                console.log("Selected node after reload:", nodeToSelect);
+              } else {
+                tree.select_node("0"); // Fall back to root
+                console.log("Fell back to selecting root node");
+              }
+              
+              // Execute callback if provided
+              if (typeof callback === 'function') {
+                callback();
+              }
+            });
+          })
+          .catch(error => {
+            console.error('Error loading sharetree:', error);
+            $("#result").html(`<div class='alert alert-danger'>Error loading sharetree: ${error.message}</div>`);
+            
+            // Create a basic tree with just root node on error
+            $("#treeContainer").jstree({
+              "core": {
+                "data": [{
+                  id: "0",
+                  text: formatNodeText("Root", 0, 1),
+                  type: "0",
+                  original: { realName: "Root" },
+                  data: { 
+                    type: 0, 
+                    shares: 1,
+                    levelPercentage: 100,
+                    totalPercentage: 100
+                  },
+                  children: []
+                }],
+                // Minimal configuration for error recovery
+                "types": {
+                  "0": { "icon": "bi bi-person" },
+                  "1": { "icon": "bi bi-briefcase" }
+                },
+                "plugins": ["types", "contextmenu", "dnd", "wholerow"]
+              },
+            });
+          });
+      }
+
+      // Fixed convertToSgeFormat to prevent duplicate node IDs
+      function convertToSgeFormat(treeData) {
+        var sgeNodes = [];
+        var treeInstance = $("#treeContainer").jstree(true);
+        var processedIds = new Set(); // Track processed IDs to avoid duplicates
+        
+        if (!treeInstance) {
+          console.error("JSTree instance not available");
+          return [];
+        }
+        
+        // Process a single node and its children
+        function processNode(node) {
+          // Ensure nodeId is an integer
+          var nodeId = parseInt(node.id, 10);
+          if (isNaN(nodeId)) {
+            console.warn("Invalid node ID found, using unique ID as fallback", node);
+            nodeId = processedIds.size + 1; // Generate a unique ID
+          }
+          
+          // Check if we've already processed this ID
+          if (processedIds.has(nodeId)) {
+            console.warn(`Duplicate node ID found (${nodeId}), skipping to prevent duplicates`, node);
+            return; // Skip this node to prevent duplicate IDs
+          }
+          
+          // Add ID to processed set
+          processedIds.add(nodeId);
+          
+          // Extract the real name from node.original or from the HTML content
+          var nodeName = "";
+          if (node.original && node.original.realName) {
+            nodeName = node.original.realName;
+          } else {
+            // Try to extract name from HTML if needed
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = node.text;
+            var nameElement = tempDiv.querySelector('.node-name');
+            if (nameElement) {
+              nodeName = nameElement.textContent.trim();
+            } else {
+              // Fallback to text as-is (for backward compatibility)
+              nodeName = node.text;
+            }
+          }
+          
+          // Special handling for root node
+          if (nodeId === 0) {
+            nodeName = "Root";
+          }
+          
+          // Ensure type and shares are integers
+          var nodeType = 0; // Default to User type
+          if (node.data && typeof node.data.type !== 'undefined') {
+            nodeType = parseInt(node.data.type, 10);
+            if (isNaN(nodeType)) nodeType = 0;
+          }
+          
+          var nodeShares = 1; // Default to 1 share
+          if (node.data && typeof node.data.shares !== 'undefined') {
+            nodeShares = parseInt(node.data.shares, 10);
+            if (isNaN(nodeShares) || nodeShares < 1) nodeShares = 1;
+          }
+          
+          // Get child IDs as a comma-separated string
+          var childIds = "NONE";
+          if (node.children && node.children.length > 0) {
+            // Filter out any potential duplicate children or invalid IDs
+            var validChildren = node.children.filter(childId => {
+              const id = parseInt(childId, 10);
+              return !isNaN(id) && id !== nodeId; // Ensure child isn't the same as parent
+            });
+            
+            if (validChildren.length > 0) {
+              childIds = validChildren.join(",");
+            }
+          }
+          
+          // Create the SGE node with all properties properly set
+          var sgeNode = {
+            id: nodeId,
+            name: nodeName,
+            type: nodeType,
+            shares: nodeShares,
+            childnodes: childIds
+          };
+          
+          // Log for debugging
+          console.log("Converting node to SGE format:", sgeNode);
+          
+          // Add to the list
+          sgeNodes.push(sgeNode);
+          
+          // Process children recursively
+          if (node.children && node.children.length > 0) {
+            for (var i = 0; i < node.children.length; i++) {
+              var childId = node.children[i];
+              var childNode = treeInstance.get_node(childId);
+              if (childNode && childNode.id !== node.id) { // Prevent self-reference
+                processNode(childNode);
+              }
+            }
+          }
+        }
+        
+        // Start with the root node
+        var rootNode = treeInstance.get_node("0");
+        if (rootNode) {
+          processNode(rootNode);
+        } else {
+          console.error("Root node not found");
+          // Create a default root node
+          sgeNodes.push({
+            id: 0,
+            name: "Root",
+            type: 0,
+            shares: 1,
+            childnodes: "NONE"
+          });
+        }
+        
+        // Final validation - ensure no duplicate IDs
+        const idCounts = {};
+        sgeNodes.forEach(node => {
+          idCounts[node.id] = (idCounts[node.id] || 0) + 1;
+        });
+        
+        const duplicates = Object.entries(idCounts).filter(([id, count]) => count > 1);
+        if (duplicates.length > 0) {
+          console.error("Duplicate IDs detected before sending to server:", duplicates);
+          // Filter out duplicates, keeping only the first occurrence
+          const seenIds = new Set();
+          sgeNodes = sgeNodes.filter(node => {
+            if (seenIds.has(node.id)) {
+              return false;
+            }
+            seenIds.add(node.id);
+            return true;
+          });
+        }
+        
+        return sgeNodes;
+      }
+
+      // Enhanced saveTreeToServer with duplicate ID checking
+      function saveTreeToServer(message, shouldReload) {
+        var treeInstance = $("#treeContainer").jstree(true);
+        
+        // Check if tree is initialized
+        if (!treeInstance) {
+          $("#result").html("<div class='alert alert-danger'>Tree not initialized</div>");
+          return Promise.reject(new Error("Tree not initialized"));
+        }
+        
+        // Get the latest tree data
+        var treeData = treeInstance.get_json("#", { flat: false });
+        
+        // Convert to sharetree format
+        var sharetree = convertToSgeFormat(treeData);
+        
+        // Validate no duplicate IDs before sending
+        const idMap = {};
+        let hasDuplicates = false;
+        let duplicateId = null;
+        
+        sharetree.forEach(node => {
+          if (idMap[node.id]) {
+            hasDuplicates = true;
+            duplicateId = node.id;
+          }
+          idMap[node.id] = true;
+        });
+        
+        if (hasDuplicates) {
+          const errorMsg = `Cannot save: Duplicate node ID found: ${duplicateId}`;
+          console.error(errorMsg, sharetree);
+          $("#result").html("<div class='alert alert-danger'>" + errorMsg + "</div>");
+          
+          // Try to fix the tree by recreating it
+          if (confirm("Tree structure has errors. Would you like to attempt to fix it?")) {
+            return fetch('/api/refreshtemp', { method: 'POST' })
+              .then(response => response.json())
+              .then(() => {
+                reloadTree();
+                return Promise.reject(new Error("Tree reset due to duplicate IDs"));
+              });
+          }
+          
+          return Promise.reject(new Error(errorMsg));
+        }
+        
+        // Log the data being sent to the server for debugging
+        console.log("Saving sharetree data to server:", sharetree);
+        
+        // Show a temporary message
+        $("#result").html("<div class='alert alert-info'>" + message + "...</div>");
+        
+        // Prepare request data
+        var requestData = {
+          sharetree: sharetree
+        };
+        
+        // Send to server
+        return fetch('/api/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestData)
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.text().then(text => {
+              throw new Error(text || 'Server returned error: ' + response.statusText);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          $("#result").html("<div class='alert alert-success'>" + data.message + "</div>");
+          
+          // Always update the tree with the returned data that has percentages calculated
+          if (data.sharetree) {
+            // Update the current SharetreeNode objects with the updated percentages
+            console.log("Server returned updated sharetree with percentages:", data.sharetree);
+          }
+          
+          if (shouldReload) {
+            // Save selection before reload
+            var selectedNodeId = $("#nodeId").val();
+            
+            // Log what we're about to do
+            console.log("Reloading tree after save, will try to reselect node:", selectedNodeId);
+            
+            // Reload the tree to refresh display
+            reloadTree(function() {
+              // Try to reselect the same node after reload if it still exists
+              if (selectedNodeId) {
+                var tree = $("#treeContainer").jstree(true);
+                if (tree && tree.get_node(selectedNodeId)) {
+                  tree.select_node(selectedNodeId);
+                }
+              }
+            });
+          } else {
+            // Update temp file info without reloading
+            currentTempFile = data.tempFile;
+            $("#tempFileInfo").text("Working on temporary file: " + currentTempFile);
+          }
+          return data;
+        })
+        .catch(error => {
+          console.error('Error saving tree:', error);
+          $("#result").html("<div class='alert alert-danger'>Error saving: " + error.message + "</div>");
+          throw error;
+        });
+      }
+
+      // Document ready function
+      $(document).ready(function() {
+        // Add a div to show current temporary file if it doesn't exist
+        if (!$("#tempFileInfo").length) {
+          $("<div id='tempFileInfo' class='alert alert-secondary mt-2'>Loading...</div>").insertAfter("#result");
+        }
+        
+        // Initial tree load
+        reloadTree();
+        
+        // Download button functionality
+        $("#btnDownload").on("click", function() {
+          window.location.href = "/api/download";
+        });
+        
+        // Improved New Sharetree button with error handling
+        $("#btnNewSharetree").on("click", function() {
+          if (confirm("This will create a new empty sharetree. Are you sure?")) {
+            $("#result").html("<div class='alert alert-info'>Creating new sharetree...</div>");
+            
+            fetch('/api/refreshtemp', {
+              method: 'POST'
+            })
+            .then(response => {
+              if (!response.ok) {
+                return response.text().then(text => {
+                  throw new Error(text || 'Error creating new sharetree: ' + response.statusText);
+                });
+              }
+              return response.json();
+            })
+            .then(data => {
+              // Update temp file info
+              currentTempFile = data.tempFile;
+              $("#tempFileInfo").text("Working on: " + currentTempFile);
+              
+              $("#result").html("<div class='alert alert-success'>" + data.message + "</div>");
+              
+              try {
+                // Force immediate tree reload to display new sharetree
+                reloadTree(function() {
+                  console.log("New sharetree loaded successfully");
+                });
+              } catch (e) {
+                console.error("Error initializing new sharetree:", e);
+                $("#result").html("<div class='alert alert-danger'>Error initializing tree: " + e.message + "</div>");
+              }
+            })
+            .catch(error => {
+              console.error('Error creating new sharetree:', error);
+              $("#result").html("<div class='alert alert-danger'>Error: " + error.message + "</div>");
+            });
+          }
+        });
+        
+        // Enhanced file upload handling with immediate display
+        $("#btnUpload").on("click", function() {
+          var fileInput = document.getElementById('fileUpload');
+          var file = fileInput.files[0];
+          
+          if (!file) {
+            $("#result").html("<div class='alert alert-warning'>Please select a file first</div>");
+            return;
+          }
+          
+          // Show loading message
+          $("#result").html("<div class='alert alert-info'>Reading file...</div>");
+          
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            try {
+              var fileContent = e.target.result;
+              
+              // Prepare request data
+              var requestData = {
+                content: fileContent,
+                save: true
+              };
+              
+              // Show processing message
+              $("#result").html("<div class='alert alert-info'>Processing sharetree file...</div>");
+              
+              // Send to server
+              fetch('/api/loadfromcontent', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+              })
+              .then(response => {
+                if (!response.ok) {
+                  return response.text().then(text => {
+                    throw new Error(text || 'Error loading sharetree: ' + response.statusText);
+                  });
+                }
+                return response.json();
+              })
+              .then(data => {
+                // Show success message
+                $("#result").html("<div class='alert alert-success'>Sharetree loaded successfully from file</div>");
+                
+                // Clear file input
+                $("#fileUpload").val('');
+                
+                // Immediately reload the tree to display the uploaded sharetree
+                reloadTree();
+              })
+              .catch(error => {
+                console.error('Error loading sharetree:', error);
+                $("#result").html("<div class='alert alert-danger'>" + error.message + "</div>");
+                $("#fileUpload").val('');
+              });
+            } catch (error) {
+              console.error('File read error:', error);
+              $("#result").html("<div class='alert alert-danger'>Invalid file format: " + error + "</div>");
+              $("#fileUpload").val('');
+            }
+          };
+          
+          reader.onerror = function() {
+            $("#result").html("<div class='alert alert-danger'>Error reading file</div>");
+            $("#fileUpload").val('');
+          };
+          
+          reader.readAsText(file);
+        });
+        
+        // Handle node details form submission with improved synchronization
+        $("#nodeDetailsForm").on("submit", function(e) {
+          e.preventDefault();
+          var nodeId = $("#nodeId").val();
+          var newText = $("#nodeText").val().trim();
+          var nodeType = parseInt($("#nodeType").val());
+          var nodeShares = parseInt($("#nodeShares").val()) || 1;
+          
+          if (!nodeId) {
+            $("#result").html("<div class='alert alert-warning'>Please select a node first</div>");
+            return;
+          }
+          
+          // For the root node, we only allow changing the shares
+          if (nodeId === "0") {
+            newText = "Root";
+            nodeType = 0; // User type
+          } else {
+            // Prevent empty node names
+            if (!newText) {
+              $("#result").html("<div class='alert alert-warning'>Node name cannot be empty</div>");
+              return;
+            }
+          }
+          
+          // Update the node in the tree
+          var treeInstance = $("#treeContainer").jstree(true);
+          if (!treeInstance) {
+            $("#result").html("<div class='alert alert-danger'>Tree not initialized</div>");
+            return;
+          }
+          
+          var node = treeInstance.get_node(nodeId);
+          if (!node) {
+            $("#result").html("<div class='alert alert-danger'>Selected node not found</div>");
+            return;
+          }
+          
+          // Store original values to detect changes
+          var originalName = node.original && node.original.realName ? node.original.realName : "";
+          var originalType = node.data ? node.data.type : 0;
+          var originalShares = node.data ? node.data.shares : 1;
+          
+          // Check if anything actually changed
+          var hasChanges = originalName !== newText || 
+                           originalType !== nodeType || 
+                           originalShares !== nodeShares;
+          
+          if (!hasChanges) {
+            $("#result").html("<div class='alert alert-info'>No changes detected</div>");
+            return;
+          }
+          
+          // Update node data properties
+          node.data = node.data || {};
+          node.data.type = nodeType;
+          node.data.shares = nodeShares;
+          
+          // Store the real name and update the formatted text
+          node.original = node.original || {};
+          node.original.realName = newText;
+          
+          // Generate the formatted text with all details
+          var formattedText = formatNodeText(newText, nodeType, nodeShares);
+          
+          // Update the node display text
+          treeInstance.rename_node(nodeId, formattedText);
+          
+          // Update node's type (for icon)
+          treeInstance.set_type(node, nodeType.toString());
+          
+          // Ensure the visual update happens immediately
+          treeInstance.redraw_node(nodeId, true);
+          
+          // Save to server with reload for complete synchronization
+          $("#result").html("<div class='alert alert-info'>Saving changes...</div>");
+          
+          // Use setTimeout to ensure tree visual updates happen before server sync
+          setTimeout(function() {
+            saveTreeToServer("Updating node", true)
+              .then(() => {
+                $("#result").html("<div class='alert alert-success'>Node updated successfully</div>");
+                
+                // Reselect the node after reload
+                var tree = $("#treeContainer").jstree(true);
+                if (tree && tree.get_node(nodeId)) {
+                  tree.select_node(nodeId);
+                }
+              })
+              .catch(error => {
+                $("#result").html("<div class='alert alert-danger'>Error saving: " + error.message + "</div>");
+                // Force reload in case of error to restore consistent state
+                reloadTree();
+              });
+          }, 100);
+        });
+        
+        // Add child node button with unique ID assignment
+        $("#btnAddChildNode").on("click", function() {
+          var nodeId = $("#nodeId").val();
+          if (!nodeId) {
+            $("#result").html("<div class='alert alert-warning'>Please select a parent node first</div>");
+            return;
+          }
+          
+          var treeInstance = $("#treeContainer").jstree(true);
+          if (!treeInstance) {
+            $("#result").html("<div class='alert alert-danger'>Tree not initialized</div>");
+            return;
+          }
+          
+          var node = treeInstance.get_node(nodeId);
+          if (!node) {
+            $("#result").html("<div class='alert alert-danger'>Selected node not found</div>");
+            return;
+          }
+          
+          // Generate unique node ID by finding highest existing ID and incrementing
+          const highestId = getHighestNodeId();
+          const newNodeId = (highestId + 1).toString();
+          
+          // Create node with formatted text and unique ID
+          var newNodeName = "New Node";
+          var newNodeType = 0; // User by default
+          var newNodeShares = 1;
+          
+          treeInstance.create_node(node, { 
+            id: newNodeId,
+            text: formatNodeText(newNodeName, newNodeType, newNodeShares),
+            original: { realName: newNodeName },
+            data: { type: newNodeType, shares: newNodeShares },
+            type: newNodeType.toString()
+          }, "last", function(new_node) {
+            // Open the parent if it's closed
+            if (!treeInstance.is_open(node)) {
+              treeInstance.open_node(node);
+            }
+            
+            // Select the new node
+            treeInstance.select_node(new_node);
+            
+            // After creating, update the server
+            saveTreeToServer("Adding new node with ID " + newNodeId, false)
+              .then(() => {
+                $("#result").html(`<div class='alert alert-success'>Added new node with ID ${newNodeId}</div>`);
+              })
+              .catch(error => {
+                $("#result").html("<div class='alert alert-danger'>Error: " + error.message + "</div>");
+              });
+          });
+        });
+        
+        // Expand/collapse all buttons
+        $("#btnExpandAll").on("click", function() {
+          $("#treeContainer").jstree("open_all");
+        });
+        
+        $("#btnCollapseAll").on("click", function() {
+          $("#treeContainer").jstree("close_all");
+          // Keep root node visible
+          $("#treeContainer").jstree("open_node", "0");
+        });
+        
+        // Initialize node action buttons state
+        $("#btnAddSiblingNode").prop("disabled", true);
+        $("#btnDeleteNode").prop("disabled", true);
+        
+        // Update buttons when tree is ready
+        $("#treeContainer").on('ready.jstree', function() {
+          updateNodeActionButtons("0"); // Default to root
+        });
+        
+        // Update buttons when a node is selected
+        $("#treeContainer").on('select_node.jstree', function(e, data) {
+          updateNodeActionButtons(data.node.id);
+        });
+        
+        // Function to update button states based on selected node
+        function updateNodeActionButtons(nodeId) {
+          if (nodeId === "0") {
+            // Root node - can add children but not siblings or be deleted
+            $("#btnAddSiblingNode").prop("disabled", true);
+            $("#btnDeleteNode").prop("disabled", true);
+          } else {
+            // Other nodes - can add children, siblings, and be deleted
+            $("#btnAddSiblingNode").prop("disabled", false);
+            $("#btnDeleteNode").prop("disabled", false);
+          }
+        }
+
+        // Delete node functionality with improved synchronization
+        $("#btnDeleteNode").on("click", function() {
+          var nodeId = $("#nodeId").val();
+          if (!nodeId) {
+            $("#result").html("<div class='alert alert-warning'>Please select a node to delete</div>");
+            return;
+          }
+          
+          // Don't allow deleting root
+          if (nodeId === "0") {
+            $("#result").html("<div class='alert alert-warning'>Cannot delete root node</div>");
+            return;
+          }
+          
+          var treeInstance = $("#treeContainer").jstree(true);
+          if (!treeInstance) {
+            $("#result").html("<div class='alert alert-danger'>Tree not initialized</div>");
+            return;
+          }
+          
+          var node = treeInstance.get_node(nodeId);
+          if (!node) {
+            $("#result").html("<div class='alert alert-danger'>Selected node not found</div>");
+            return;
+          }
+          
+          // Check if has children and confirm
+          if (node.children && node.children.length > 0) {
+            if (!confirm(`This will delete node "${getNodeRealName(node)}" and all its children. Are you sure?`)) {
+              return;
+            }
+          } else if (!confirm(`Are you sure you want to delete node "${getNodeRealName(node)}"?`)) {
+            return;
+          }
+          
+          // Get parent for selection after delete
+          var parentId = treeInstance.get_parent(node);
+          
+          // Delete the node from the tree
+          treeInstance.delete_node(node);
+          
+          // Ensure tree is updated internally before syncing with server
+          setTimeout(function() {
+            // Select the parent node if available
+            if (parentId && treeInstance.get_node(parentId)) {
+              treeInstance.select_node(parentId);
+            }
+            
+            // Save to server with force reload to ensure synchronization
+            saveTreeToServer("Deleting node", true)
+              .then(() => {
+                $("#result").html("<div class='alert alert-success'>Node deleted successfully</div>");
+              })
+              .catch(error => {
+                $("#result").html("<div class='alert alert-danger'>Error: " + error.message + "</div>");
+                // Force reload in case of error to restore consistent state
+                reloadTree();
+              });
+          }, 100);
+        });
+
+        // Helper function to get real node name from formatted node
+        function getNodeRealName(node) {
+          if (node.original && node.original.realName) {
+            return node.original.realName;
+          } else {
+            // Try to extract name from HTML
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = node.text;
+            var nameElement = tempDiv.querySelector('.node-name');
+            if (nameElement) {
+              return nameElement.textContent.trim();
+            }
+            return node.text;
+          }
+        }
+
+        // Fetch and display backend version
+        fetch('/api/version')
+          .then(response => response.text())
+          .then(version => {
+            $('#versionInfo').text('Backend Version: ' + version);
+          })
+          .catch(error => {
+            console.error('Error fetching version:', error);
+            $('#versionInfo').text('Error loading version info');
+          });
+
+        // Add debugging helper function
+        function inspectBackendData() {
+          fetch('/api/getsharetree')
+            .then(response => response.json())
+            .then(data => {
+              console.log("Current backend sharetree data:", data);
+              
+              // Display details about node formatting
+              if (data.sharetree && Array.isArray(data.sharetree)) {
+                data.sharetree.forEach(node => {
+                  console.log(`Node ${node.id}:`, {
+                    name: node.name,
+                    type: node.type,
+                    shares: node.shares,
+                    childnodes: node.childnodes
+                  });
+                });
+              }
+            })
+            .catch(error => {
+              console.error('Error inspecting backend data:', error);
+            });
+        }
+
+        // Add sibling node button with proper variable references
+        $("#btnAddSiblingNode").on("click", function() {
+          var nodeId = $("#nodeId").val();
+          if (!nodeId) {
+            $("#result").html("<div class='alert alert-warning'>Please select a node first</div>");
+            return;
+          }
+          
+          var treeInstance = $("#treeContainer").jstree(true);
+          if (!treeInstance) {
+            $("#result").html("<div class='alert alert-danger'>Tree not initialized</div>");
+            return;
+          }
+          
+          var node = treeInstance.get_node(nodeId);
+          if (!node) {
+            $("#result").html("<div class='alert alert-danger'>Selected node not found</div>");
+            return;
+          }
+          
+          // Don't allow siblings for root
+          if (node.id === "0") {
+            $("#result").html("<div class='alert alert-warning'>Root node cannot have siblings</div>");
+            return;
+          }
+          
+          // Get parent node
+          var parentId = treeInstance.get_parent(node);
+          var parentNode = treeInstance.get_node(parentId);
+          if (!parentNode) {
+            $("#result").html("<div class='alert alert-danger'>Parent node not found</div>");
+            return;
+          }
+          
+          // Generate unique ID
+          const highestId = getHighestNodeId();
+          const newNodeId = (highestId + 1).toString();
+          
+          // Create sibling node
+          treeInstance.create_node(parentNode, {
+            id: newNodeId,
+            text: formatNodeText("New Sibling", 0, 1),
+            original: { realName: "New Sibling" },
+            data: { type: 0, shares: 1 },
+            type: "0"
+          }, "last", function(new_node) {
+            // Open parent if closed
+            if (!treeInstance.is_open(parentNode)) {
+              treeInstance.open_node(parentNode);
+            }
+            
+            // Select the new node
+            treeInstance.select_node(new_node);
+            
+            // Save to server
+            saveTreeToServer("Adding sibling node", true)
+              .then(() => {
+                $("#result").html(`<div class='alert alert-success'>Added new sibling node with ID ${newNodeId}</div>`);
+              })
+              .catch(error => {
+                $("#result").html("<div class='alert alert-danger'>Error: " + error.message + "</div>");
+              });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
