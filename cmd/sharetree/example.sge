@@ -1,0 +1,27 @@
+# OCS Sharetree Configuration
+# Generated on 2025-03-03T10:31:41+01:00
+
+id=0
+name=Root
+type=0
+shares=1
+childnodes=1,2,3
+
+id=1
+name=P1
+type=1
+shares=50
+childnodes=NONE
+
+id=2
+name=P2
+type=1
+shares=50
+childnodes=NONE
+
+id=3
+name=default
+type=0
+shares=10
+childnodes=NONE
+
