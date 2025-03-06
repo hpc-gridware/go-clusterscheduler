@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open Cluster Scheduler Sharetree Editor</title>
+    <title>Simple Open Cluster Scheduler Sharetree Editor</title>
     
     <!-- Bootstrap CSS (using CDN for latest version) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -139,11 +139,31 @@
         right: 20px;
         z-index: 1050;
       }
+      .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .github-issue-btn {
+        font-size: 0.9rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+      }
+      .github-issue-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1 class="mb-4">Open Cluster Scheduler Sharetree Editor</h1>
+      <div class="header-container">
+        <h1>Simple Open Cluster Scheduler Sharetree Editor</h1>
+        <a href="https://github.com/hpc-gridware/go-clusterscheduler/issues/new" target="_blank" class="btn btn-outline-secondary github-issue-btn">
+          <i class="bi bi-bug"></i> Report Issue / Feature Request
+        </a>
+      </div>
       
       <div id="result" class="alert alert-info">Welcome to Sharetree Editor. Upload a file or start a new sharetree.</div>
       <div id="tempFileInfo" class="alert alert-secondary">Loading temporary file...</div>
