@@ -130,6 +130,14 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 			Expect(tc).To(Equal(ce))
 
+			ce.Shortcut = "tt"
+			err = qc.ModifyComplexEntry(complexName, ce)
+			Expect(err).To(BeNil())
+
+			tc, err = qc.ShowComplexEntry(complexName)
+			Expect(err).To(BeNil())
+			Expect(tc).To(Equal(ce))
+
 			err = qc.DeleteComplexEntry(complexName)
 			Expect(err).To(BeNil())
 

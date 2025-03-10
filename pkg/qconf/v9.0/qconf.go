@@ -38,6 +38,7 @@ type QConf interface {
 	ShowComplexEntries() ([]string, error)
 	ShowAllComplexes() ([]ComplexEntryConfig, error)
 	ModifyAllComplexes(complexAttr []ComplexEntryConfig) error
+	ModifyComplexEntry(complexName string, c ComplexEntryConfig) error
 
 	AddCkptInterface(c CkptInterfaceConfig) error
 	DeleteCkptInterface(interfaceName string) error

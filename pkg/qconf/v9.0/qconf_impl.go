@@ -2351,6 +2351,52 @@ func (c *CommandLineQConf) ModifyAllComplexes(centries []ComplexEntryConfig) err
 	return err
 }
 
+// ModifyComplexEntry modifies a complex entry.
+func (c *CommandLineQConf) ModifyComplexEntry(complexName string, cfg ComplexEntryConfig) error {
+	file, err := createTempDirWithFileName(complexName)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(filepath.Dir(file.Name()))
+
+	_, err = file.WriteString(fmt.Sprintf("name           %s\n", cfg.Name))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("shortcut       %s\n", cfg.Shortcut))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("type           %s\n", cfg.Type))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("relop       %s\n", cfg.Relop))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("requestable  %s\n", cfg.Requestable))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("consumable   %s\n", cfg.Consumable))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("default      %s\n", cfg.Default))
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(fmt.Sprintf("urgency      %d\n", cfg.Urgency))
+	if err != nil {
+		return err
+	}
+	file.Close()
+
+	_, err = c.RunCommand("-Mce", file.Name())
+	return err
+}
+
 // ModifyCalendar modifies a calendar.
 func (c *CommandLineQConf) ModifyCalendar(calendarName string, cfg CalendarConfig) error {
 	if cfg.Year == "" {
