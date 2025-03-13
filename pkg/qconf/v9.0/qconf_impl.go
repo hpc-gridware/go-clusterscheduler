@@ -1605,7 +1605,7 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 		queue.QType = []string{"BATCH", "INTERACTIVE"}
 	}
 	if queue.Rerun == nil {
-		queue.Rerun = []string{}
+		queue.Rerun = []string{"FALSE"}
 	}
 	if queue.Slots == nil {
 		queue.Slots = []string{"1"}
@@ -1704,7 +1704,7 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(filepath.Dir(file.Name()))
+	//defer os.RemoveAll(filepath.Dir(file.Name()))
 
 	_, err = file.WriteString(fmt.Sprintf("qname             %s\n", queue.Name))
 	if err != nil {
@@ -2047,6 +2047,10 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 func (c *CommandLineQConf) ShowClusterQueues() ([]string, error) {
 	output, err := c.RunCommand("-sql")
 	if err != nil {
+		if strings.Contains(output, "no") &&
+			strings.Contains(output, "defined") {
+			return []string{}, nil
+		}
 		return nil, err
 	}
 	return splitWithoutEmptyLines(output, "\n"), nil
@@ -2074,6 +2078,10 @@ func (c *CommandLineQConf) DeleteSubmitHost(hostnames []string) error {
 func (c *CommandLineQConf) ShowSubmitHosts() ([]string, error) {
 	output, err := c.RunCommand("-ss")
 	if err != nil {
+		if strings.Contains(output, "no") &&
+			strings.Contains(output, "defined") {
+			return []string{}, nil
+		}
 		return nil, fmt.Errorf("error showing submit hosts: %v", err)
 	}
 	return splitWithoutEmptyLines(output, "\n"), nil

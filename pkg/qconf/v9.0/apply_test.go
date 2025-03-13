@@ -68,7 +68,7 @@ var _ = Describe("Apply", func() {
 					Entries: []string{"root", "peter"},
 				},
 			},
-
+			SubmitHosts: []string{"master"},
 			// Initialize other fields as necessary
 		}
 
