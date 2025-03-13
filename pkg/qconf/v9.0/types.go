@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2024-2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -225,8 +225,8 @@ type ClusterQueueConfig struct {
 	QType             []string `json:"qtype"`
 	CkptList          []string `json:"ckpt_list"`
 	PeList            []string `json:"pe_list"`
-	Rerun             bool     `json:"rerun"`
-	Slots             int      `json:"slots"`
+	Rerun             []string `json:"rerun"`
+	Slots             []string `json:"slots"`
 	TmpDir            string   `json:"tmpdir"`
 	Shell             string   `json:"shell"`
 	Prolog            string   `json:"prolog"`
