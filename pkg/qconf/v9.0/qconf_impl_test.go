@@ -1056,7 +1056,7 @@ gid_range                    20000-20100`, "\n")
 				HostList: []string{"@allhosts"},
 				SeqNo:    77,
 				Priority: 0,
-				Slots:    10,
+				Slots:    []string{"10"},
 				PeList:   []string{"p1", "p2"},
 				QType:    []string{qconf.QTypeBatch, qconf.QTypeInteractive},
 				//ChktList
@@ -1087,13 +1087,13 @@ gid_range                    20000-20100`, "\n")
 				HostList:       []string{"@allhosts", "@newhosts"},
 				SeqNo:          99,
 				LoadThresholds: "np_load_avg=1.75",
-				Slots:          50,
+				Slots:          []string{"50"},
 				MinCpuInterval: "00:01:00",
 				QType:          []string{"BATCH", "INTERACTIVE"},
 				Prolog:         "/new/prolog",
 				Epilog:         "/new/epilog",
 				InitialState:   "disabled",
-				Rerun:          true,
+				Rerun:          []string{"true"},
 			}
 			err = qc.ModifyClusterQueue(queueName, newQueueConfig)
 			Expect(err).To(BeNil())

@@ -1604,11 +1604,11 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 	if queue.QType == nil {
 		queue.QType = []string{"BATCH", "INTERACTIVE"}
 	}
-	if queue.Rerun == false {
-		queue.Rerun = false
+	if queue.Rerun == nil {
+		queue.Rerun = []string{}
 	}
-	if queue.Slots == 0 {
-		queue.Slots = 0
+	if queue.Slots == nil {
+		queue.Slots = []string{"1"}
 	}
 	if queue.TmpDir == "" {
 		queue.TmpDir = "/tmp"
@@ -1763,11 +1763,11 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("rerun             %t\n", queue.Rerun))
+	_, err = file.WriteString(fmt.Sprintf("rerun             %s\n", JoinList(queue.Rerun, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("slots             %d\n", queue.Slots))
+	_, err = file.WriteString(fmt.Sprintf("slots             %s\n", JoinList(queue.Slots, ",")))
 	if err != nil {
 		return err
 	}
@@ -1965,9 +1965,9 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "pe_list":
 			cfg.PeList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "rerun":
-			cfg.Rerun, _ = strconv.ParseBool(fields[1])
+			cfg.Rerun = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "slots":
-			cfg.Slots, _ = strconv.Atoi(fields[1])
+			cfg.Slots = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "tmpdir":
 			cfg.TmpDir = fields[1]
 		case "shell":
@@ -2808,11 +2808,11 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("rerun             %v\n", cfg.Rerun))
+	_, err = file.WriteString(fmt.Sprintf("rerun             %s\n", JoinList(cfg.Rerun, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("slots             %d\n", cfg.Slots))
+	_, err = file.WriteString(fmt.Sprintf("slots             %s\n", JoinList(cfg.Slots, ",")))
 	if err != nil {
 		return err
 	}
