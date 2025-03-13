@@ -1093,7 +1093,7 @@ gid_range                    20000-20100`, "\n")
 				Prolog:         "/new/prolog",
 				Epilog:         "/new/epilog",
 				InitialState:   "disabled",
-				Rerun:          []string{"true"},
+				Rerun:          []string{"TRUE"},
 			}
 			err = qc.ModifyClusterQueue(queueName, newQueueConfig)
 			Expect(err).To(BeNil())
@@ -1128,7 +1128,8 @@ gid_range                    20000-20100`, "\n")
 
 			submitHosts := []string{hostname}
 
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			// Show all submit hosts, initially should not contain the new hosts

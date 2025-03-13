@@ -215,6 +215,17 @@ func (c *ClusterConfig) CompareTo(new ClusterConfig) (*ClusterConfigComparison, 
 	comparison.DiffModified.UserSetLists = resultUserSetLists.Modified
 	comparison.DiffRemoved.UserSetLists = resultUserSetLists.Removed
 
+	// SubmitHosts comparison
+	resultSubmitHosts, err := FindDifferences(c.SubmitHosts, new.SubmitHosts, "")
+	if err != nil {
+		return nil, fmt.Errorf("error finding differences for submit hosts: %w", err)
+	}
+
+	comparison.DiffAdded.SubmitHosts = append(comparison.DiffAdded.SubmitHosts,
+		resultSubmitHosts.Added...)
+	comparison.DiffRemoved.SubmitHosts = append(comparison.DiffRemoved.SubmitHosts,
+		resultSubmitHosts.Removed...)
+
 	return comparison, nil
 }
 

@@ -30,6 +30,7 @@ type ClusterConfig struct {
 	HostConfigurations   map[string]HostConfiguration         `json:"host_configurations"`
 	ExecHosts            map[string]HostExecConfig            `json:"exec_hosts"`
 	AdminHosts           []string                             `json:"admin_hosts"`
+	SubmitHosts          []string                             `json:"submit_hosts"`
 	HostGroups           map[string]HostGroupConfig           `json:"host_groups"`
 	ResourceQuotaSets    map[string]ResourceQuotaSetConfig    `json:"resource_quota_sets"`
 	Managers             []string                             `json:"managers"`

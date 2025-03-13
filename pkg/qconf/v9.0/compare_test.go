@@ -63,7 +63,8 @@ var _ = Describe("CompareTo", func() {
 					},
 					"NewCalendar2": {Name: "NewCalendar2"},
 				},
-				AdminHosts: []string{"NewAdminHost1", "InitialAdminHost1"}, // update
+				AdminHosts:  []string{"NewAdminHost1", "InitialAdminHost1"}, // update
+				SubmitHosts: []string{"submitHost1", "submitHost2"},
 				// Initialize other fields as necessary
 			}
 
@@ -80,6 +81,10 @@ var _ = Describe("CompareTo", func() {
 
 			Expect(comparison.DiffAdded.AdminHosts).To(HaveLen(1))
 			Expect(comparison.DiffAdded.AdminHosts[0]).To(Equal("NewAdminHost1"))
+
+			Expect(comparison.DiffAdded.SubmitHosts).To(HaveLen(2))
+			Expect(comparison.DiffAdded.SubmitHosts[0]).To(Equal("submitHost1"))
+			Expect(comparison.DiffAdded.SubmitHosts[1]).To(Equal("submitHost2"))
 
 			// Validate the DiffModified section
 			Expect(comparison.DiffModified.Calendars).To(HaveLen(1))

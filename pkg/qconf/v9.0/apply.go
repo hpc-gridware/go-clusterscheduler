@@ -102,6 +102,7 @@ func Apply(qc QConf, newConfig ClusterConfig, dryRun bool) error {
 // 13. ResourceQuotaSets
 // 14. ParallelEnvironments
 // 15. ClusterQueues
+// 16. SubmitHosts
 func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 	var appliedConfig ClusterConfig
 
@@ -267,6 +268,12 @@ func AddAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 		}
 		appliedConfig.ClusterQueues[elem.Name] = elem
 	}
+
+	// Add all submit hosts
+	if err := qc.AddSubmitHosts(q.SubmitHosts); err != nil {
+		return appliedConfig, fmt.Errorf("failed to add submit hosts: %w", err)
+	}
+	appliedConfig.SubmitHosts = q.SubmitHosts
 
 	return appliedConfig, nil
 }
@@ -465,6 +472,14 @@ func ModifyAllEntries(qc QConf, q ClusterConfig) (ClusterConfig, error) {
 			return modifiedConfig, fmt.Errorf("failed to modify scheduler config: %w", err)
 		}
 		modifiedConfig.SchedulerConfig = q.SchedulerConfig
+	}
+
+	// Modify submit hosts if set
+	if q.SubmitHosts != nil {
+		if err := qc.AddSubmitHosts(q.SubmitHosts); err != nil {
+			return modifiedConfig, fmt.Errorf("failed to modify submit hosts: %w", err)
+		}
+		modifiedConfig.SubmitHosts = q.SubmitHosts
 	}
 
 	return modifiedConfig, nil
@@ -727,6 +742,16 @@ func DeleteAllEnries(qc QConf, q ClusterConfig, continueOnError bool) (ClusterCo
 		}
 		deletedConfig.Users[elem.Name] = elem
 	}
+
+	// Delete all submit hosts
+	if err := qc.DeleteSubmitHost(q.SubmitHosts); err != nil {
+		if continueOnError {
+			allErrors = append(allErrors, fmt.Errorf("error deleting submit hosts: %w", err))
+		} else {
+			return deletedConfig, fmt.Errorf("error deleting submit hosts: %w", err)
+		}
+	}
+	deletedConfig.SubmitHosts = q.SubmitHosts
 
 	if len(allErrors) > 0 {
 		errMsg := "error deleting multiple objects: "
