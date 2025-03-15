@@ -70,6 +70,13 @@ adapter:
 	mkdir -p ./installation
 	docker run --platform=linux/amd64 --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter"
 
+.PHONY: run-rest
+run-rest: build
+	@echo "Running the Open Cluster Scheduler container with REST adapter..."
+	@echo "For a new installation, you need to remove the ./installation subdirectory first."
+	mkdir -p ./installation
+	docker run --platform=linux/amd64 -p 7070:7070 -p 9464:9464 -p 9898:9898 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter --port 9898 & exec bash"
+
 .PHONY: clean
 clean:
 	@echo "Removing the container..."

@@ -1577,122 +1577,157 @@ func SetDefaultQueueValues(queue *ClusterQueueConfig) {
 	if len(queue.HostList) == 0 {
 		queue.HostList = []string{"NONE"}
 	}
-	if queue.SeqNo == 0 {
-		queue.SeqNo = 0
+	if len(queue.SeqNo) == 0 || queue.SeqNo[0] == "" {
+		queue.SeqNo = []string{"0"}
 	}
-	if queue.LoadThresholds == "" {
-		queue.LoadThresholds = "np_load_avg=1.75"
+	if len(queue.LoadThresholds) == 0 ||
+		queue.LoadThresholds[0] == "" {
+		queue.LoadThresholds = []string{"np_load_avg=1.75"}
 	}
-	if queue.SuspendThresholds == "" {
-		queue.SuspendThresholds = "NONE"
+	if len(queue.SuspendThresholds) == 0 ||
+		queue.SuspendThresholds[0] == "" {
+		queue.SuspendThresholds = []string{"NONE"}
 	}
-	if queue.NSuspend == 0 {
-		queue.NSuspend = 0
+	if len(queue.NSuspend) == 0 || queue.NSuspend[0] == "" {
+		queue.NSuspend = []string{"0"}
 	}
-	if queue.SuspendInterval == "" {
-		queue.SuspendInterval = "00:05:00"
+	if len(queue.SuspendInterval) == 0 || queue.SuspendInterval[0] == "" {
+		queue.SuspendInterval = []string{"00:05:00"}
 	}
-	if queue.Priority == 0 {
-		queue.Priority = 0
+	if len(queue.Priority) == 0 || queue.Priority[0] == "" {
+		queue.Priority = []string{"0"}
 	}
-	if queue.MinCpuInterval == "" {
-		queue.MinCpuInterval = "00:05:00"
+	if len(queue.MinCpuInterval) == 0 || queue.MinCpuInterval[0] == "" {
+		queue.MinCpuInterval = []string{"00:05:00"}
 	}
-	if queue.Processors == "" {
-		queue.Processors = "UNDEFINED"
+	if len(queue.Processors) == 0 || queue.Processors[0] == "" {
+		queue.Processors = []string{"UNDEFINED"}
 	}
-	if queue.QType == nil {
+	if len(queue.QType) == 0 {
 		queue.QType = []string{"BATCH", "INTERACTIVE"}
 	}
-	if queue.Rerun == nil {
+	if len(queue.Rerun) == 0 || queue.Rerun[0] == "" {
 		queue.Rerun = []string{"FALSE"}
 	}
-	if queue.Slots == nil {
+	if len(queue.Slots) == 0 || queue.Slots[0] == "" {
 		queue.Slots = []string{"1"}
 	}
-	if queue.TmpDir == "" {
-		queue.TmpDir = "/tmp"
+	if len(queue.TmpDir) == 0 || queue.TmpDir[0] == "" {
+		queue.TmpDir = []string{"/tmp"}
 	}
-	if queue.Shell == "" {
-		queue.Shell = "/bin/sh"
+	if len(queue.Shell) == 0 || queue.Shell[0] == "" {
+		queue.Shell = []string{"/bin/sh"}
 	}
-	if queue.Prolog == "" {
-		queue.Prolog = "NONE"
+	if len(queue.Prolog) == 0 || queue.Prolog[0] == "" {
+		queue.Prolog = []string{"NONE"}
 	}
-	if queue.Epilog == "" {
-		queue.Epilog = "NONE"
+	if len(queue.Epilog) == 0 || queue.Epilog[0] == "" {
+		queue.Epilog = []string{"NONE"}
 	}
-	if queue.ShellStartMode == "" {
-		queue.ShellStartMode = "unix_behavior"
+	if len(queue.ShellStartMode) == 0 || queue.ShellStartMode[0] == "" {
+		queue.ShellStartMode = []string{"unix_behavior"}
 	}
-	if queue.StarterMethod == "" {
-		queue.StarterMethod = "NONE"
+	if len(queue.StarterMethod) == 0 || queue.StarterMethod[0] == "" {
+		queue.StarterMethod = []string{"NONE"}
 	}
-	if queue.SuspendMethod == "" {
-		queue.SuspendMethod = "NONE"
+	if len(queue.SuspendMethod) == 0 || queue.SuspendMethod[0] == "" {
+		queue.SuspendMethod = []string{"NONE"}
 	}
-	if queue.ResumeMethod == "" {
-		queue.ResumeMethod = "NONE"
+	if len(queue.ResumeMethod) == 0 || queue.ResumeMethod[0] == "" {
+		queue.ResumeMethod = []string{"NONE"}
 	}
-	if queue.TerminateMethod == "" {
-		queue.TerminateMethod = "NONE"
+	if len(queue.TerminateMethod) == 0 || queue.TerminateMethod[0] == "" {
+		queue.TerminateMethod = []string{"NONE"}
 	}
-	if queue.Notify == "" {
-		queue.Notify = "00:00:60"
+	if len(queue.Notify) == 0 || queue.Notify[0] == "" {
+		queue.Notify = []string{"00:00:60"}
 	}
-	if queue.Calendar == "" {
-		queue.Calendar = "NONE"
+	if len(queue.Calendar) == 0 || queue.Calendar[0] == "" {
+		queue.Calendar = []string{"NONE"}
 	}
-	if queue.InitialState == "" {
-		queue.InitialState = "default"
+	if len(queue.InitialState) == 0 || queue.InitialState[0] == "" {
+		queue.InitialState = []string{"default"}
 	}
-	if queue.SRt == "" {
-		queue.SRt = "INFINITY"
+	if len(queue.SRt) == 0 || queue.SRt[0] == "" {
+		queue.SRt = []string{"INFINITY"}
 	}
-	if queue.HRt == "" {
-		queue.HRt = "INFINITY"
+	if len(queue.HRt) == 0 || queue.HRt[0] == "" {
+		queue.HRt = []string{"INFINITY"}
 	}
-	if queue.SCpu == "" {
-		queue.SCpu = "INFINITY"
+	if len(queue.SCpu) == 0 || queue.SCpu[0] == "" {
+		queue.SCpu = []string{"INFINITY"}
 	}
-	if queue.HCpu == "" {
-		queue.HCpu = "INFINITY"
+	if len(queue.HCpu) == 0 || queue.HCpu[0] == "" {
+		queue.HCpu = []string{"INFINITY"}
 	}
-	if queue.SSize == "" {
-		queue.SSize = "INFINITY"
+	if len(queue.SSize) == 0 || queue.SSize[0] == "" {
+		queue.SSize = []string{"INFINITY"}
 	}
-	if queue.HSize == "" {
-		queue.HSize = "INFINITY"
+	if len(queue.HSize) == 0 || queue.HSize[0] == "" {
+		queue.HSize = []string{"INFINITY"}
 	}
-	if queue.SData == "" {
-		queue.SData = "INFINITY"
+	if len(queue.SData) == 0 || queue.SData[0] == "" {
+		queue.SData = []string{"INFINITY"}
 	}
-	if queue.HData == "" {
-		queue.HData = "INFINITY"
+	if len(queue.HData) == 0 || queue.HData[0] == "" {
+		queue.HData = []string{"INFINITY"}
 	}
-	if queue.SStack == "" {
-		queue.SStack = "INFINITY"
+	if len(queue.SStack) == 0 || queue.SStack[0] == "" {
+		queue.SStack = []string{"INFINITY"}
 	}
-	if queue.HStack == "" {
-		queue.HStack = "INFINITY"
+	if len(queue.HStack) == 0 || queue.HStack[0] == "" {
+		queue.HStack = []string{"INFINITY"}
 	}
-	if queue.SCore == "" {
-		queue.SCore = "INFINITY"
+	if len(queue.SCore) == 0 || queue.SCore[0] == "" {
+		queue.SCore = []string{"INFINITY"}
 	}
-	if queue.HCore == "" {
-		queue.HCore = "INFINITY"
+	if len(queue.HCore) == 0 || queue.HCore[0] == "" {
+		queue.HCore = []string{"INFINITY"}
 	}
-	if queue.SRss == "" {
-		queue.SRss = "INFINITY"
+	if len(queue.SRss) == 0 || queue.SRss[0] == "" {
+		queue.SRss = []string{"INFINITY"}
 	}
-	if queue.HRss == "" {
-		queue.HRss = "INFINITY"
+	if len(queue.HRss) == 0 || queue.HRss[0] == "" {
+		queue.HRss = []string{"INFINITY"}
 	}
-	if queue.SVmem == "" {
-		queue.SVmem = "INFINITY"
+	if len(queue.SVmem) == 0 || queue.SVmem[0] == "" {
+		queue.SVmem = []string{"INFINITY"}
 	}
-	if queue.HVmem == "" {
-		queue.HVmem = "INFINITY"
+	if len(queue.HVmem) == 0 || queue.HVmem[0] == "" {
+		queue.HVmem = []string{"INFINITY"}
+	}
+
+	// Simplified checks for fields that should be ["NONE"] when empty
+	if len(queue.SuspendThresholds) == 0 || queue.SuspendThresholds[0] == "" {
+		queue.SuspendThresholds = []string{"NONE"}
+	}
+
+	if len(queue.Prolog) == 0 || queue.Prolog[0] == "" {
+		queue.Prolog = []string{"NONE"}
+	}
+
+	if len(queue.Epilog) == 0 || queue.Epilog[0] == "" {
+		queue.Epilog = []string{"NONE"}
+	}
+
+	if len(queue.StarterMethod) == 0 || queue.StarterMethod[0] == "" {
+		queue.StarterMethod = []string{"NONE"}
+	}
+
+	if len(queue.SuspendMethod) == 0 || queue.SuspendMethod[0] == "" {
+		queue.SuspendMethod = []string{"NONE"}
+	}
+
+	if len(queue.ResumeMethod) == 0 || queue.ResumeMethod[0] == "" {
+		queue.ResumeMethod = []string{"NONE"}
+	}
+
+	if len(queue.TerminateMethod) == 0 || queue.TerminateMethod[0] == "" {
+		queue.TerminateMethod = []string{"NONE"}
+	}
+
+	if len(queue.Calendar) == 0 || queue.Calendar[0] == "" {
+		queue.Calendar = []string{"NONE"}
 	}
 }
 
@@ -1710,204 +1745,248 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	hostlist := strings.Join(queue.HostList, " ")
-	if len(queue.HostList) == 0 {
-		hostlist = "NONE"
-	}
 	_, err = file.WriteString(fmt.Sprintf("hostlist          %s\n",
-		hostlist))
+		JoinList(queue.HostList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("seq_no             %d\n", queue.SeqNo))
+	_, err = file.WriteString(fmt.Sprintf("seq_no            %s\n",
+		JoinList(queue.SeqNo, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("load_thresholds    %s\n", queue.LoadThresholds))
+	_, err = file.WriteString(fmt.Sprintf("load_thresholds    %s\n",
+		JoinList(queue.LoadThresholds, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("suspend_thresholds %s\n", queue.SuspendThresholds))
+	_, err = file.WriteString(fmt.Sprintf("suspend_thresholds %s\n",
+		JoinList(queue.SuspendThresholds, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("nsuspend          %d\n", queue.NSuspend))
+	_, err = file.WriteString(fmt.Sprintf("nsuspend          %s\n",
+		JoinList(queue.NSuspend, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("suspend_interval   %s\n", queue.SuspendInterval))
+	_, err = file.WriteString(fmt.Sprintf("suspend_interval   %s\n",
+		JoinList(queue.SuspendInterval, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("priority          %d\n", queue.Priority))
+	_, err = file.WriteString(fmt.Sprintf("priority          %s\n",
+		JoinList(queue.Priority, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("min_cpu_interval    %s\n", queue.MinCpuInterval))
+	_, err = file.WriteString(fmt.Sprintf("min_cpu_interval    %s\n",
+		JoinList(queue.MinCpuInterval, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("processors        %s\n", queue.Processors))
+	_, err = file.WriteString(fmt.Sprintf("processors        %s\n",
+		JoinList(queue.Processors, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", JoinList(queue.QType, " ")))
+	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n",
+		JoinList(queue.QType, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", JoinList(queue.CkptList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n",
+		JoinList(queue.CkptList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", JoinList(queue.PeList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n",
+		JoinList(queue.PeList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("rerun             %s\n", JoinList(queue.Rerun, ",")))
+	_, err = file.WriteString(fmt.Sprintf("rerun             %s\n",
+		JoinList(queue.Rerun, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("slots             %s\n", JoinList(queue.Slots, ",")))
+	_, err = file.WriteString(fmt.Sprintf("slots             %s\n",
+		JoinList(queue.Slots, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("tmpdir            %s\n", queue.TmpDir))
+	_, err = file.WriteString(fmt.Sprintf("tmpdir            %s\n",
+		JoinList(queue.TmpDir, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("shell             %s\n", queue.Shell))
+	_, err = file.WriteString(fmt.Sprintf("shell             %s\n",
+		JoinList(queue.Shell, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("prolog            %s\n", queue.Prolog))
+	_, err = file.WriteString(fmt.Sprintf("prolog            %s\n",
+		JoinList(queue.Prolog, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("epilog            %s\n", queue.Epilog))
+	_, err = file.WriteString(fmt.Sprintf("epilog            %s\n",
+		JoinList(queue.Epilog, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("shell_start_mode    %s\n", queue.ShellStartMode))
+	_, err = file.WriteString(fmt.Sprintf("shell_start_mode    %s\n",
+		JoinList(queue.ShellStartMode, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("starter_method     %s\n", queue.StarterMethod))
+	_, err = file.WriteString(fmt.Sprintf("starter_method     %s\n",
+		JoinList(queue.StarterMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("suspend_method     %s\n", queue.SuspendMethod))
+	_, err = file.WriteString(fmt.Sprintf("suspend_method     %s\n",
+		JoinList(queue.SuspendMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("resume_method      %s\n", queue.ResumeMethod))
+	_, err = file.WriteString(fmt.Sprintf("resume_method      %s\n",
+		JoinList(queue.ResumeMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("terminate_method   %s\n", queue.TerminateMethod))
+	_, err = file.WriteString(fmt.Sprintf("terminate_method   %s\n",
+		JoinList(queue.TerminateMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("notify            %s\n", queue.Notify))
+	_, err = file.WriteString(fmt.Sprintf("notify            %s\n",
+		JoinList(queue.Notify, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n", JoinList(queue.OwnerList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n",
+		JoinList(queue.OwnerList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n", JoinList(queue.UserLists, " ")))
+	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n",
+		JoinList(queue.UserLists, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n", JoinList(queue.XUserLists, " ")))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n",
+		JoinList(queue.XUserLists, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n", JoinList(queue.SubordinateList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n",
+		JoinList(queue.SubordinateList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n", JoinList(queue.ComplexValues, ",")))
+	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n",
+		JoinList(queue.ComplexValues, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("projects          %s\n", JoinList(queue.Projects, " ")))
+	_, err = file.WriteString(fmt.Sprintf("projects          %s\n",
+		JoinList(queue.Projects, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n", JoinList(queue.XProjects, " ")))
+	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n",
+		JoinList(queue.XProjects, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("calendar          %s\n", queue.Calendar))
+	_, err = file.WriteString(fmt.Sprintf("calendar          %s\n",
+		JoinList(queue.Calendar, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("initial_state      %s\n", queue.InitialState))
+	_, err = file.WriteString(fmt.Sprintf("initial_state      %s\n",
+		JoinList(queue.InitialState, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_rt               %s\n", queue.SRt))
+	_, err = file.WriteString(fmt.Sprintf("s_rt               %s\n",
+		JoinList(queue.SRt, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_rt               %s\n", queue.HRt))
+	_, err = file.WriteString(fmt.Sprintf("h_rt               %s\n",
+		JoinList(queue.HRt, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_cpu              %s\n", queue.SCpu))
+	_, err = file.WriteString(fmt.Sprintf("s_cpu              %s\n",
+		JoinList(queue.SCpu, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_cpu              %s\n", queue.HCpu))
+	_, err = file.WriteString(fmt.Sprintf("h_cpu              %s\n",
+		JoinList(queue.HCpu, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_fsize            %s\n", queue.SSize))
+	_, err = file.WriteString(fmt.Sprintf("s_fsize            %s\n",
+		JoinList(queue.SSize, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_fsize            %s\n", queue.HSize))
+	_, err = file.WriteString(fmt.Sprintf("h_fsize            %s\n",
+		JoinList(queue.HSize, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_data             %s\n", queue.SData))
+	_, err = file.WriteString(fmt.Sprintf("s_data             %s\n",
+		JoinList(queue.SData, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_data             %s\n", queue.HData))
+	_, err = file.WriteString(fmt.Sprintf("h_data             %s\n",
+		JoinList(queue.HData, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_stack            %s\n", queue.SStack))
+	_, err = file.WriteString(fmt.Sprintf("s_stack            %s\n",
+		JoinList(queue.SStack, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_stack            %s\n", queue.HStack))
+	_, err = file.WriteString(fmt.Sprintf("h_stack            %s\n",
+		JoinList(queue.HStack, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_core             %s\n", queue.SCore))
+	_, err = file.WriteString(fmt.Sprintf("s_core             %s\n",
+		JoinList(queue.SCore, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_core             %s\n", queue.HCore))
+	_, err = file.WriteString(fmt.Sprintf("h_core             %s\n",
+		JoinList(queue.HCore, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_rss              %s\n", queue.SRss))
+	_, err = file.WriteString(fmt.Sprintf("s_rss              %s\n",
+		JoinList(queue.SRss, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_rss              %s\n", queue.HRss))
+	_, err = file.WriteString(fmt.Sprintf("h_rss              %s\n",
+		JoinList(queue.HRss, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_vmem             %s\n", queue.SVmem))
+	_, err = file.WriteString(fmt.Sprintf("s_vmem             %s\n",
+		JoinList(queue.SVmem, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_vmem             %s\n", queue.HVmem))
+	_, err = file.WriteString(fmt.Sprintf("h_vmem             %s\n",
+		JoinList(queue.HVmem, ",")))
 	if err != nil {
 		return err
 	}
@@ -1943,21 +2022,21 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "hostlist":
 			cfg.HostList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "seq_no":
-			cfg.SeqNo, _ = strconv.Atoi(fields[1])
+			cfg.SeqNo = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "load_thresholds":
-			cfg.LoadThresholds = fields[1]
+			cfg.LoadThresholds = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "suspend_thresholds":
-			cfg.SuspendThresholds = fields[1]
+			cfg.SuspendThresholds = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "nsuspend":
-			cfg.NSuspend, _ = strconv.Atoi(fields[1])
+			cfg.NSuspend = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "suspend_interval":
-			cfg.SuspendInterval = fields[1]
+			cfg.SuspendInterval = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "priority":
-			cfg.Priority, _ = strconv.Atoi(fields[1])
+			cfg.Priority = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "min_cpu_interval":
-			cfg.MinCpuInterval = fields[1]
+			cfg.MinCpuInterval = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "processors":
-			cfg.Processors = fields[1]
+			cfg.Processors = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "qtype":
 			cfg.QType = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "ckpt_list":
@@ -1969,25 +2048,25 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "slots":
 			cfg.Slots = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "tmpdir":
-			cfg.TmpDir = fields[1]
+			cfg.TmpDir = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "shell":
-			cfg.Shell = fields[1]
+			cfg.Shell = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "prolog":
-			cfg.Prolog = fields[1]
+			cfg.Prolog = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "epilog":
-			cfg.Epilog = fields[1]
+			cfg.Epilog = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "shell_start_mode":
-			cfg.ShellStartMode = fields[1]
+			cfg.ShellStartMode = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "starter_method":
-			cfg.StarterMethod = fields[1]
+			cfg.StarterMethod = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "suspend_method":
-			cfg.SuspendMethod = fields[1]
+			cfg.SuspendMethod = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "resume_method":
-			cfg.ResumeMethod = fields[1]
+			cfg.ResumeMethod = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "terminate_method":
-			cfg.TerminateMethod = fields[1]
+			cfg.TerminateMethod = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "notify":
-			cfg.Notify = fields[1]
+			cfg.Notify = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "owner_list":
 			cfg.OwnerList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "user_lists":
@@ -2003,43 +2082,48 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "xprojects":
 			cfg.XProjects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "calendar":
-			cfg.Calendar, _ = ParseMultiLineValue(lines, i)
+			cfg.Calendar = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "initial_state":
-			cfg.InitialState, _ = ParseMultiLineValue(lines, i)
+			cfg.InitialState = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "s_rt":
-			cfg.SRt = fields[1]
+			cfg.SRt = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_rt":
-			cfg.HRt = fields[1]
+			cfg.HRt = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_cpu":
-			cfg.SCpu = fields[1]
+			cfg.SCpu = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_cpu":
-			cfg.HCpu = fields[1]
+			cfg.HCpu = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_fsize":
-			cfg.SSize = fields[1]
+			cfg.SSize = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_fsize":
-			cfg.HSize = fields[1]
+			cfg.HSize = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_data":
-			cfg.SData = fields[1]
+			cfg.SData = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_data":
-			cfg.HData = fields[1]
+			cfg.HData = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_stack":
-			cfg.SStack = fields[1]
+			cfg.SStack = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_stack":
-			cfg.HStack = fields[1]
+			cfg.HStack = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_core":
-			cfg.SCore = fields[1]
+			cfg.SCore = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_core":
-			cfg.HCore = fields[1]
+			cfg.HCore = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_rss":
-			cfg.SRss = fields[1]
+			cfg.SRss = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_rss":
-			cfg.HRss = fields[1]
+			cfg.HRss = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "s_vmem":
-			cfg.SVmem = fields[1]
+			cfg.SVmem = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "h_vmem":
-			cfg.HVmem = fields[1]
+			cfg.HVmem = ParseCommaSeparatedMultiLineValues(lines, i)
 		}
 	}
+
+	// THIS IS THE CRITICAL PART
+	// Make sure all nil fields are properly converted to ["NONE"]
+	SetDefaultQueueValues(&cfg)
+
 	return cfg, nil
 }
 
@@ -2772,35 +2856,35 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("seq_no            %d\n", cfg.SeqNo))
+	_, err = file.WriteString(fmt.Sprintf("seq_no            %s\n", JoinList(cfg.SeqNo, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("load_thresholds    %s\n", cfg.LoadThresholds))
+	_, err = file.WriteString(fmt.Sprintf("load_thresholds    %s\n", JoinList(cfg.LoadThresholds, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("suspend_thresholds %s\n", cfg.SuspendThresholds))
+	_, err = file.WriteString(fmt.Sprintf("suspend_thresholds %s\n", JoinList(cfg.SuspendThresholds, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("nsuspend          %d\n", cfg.NSuspend))
+	_, err = file.WriteString(fmt.Sprintf("nsuspend          %s\n", JoinList(cfg.NSuspend, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("suspend_interval   %s\n", cfg.SuspendInterval))
+	_, err = file.WriteString(fmt.Sprintf("suspend_interval   %s\n", JoinList(cfg.SuspendInterval, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("priority          %d\n", cfg.Priority))
+	_, err = file.WriteString(fmt.Sprintf("priority          %s\n", JoinList(cfg.Priority, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("min_cpu_interval    %s\n", cfg.MinCpuInterval))
+	_, err = file.WriteString(fmt.Sprintf("min_cpu_interval    %s\n", JoinList(cfg.MinCpuInterval, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("processors        %s\n", cfg.Processors))
+	_, err = file.WriteString(fmt.Sprintf("processors        %s\n", JoinList(cfg.Processors, ",")))
 	if err != nil {
 		return err
 	}
@@ -2824,143 +2908,168 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("tmpdir            %s\n", cfg.TmpDir))
+	_, err = file.WriteString(fmt.Sprintf("tmpdir            %s\n", JoinList(cfg.TmpDir, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("shell             %s\n", cfg.Shell))
+	_, err = file.WriteString(fmt.Sprintf("shell             %s\n", JoinList(cfg.Shell, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("prolog            %s\n", cfg.Prolog))
+	_, err = file.WriteString(fmt.Sprintf("prolog            %s\n", JoinList(cfg.Prolog, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("epilog            %s\n", cfg.Epilog))
+	_, err = file.WriteString(fmt.Sprintf("epilog            %s\n", JoinList(cfg.Epilog, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("shell_start_mode    %s\n", cfg.ShellStartMode))
+	_, err = file.WriteString(fmt.Sprintf("shell_start_mode    %s\n", JoinList(cfg.ShellStartMode, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("starter_method     %s\n", cfg.StarterMethod))
+	_, err = file.WriteString(fmt.Sprintf("starter_method     %s\n", JoinList(cfg.StarterMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("suspend_method     %s\n", cfg.SuspendMethod))
+	_, err = file.WriteString(fmt.Sprintf("suspend_method     %s\n", JoinList(cfg.SuspendMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("resume_method      %s\n", cfg.ResumeMethod))
+	_, err = file.WriteString(fmt.Sprintf("resume_method      %s\n", JoinList(cfg.ResumeMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("terminate_method   %s\n", cfg.TerminateMethod))
+	_, err = file.WriteString(fmt.Sprintf("terminate_method   %s\n", JoinList(cfg.TerminateMethod, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("notify            %s\n", cfg.Notify))
+	_, err = file.WriteString(fmt.Sprintf("notify            %s\n", JoinList(cfg.Notify, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n", JoinList(cfg.OwnerList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("owner_list         %s\n",
+		JoinList(cfg.OwnerList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n", JoinList(cfg.UserLists, " ")))
+	_, err = file.WriteString(fmt.Sprintf("user_lists          %s\n",
+		JoinList(cfg.UserLists, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n", JoinList(cfg.XUserLists, " ")))
+	_, err = file.WriteString(fmt.Sprintf("xuser_lists         %s\n",
+		JoinList(cfg.XUserLists, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n", JoinList(cfg.SubordinateList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("subordinate_list   %s\n",
+		JoinList(cfg.SubordinateList, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n", JoinList(cfg.ComplexValues, ",")))
+	_, err = file.WriteString(fmt.Sprintf("complex_values     %s\n",
+		JoinList(cfg.ComplexValues, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("projects          %s\n", JoinList(cfg.Projects, " ")))
+	_, err = file.WriteString(fmt.Sprintf("projects          %s\n",
+		JoinList(cfg.Projects, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n", JoinList(cfg.XProjects, " ")))
+	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n",
+		JoinList(cfg.XProjects, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("calendar          %s\n", cfg.Calendar))
+	_, err = file.WriteString(fmt.Sprintf("calendar          %s\n",
+		JoinList(cfg.Calendar, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("initial_state      %s\n", cfg.InitialState))
+	_, err = file.WriteString(fmt.Sprintf("initial_state      %s\n",
+		JoinList(cfg.InitialState, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_rt               %s\n", cfg.SRt))
+	_, err = file.WriteString(fmt.Sprintf("s_rt               %s\n",
+		JoinList(cfg.SRt, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_rt               %s\n", cfg.HRt))
+	_, err = file.WriteString(fmt.Sprintf("h_rt               %s\n",
+		JoinList(cfg.HRt, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_cpu              %s\n", cfg.SCpu))
+	_, err = file.WriteString(fmt.Sprintf("s_cpu              %s\n",
+		JoinList(cfg.SCpu, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_cpu              %s\n", cfg.HCpu))
+	_, err = file.WriteString(fmt.Sprintf("h_cpu              %s\n",
+		JoinList(cfg.HCpu, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_fsize            %s\n", cfg.SSize))
+	_, err = file.WriteString(fmt.Sprintf("s_fsize            %s\n",
+		JoinList(cfg.SSize, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_fsize            %s\n", cfg.HSize))
+	_, err = file.WriteString(fmt.Sprintf("h_fsize            %s\n",
+		JoinList(cfg.HSize, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_data             %s\n", cfg.SData))
+	_, err = file.WriteString(fmt.Sprintf("s_data             %s\n",
+		JoinList(cfg.SData, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_data             %s\n", cfg.HData))
+	_, err = file.WriteString(fmt.Sprintf("h_data             %s\n",
+		JoinList(cfg.HData, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_stack            %s\n", cfg.SStack))
+	_, err = file.WriteString(fmt.Sprintf("s_stack            %s\n",
+		JoinList(cfg.SStack, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_stack            %s\n", cfg.HStack))
+	_, err = file.WriteString(fmt.Sprintf("h_stack            %s\n",
+		JoinList(cfg.HStack, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_core             %s\n", cfg.SCore))
+	_, err = file.WriteString(fmt.Sprintf("s_core             %s\n",
+		JoinList(cfg.SCore, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_core             %s\n", cfg.HCore))
+	_, err = file.WriteString(fmt.Sprintf("h_core             %s\n",
+		JoinList(cfg.HCore, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_rss              %s\n", cfg.SRss))
+	_, err = file.WriteString(fmt.Sprintf("s_rss              %s\n",
+		JoinList(cfg.SRss, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_rss              %s\n", cfg.HRss))
+	_, err = file.WriteString(fmt.Sprintf("h_rss              %s\n",
+		JoinList(cfg.HRss, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("s_vmem             %s\n", cfg.SVmem))
+	_, err = file.WriteString(fmt.Sprintf("s_vmem             %s\n",
+		JoinList(cfg.SVmem, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("h_vmem             %s\n", cfg.HVmem))
+	_, err = file.WriteString(fmt.Sprintf("h_vmem             %s\n",
+		JoinList(cfg.HVmem, ",")))
 	if err != nil {
 		return err
 	}
