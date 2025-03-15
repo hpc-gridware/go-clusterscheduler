@@ -215,29 +215,29 @@ const QTypeInteractive string = "INTERACTIVE"
 type ClusterQueueConfig struct {
 	Name              string   `json:"qname"`
 	HostList          []string `json:"hostlist"`
-	SeqNo             int      `json:"seq_no"`
-	LoadThresholds    string   `json:"load_thresholds"`
-	SuspendThresholds string   `json:"suspend_thresholds"`
-	NSuspend          int      `json:"nsuspend"`
-	SuspendInterval   string   `json:"suspend_interval"`
-	Priority          int      `json:"priority"`
-	MinCpuInterval    string   `json:"min_cpu_interval"`
-	Processors        string   `json:"processors"`
+	SeqNo             []string `json:"seq_no"`
+	LoadThresholds    []string `json:"load_thresholds"`
+	SuspendThresholds []string `json:"suspend_thresholds"`
+	NSuspend          []string `json:"nsuspend"`
+	SuspendInterval   []string `json:"suspend_interval"`
+	Priority          []string `json:"priority"`
+	MinCpuInterval    []string `json:"min_cpu_interval"`
+	Processors        []string `json:"processors"`
 	QType             []string `json:"qtype"`
 	CkptList          []string `json:"ckpt_list"`
 	PeList            []string `json:"pe_list"`
 	Rerun             []string `json:"rerun"`
 	Slots             []string `json:"slots"`
-	TmpDir            string   `json:"tmpdir"`
-	Shell             string   `json:"shell"`
-	Prolog            string   `json:"prolog"`
-	Epilog            string   `json:"epilog"`
-	ShellStartMode    string   `json:"shell_start_mode"`
-	StarterMethod     string   `json:"starter_method"`
-	SuspendMethod     string   `json:"suspend_method"`
-	ResumeMethod      string   `json:"resume_method"`
-	TerminateMethod   string   `json:"terminate_method"`
-	Notify            string   `json:"notify"`
+	TmpDir            []string `json:"tmpdir"`
+	Shell             []string `json:"shell"`
+	Prolog            []string `json:"prolog"`
+	Epilog            []string `json:"epilog"`
+	ShellStartMode    []string `json:"shell_start_mode"`
+	StarterMethod     []string `json:"starter_method"`
+	SuspendMethod     []string `json:"suspend_method"`
+	ResumeMethod      []string `json:"resume_method"`
+	TerminateMethod   []string `json:"terminate_method"`
+	Notify            []string `json:"notify"`
 	OwnerList         []string `json:"owner_list"`
 	UserLists         []string `json:"user_lists"`
 	XUserLists        []string `json:"xuser_lists"`
@@ -245,24 +245,24 @@ type ClusterQueueConfig struct {
 	ComplexValues     []string `json:"complex_values"`
 	Projects          []string `json:"projects"`
 	XProjects         []string `json:"xprojects"`
-	Calendar          string   `json:"calendar"`
-	InitialState      string   `json:"initial_state"`
-	SRt               string   `json:"s_rt"`
-	HRt               string   `json:"h_rt"`
-	SCpu              string   `json:"s_cpu"`
-	HCpu              string   `json:"h_cpu"`
-	SSize             string   `json:"s_fsize"`
-	HSize             string   `json:"h_fsize"`
-	SData             string   `json:"s_data"`
-	HData             string   `json:"h_data"`
-	SStack            string   `json:"s_stack"`
-	HStack            string   `json:"h_stack"`
-	SCore             string   `json:"s_core"`
-	HCore             string   `json:"h_core"`
-	SRss              string   `json:"s_rss"`
-	HRss              string   `json:"h_rss"`
-	SVmem             string   `json:"s_vmem"`
-	HVmem             string   `json:"h_vmem"`
+	Calendar          []string `json:"calendar"`
+	InitialState      []string `json:"initial_state"`
+	SRt               []string `json:"s_rt"`
+	HRt               []string `json:"h_rt"`
+	SCpu              []string `json:"s_cpu"`
+	HCpu              []string `json:"h_cpu"`
+	SSize             []string `json:"s_fsize"`
+	HSize             []string `json:"h_fsize"`
+	SData             []string `json:"s_data"`
+	HData             []string `json:"h_data"`
+	SStack            []string `json:"s_stack"`
+	HStack            []string `json:"h_stack"`
+	SCore             []string `json:"s_core"`
+	HCore             []string `json:"h_core"`
+	SRss              []string `json:"s_rss"`
+	HRss              []string `json:"h_rss"`
+	SVmem             []string `json:"s_vmem"`
+	HVmem             []string `json:"h_vmem"`
 }
 
 // UserSetListConfig represents the configuration for a user set list.

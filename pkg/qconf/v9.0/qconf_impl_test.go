@@ -1054,8 +1054,8 @@ gid_range                    20000-20100`, "\n")
 			queueConfig := qconf.ClusterQueueConfig{
 				Name:     queueName,
 				HostList: []string{"@allhosts"},
-				SeqNo:    77,
-				Priority: 0,
+				SeqNo:    []string{"77"},
+				Priority: []string{"0"},
 				Slots:    []string{"10"},
 				PeList:   []string{"p1", "p2"},
 				QType:    []string{qconf.QTypeBatch, qconf.QTypeInteractive},
@@ -1085,14 +1085,14 @@ gid_range                    20000-20100`, "\n")
 			newQueueConfig := qconf.ClusterQueueConfig{
 				Name:           queueName,
 				HostList:       []string{"@allhosts", "@newhosts"},
-				SeqNo:          99,
-				LoadThresholds: "np_load_avg=1.75",
+				SeqNo:          []string{"99"},
+				LoadThresholds: []string{"np_load_avg=1.75"},
 				Slots:          []string{"50"},
-				MinCpuInterval: "00:01:00",
+				MinCpuInterval: []string{"00:01:00"},
 				QType:          []string{"BATCH", "INTERACTIVE"},
-				Prolog:         "/new/prolog",
-				Epilog:         "/new/epilog",
-				InitialState:   "disabled",
+				Prolog:         []string{"/new/prolog"},
+				Epilog:         []string{"/new/epilog"},
+				InitialState:   []string{"disabled"},
 				Rerun:          []string{"TRUE"},
 			}
 			err = qc.ModifyClusterQueue(queueName, newQueueConfig)
