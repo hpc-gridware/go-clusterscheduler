@@ -53,6 +53,7 @@ type ClusterEnvironment struct {
 	Cell        string `json:"sge_cell"`
 	QmasterPort int    `json:"sge_qmaster_port"`
 	ExecdPort   int    `json:"sge_execd_port"`
+	Version     string `json:"sge_version"`
 }
 
 // CalendarConfig represents the configuration for resource.
@@ -142,12 +143,36 @@ type GlobalConfig struct {
 	JsvAllowedMod []string `json:"jsv_allowed_mod"`
 }
 
-// HostConfiguration represents the configuration for a host.
+// HostConfiguration represents the local configuration for a host.
+// Overrides the global configuration for the host. In order to differentiate
+// unset values from empty values, we use a pointer to the field.
 type HostConfiguration struct {
-	Name   string // Inconsistency
-	Mailer string `json:"mailer"`
-	Xterm  string `json:"xterm"`
-	// @TODO Add additional fields here as needed
+	Name              string   // Inconsistency
+	ExecdSpoolDir     *string  `json:"execd_spool_dir"`
+	Mailer            *string  `json:"mailer"`
+	Xterm             *string  `json:"xterm"`
+	LoadSensors       []string `json:"load_sensor"`
+	Prolog            *string  `json:"prolog"`
+	Epilog            *string  `json:"epilog"`
+	ShellStartMode    *string  `json:"shell_start_mode"`
+	LoginShells       []string `json:"login_shells"`
+	LoadReportTime    *string  `json:"load_report_time"`
+	SetTokenCmd       *string  `json:"set_token_cmd"`
+	PagCmd            *string  `json:"pag_cmd"`
+	TokenExtendTime   *string  `json:"token_extend_time"`
+	ShepherdCmd       *string  `json:"shepherd_cmd"`
+	ExecdParams       []string `json:"execd_params"`
+	ReportingParams   []string `json:"reporting_params"`
+	GidRange          []string `json:"gid_range"`
+	QloginDaemon      *string  `json:"qlogin_daemon"`
+	QloginCommand     *string  `json:"qlogin_command"`
+	RshDaemon         *string  `json:"rsh_daemon"`
+	RshCommand        *string  `json:"rsh_command"`
+	RloginDaemon      *string  `json:"rlogin_daemon"`
+	RloginCommand     *string  `json:"rlogin_command"`
+	RescheduleUnknown *string  `json:"reschedule_unknown"`
+	LibJvmPath        *string  `json:"libjvm_path"`
+	AdditionalJvmArgs *string  `json:"additional_jvm_args"`
 }
 
 // HostGroupConfig represents the configuration for a host group.

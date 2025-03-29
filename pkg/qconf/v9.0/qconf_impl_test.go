@@ -377,11 +377,14 @@ gid_range                    20000-20100`, "\n")
 			Expect(hosts).NotTo(BeNil())
 			Expect(hosts).To(ContainElement(hostName))
 
+			mailer := "/mailer"
+			xterm := "/xterm"
+
 			// Define a new host configuration
 			hostConfig := qconf.HostConfiguration{
 				Name:   hostName,
-				Mailer: "/mailer",
-				Xterm:  "/xterm",
+				Mailer: &mailer,
+				Xterm:  &xterm,
 				// Add other necessary fields here...
 			}
 
