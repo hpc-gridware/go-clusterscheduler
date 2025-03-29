@@ -148,31 +148,31 @@ type GlobalConfig struct {
 // unset values from empty values, we use a pointer to the field.
 type HostConfiguration struct {
 	Name              string   // Inconsistency
-	ExecdSpoolDir     *string  `json:"execd_spool_dir"`
-	Mailer            *string  `json:"mailer"`
-	Xterm             *string  `json:"xterm"`
-	LoadSensors       []string `json:"load_sensor"`
-	Prolog            *string  `json:"prolog"`
-	Epilog            *string  `json:"epilog"`
-	ShellStartMode    *string  `json:"shell_start_mode"`
-	LoginShells       []string `json:"login_shells"`
-	LoadReportTime    *string  `json:"load_report_time"`
-	SetTokenCmd       *string  `json:"set_token_cmd"`
-	PagCmd            *string  `json:"pag_cmd"`
-	TokenExtendTime   *string  `json:"token_extend_time"`
-	ShepherdCmd       *string  `json:"shepherd_cmd"`
-	ExecdParams       []string `json:"execd_params"`
-	ReportingParams   []string `json:"reporting_params"`
-	GidRange          []string `json:"gid_range"`
-	QloginDaemon      *string  `json:"qlogin_daemon"`
-	QloginCommand     *string  `json:"qlogin_command"`
-	RshDaemon         *string  `json:"rsh_daemon"`
-	RshCommand        *string  `json:"rsh_command"`
-	RloginDaemon      *string  `json:"rlogin_daemon"`
-	RloginCommand     *string  `json:"rlogin_command"`
-	RescheduleUnknown *string  `json:"reschedule_unknown"`
-	LibJvmPath        *string  `json:"libjvm_path"`
-	AdditionalJvmArgs *string  `json:"additional_jvm_args"`
+	ExecdSpoolDir     *string  `json:"execd_spool_dir,omitempty"`
+	Mailer            *string  `json:"mailer,omitempty"`
+	Xterm             *string  `json:"xterm,omitempty"`
+	LoadSensors       []string `json:"load_sensor,omitempty"`
+	Prolog            *string  `json:"prolog,omitempty"`
+	Epilog            *string  `json:"epilog,omitempty"`
+	ShellStartMode    *string  `json:"shell_start_mode,omitempty"`
+	LoginShells       []string `json:"login_shells,omitempty"`
+	LoadReportTime    *string  `json:"load_report_time,omitempty"`
+	SetTokenCmd       *string  `json:"set_token_cmd,omitempty"`
+	PagCmd            *string  `json:"pag_cmd,omitempty"`
+	TokenExtendTime   *string  `json:"token_extend_time,omitempty"`
+	ShepherdCmd       *string  `json:"shepherd_cmd,omitempty"`
+	ExecdParams       []string `json:"execd_params,omitempty"`
+	ReportingParams   []string `json:"reporting_params,omitempty"`
+	GidRange          []string `json:"gid_range,omitempty"`
+	QloginDaemon      *string  `json:"qlogin_daemon,omitempty"`
+	QloginCommand     *string  `json:"qlogin_command,omitempty"`
+	RshDaemon         *string  `json:"rsh_daemon,omitempty"`
+	RshCommand        *string  `json:"rsh_command,omitempty"`
+	RloginDaemon      *string  `json:"rlogin_daemon,omitempty"`
+	RloginCommand     *string  `json:"rlogin_command,omitempty"`
+	RescheduleUnknown *string  `json:"reschedule_unknown,omitempty"`
+	LibJvmPath        *string  `json:"libjvm_path,omitempty"`
+	AdditionalJvmArgs *string  `json:"additional_jvm_args,omitempty"`
 }
 
 // HostGroupConfig represents the configuration for a host group.
