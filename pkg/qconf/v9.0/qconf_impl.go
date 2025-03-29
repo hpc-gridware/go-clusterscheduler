@@ -703,14 +703,146 @@ func (c *CommandLineQConf) AddHostConfiguration(config HostConfiguration) error 
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	_, err = file.WriteString(fmt.Sprintf("mailer %s\n", config.Mailer))
-	if err != nil {
-		return err
+	// Handle pointer fields properly - only write if not nil
+	if config.ExecdSpoolDir != nil {
+		if _, err = file.WriteString(fmt.Sprintf("execd_spool_dir %s\n", *config.ExecdSpoolDir)); err != nil {
+			return err
+		}
 	}
-	_, err = file.WriteString(fmt.Sprintf("xterm %s\n", config.Xterm))
-	if err != nil {
-		return err
+	if config.Mailer != nil {
+		if _, err = file.WriteString(fmt.Sprintf("mailer %s\n", *config.Mailer)); err != nil {
+			return err
+		}
 	}
+	if config.Xterm != nil {
+		if _, err = file.WriteString(fmt.Sprintf("xterm %s\n", *config.Xterm)); err != nil {
+			return err
+		}
+	}
+
+	// Handle slice fields
+	for _, sensor := range config.LoadSensors {
+		if _, err = file.WriteString(fmt.Sprintf("load_sensor %s\n", sensor)); err != nil {
+			return err
+		}
+	}
+
+	if config.Prolog != nil {
+		if _, err = file.WriteString(fmt.Sprintf("prolog %s\n", *config.Prolog)); err != nil {
+			return err
+		}
+	}
+	if config.Epilog != nil {
+		if _, err = file.WriteString(fmt.Sprintf("epilog %s\n", *config.Epilog)); err != nil {
+			return err
+		}
+	}
+	if config.ShellStartMode != nil {
+		if _, err = file.WriteString(fmt.Sprintf("shell_start_mode %s\n", *config.ShellStartMode)); err != nil {
+			return err
+		}
+	}
+
+	// Write login shells
+	for _, shell := range config.LoginShells {
+		if _, err = file.WriteString(fmt.Sprintf("login_shells %s\n", shell)); err != nil {
+			return err
+		}
+	}
+
+	if config.LoadReportTime != nil {
+		if _, err = file.WriteString(fmt.Sprintf("load_report_time %s\n", *config.LoadReportTime)); err != nil {
+			return err
+		}
+	}
+	if config.SetTokenCmd != nil {
+		if _, err = file.WriteString(fmt.Sprintf("set_token_cmd %s\n", *config.SetTokenCmd)); err != nil {
+			return err
+		}
+	}
+	if config.PagCmd != nil {
+		if _, err = file.WriteString(fmt.Sprintf("pag_cmd %s\n", *config.PagCmd)); err != nil {
+			return err
+		}
+	}
+	if config.TokenExtendTime != nil {
+		if _, err = file.WriteString(fmt.Sprintf("token_extend_time %s\n", *config.TokenExtendTime)); err != nil {
+			return err
+		}
+	}
+	if config.ShepherdCmd != nil {
+		if _, err = file.WriteString(fmt.Sprintf("shepherd_cmd %s\n", *config.ShepherdCmd)); err != nil {
+			return err
+		}
+	}
+
+	// Write execd params
+	for _, param := range config.ExecdParams {
+		if _, err = file.WriteString(fmt.Sprintf("execd_params %s\n", param)); err != nil {
+			return err
+		}
+	}
+
+	// Write reporting params
+	for _, param := range config.ReportingParams {
+		if _, err = file.WriteString(fmt.Sprintf("reporting_params %s\n", param)); err != nil {
+			return err
+		}
+	}
+
+	// Write gid range
+	for _, gid := range config.GidRange {
+		if _, err = file.WriteString(fmt.Sprintf("gid_range %s\n", gid)); err != nil {
+			return err
+		}
+	}
+
+	if config.QloginDaemon != nil {
+		if _, err = file.WriteString(fmt.Sprintf("qlogin_daemon %s\n", *config.QloginDaemon)); err != nil {
+			return err
+		}
+	}
+	if config.QloginCommand != nil {
+		if _, err = file.WriteString(fmt.Sprintf("qlogin_command %s\n", *config.QloginCommand)); err != nil {
+			return err
+		}
+	}
+	if config.RshDaemon != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rsh_daemon %s\n", *config.RshDaemon)); err != nil {
+			return err
+		}
+	}
+	if config.RshCommand != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rsh_command %s\n", *config.RshCommand)); err != nil {
+			return err
+		}
+	}
+	if config.RloginDaemon != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rlogin_daemon %s\n", *config.RloginDaemon)); err != nil {
+			return err
+		}
+	}
+	if config.RloginCommand != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rlogin_command %s\n", *config.RloginCommand)); err != nil {
+			return err
+		}
+	}
+	if config.RescheduleUnknown != nil {
+		if _, err = file.WriteString(fmt.Sprintf("reschedule_unknown %s\n", *config.RescheduleUnknown)); err != nil {
+			return err
+		}
+	}
+	if config.LibJvmPath != nil {
+		if _, err = file.WriteString(fmt.Sprintf("libjvm_path %s\n", *config.LibJvmPath)); err != nil {
+			return err
+		}
+	}
+	if config.AdditionalJvmArgs != nil {
+		if _, err = file.WriteString(fmt.Sprintf("additional_jvm_args %s\n", *config.AdditionalJvmArgs)); err != nil {
+			return err
+		}
+	}
+
 	file.Close()
 
 	out, err := c.RunCommand("-Aconf", file.Name())
@@ -738,15 +870,70 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 		Name: hostName,
 	}
 	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
 		}
-		switch fields[0] {
+
+		key := fields[0]
+		value := strings.Join(fields[1:], " ")
+
+		switch key {
+		case "execd_spool_dir":
+			cfg.ExecdSpoolDir = &value
 		case "mailer":
-			cfg.Mailer = fields[1]
+			cfg.Mailer = &value
 		case "xterm":
-			cfg.Xterm = fields[1]
+			cfg.Xterm = &value
+		case "load_sensor":
+			cfg.LoadSensors = append(cfg.LoadSensors, value)
+		case "prolog":
+			cfg.Prolog = &value
+		case "epilog":
+			cfg.Epilog = &value
+		case "shell_start_mode":
+			cfg.ShellStartMode = &value
+		case "login_shells":
+			cfg.LoginShells = append(cfg.LoginShells, value)
+		case "load_report_time":
+			cfg.LoadReportTime = &value
+		case "set_token_cmd":
+			cfg.SetTokenCmd = &value
+		case "pag_cmd":
+			cfg.PagCmd = &value
+		case "token_extend_time":
+			cfg.TokenExtendTime = &value
+		case "shepherd_cmd":
+			cfg.ShepherdCmd = &value
+		case "execd_params":
+			cfg.ExecdParams = append(cfg.ExecdParams, value)
+		case "reporting_params":
+			cfg.ReportingParams = append(cfg.ReportingParams, value)
+		case "gid_range":
+			cfg.GidRange = append(cfg.GidRange, value)
+		case "qlogin_daemon":
+			cfg.QloginDaemon = &value
+		case "qlogin_command":
+			cfg.QloginCommand = &value
+		case "rsh_daemon":
+			cfg.RshDaemon = &value
+		case "rsh_command":
+			cfg.RshCommand = &value
+		case "rlogin_daemon":
+			cfg.RloginDaemon = &value
+		case "rlogin_command":
+			cfg.RloginCommand = &value
+		case "reschedule_unknown":
+			cfg.RescheduleUnknown = &value
+		case "libjvm_path":
+			cfg.LibJvmPath = &value
+		case "additional_jvm_args":
+			cfg.AdditionalJvmArgs = &value
 		}
 	}
 	return cfg, nil
@@ -2579,22 +2766,146 @@ func (c *CommandLineQConf) ModifyHostConfiguration(configName string, cfg HostCo
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	_, err = file.WriteString(fmt.Sprintf("mailer %s\n", cfg.Mailer))
-	if err != nil {
-		return err
+	// Write pointer fields if they're not nil
+	if cfg.ExecdSpoolDir != nil {
+		if _, err = file.WriteString(fmt.Sprintf("execd_spool_dir %s\n", *cfg.ExecdSpoolDir)); err != nil {
+			return err
+		}
 	}
-	_, err = file.WriteString(fmt.Sprintf("xterm %s\n", cfg.Xterm))
-	if err != nil {
-		return err
+	if cfg.Mailer != nil {
+		if _, err = file.WriteString(fmt.Sprintf("mailer %s\n", *cfg.Mailer)); err != nil {
+			return err
+		}
 	}
+	if cfg.Xterm != nil {
+		if _, err = file.WriteString(fmt.Sprintf("xterm %s\n", *cfg.Xterm)); err != nil {
+			return err
+		}
+	}
+
+	// Handle slice fields
+	for _, sensor := range cfg.LoadSensors {
+		if _, err = file.WriteString(fmt.Sprintf("load_sensor %s\n", sensor)); err != nil {
+			return err
+		}
+	}
+
+	if cfg.Prolog != nil {
+		if _, err = file.WriteString(fmt.Sprintf("prolog %s\n", *cfg.Prolog)); err != nil {
+			return err
+		}
+	}
+	if cfg.Epilog != nil {
+		if _, err = file.WriteString(fmt.Sprintf("epilog %s\n", *cfg.Epilog)); err != nil {
+			return err
+		}
+	}
+	if cfg.ShellStartMode != nil {
+		if _, err = file.WriteString(fmt.Sprintf("shell_start_mode %s\n", *cfg.ShellStartMode)); err != nil {
+			return err
+		}
+	}
+
+	for _, shell := range cfg.LoginShells {
+		if _, err = file.WriteString(fmt.Sprintf("login_shells %s\n", shell)); err != nil {
+			return err
+		}
+	}
+
+	if cfg.LoadReportTime != nil {
+		if _, err = file.WriteString(fmt.Sprintf("load_report_time %s\n", *cfg.LoadReportTime)); err != nil {
+			return err
+		}
+	}
+	if cfg.SetTokenCmd != nil {
+		if _, err = file.WriteString(fmt.Sprintf("set_token_cmd %s\n", *cfg.SetTokenCmd)); err != nil {
+			return err
+		}
+	}
+	if cfg.PagCmd != nil {
+		if _, err = file.WriteString(fmt.Sprintf("pag_cmd %s\n", *cfg.PagCmd)); err != nil {
+			return err
+		}
+	}
+	if cfg.TokenExtendTime != nil {
+		if _, err = file.WriteString(fmt.Sprintf("token_extend_time %s\n", *cfg.TokenExtendTime)); err != nil {
+			return err
+		}
+	}
+	if cfg.ShepherdCmd != nil {
+		if _, err = file.WriteString(fmt.Sprintf("shepherd_cmd %s\n", *cfg.ShepherdCmd)); err != nil {
+			return err
+		}
+	}
+
+	for _, param := range cfg.ExecdParams {
+		if _, err = file.WriteString(fmt.Sprintf("execd_params %s\n", param)); err != nil {
+			return err
+		}
+	}
+
+	for _, param := range cfg.ReportingParams {
+		if _, err = file.WriteString(fmt.Sprintf("reporting_params %s\n", param)); err != nil {
+			return err
+		}
+	}
+
+	for _, gid := range cfg.GidRange {
+		if _, err = file.WriteString(fmt.Sprintf("gid_range %s\n", gid)); err != nil {
+			return err
+		}
+	}
+
+	if cfg.QloginDaemon != nil {
+		if _, err = file.WriteString(fmt.Sprintf("qlogin_daemon %s\n", *cfg.QloginDaemon)); err != nil {
+			return err
+		}
+	}
+	if cfg.QloginCommand != nil {
+		if _, err = file.WriteString(fmt.Sprintf("qlogin_command %s\n", *cfg.QloginCommand)); err != nil {
+			return err
+		}
+	}
+	if cfg.RshDaemon != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rsh_daemon %s\n", *cfg.RshDaemon)); err != nil {
+			return err
+		}
+	}
+	if cfg.RshCommand != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rsh_command %s\n", *cfg.RshCommand)); err != nil {
+			return err
+		}
+	}
+	if cfg.RloginDaemon != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rlogin_daemon %s\n", *cfg.RloginDaemon)); err != nil {
+			return err
+		}
+	}
+	if cfg.RloginCommand != nil {
+		if _, err = file.WriteString(fmt.Sprintf("rlogin_command %s\n", *cfg.RloginCommand)); err != nil {
+			return err
+		}
+	}
+	if cfg.RescheduleUnknown != nil {
+		if _, err = file.WriteString(fmt.Sprintf("reschedule_unknown %s\n", *cfg.RescheduleUnknown)); err != nil {
+			return err
+		}
+	}
+	if cfg.LibJvmPath != nil {
+		if _, err = file.WriteString(fmt.Sprintf("libjvm_path %s\n", *cfg.LibJvmPath)); err != nil {
+			return err
+		}
+	}
+	if cfg.AdditionalJvmArgs != nil {
+		if _, err = file.WriteString(fmt.Sprintf("additional_jvm_args %s\n", *cfg.AdditionalJvmArgs)); err != nil {
+			return err
+		}
+	}
+
 	file.Close()
 
-	out, err := c.RunCommand("-Mconf", file.Name())
-	if err != nil {
-		return fmt.Errorf("error modifying host configuration (%s): %s",
-			out, err)
-	}
-	return nil
+	_, err = c.RunCommand("-Mconf", file.Name())
+	return err
 }
 
 func createTempDirWithFileName(name string) (*os.File, error) {
