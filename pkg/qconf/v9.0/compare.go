@@ -28,14 +28,14 @@ import (
 // ClusterConfigComparison contains the differences between two
 // ClusterConfig structs.
 type ClusterConfigComparison struct {
-	IsSame              bool
-	GlobalConfigChanged bool
+	IsSame              bool `json:"is_same"`
+	GlobalConfigChanged bool `json:"global_config_changed"`
 	// Contains added objects
-	DiffAdded *ClusterConfig
+	DiffAdded *ClusterConfig `json:"diff_added,omitempty"`
 	// Modified objects
-	DiffModified *ClusterConfig
+	DiffModified *ClusterConfig `json:"diff_modified,omitempty"`
 	// Contains removed objects
-	DiffRemoved *ClusterConfig
+	DiffRemoved *ClusterConfig `json:"diff_removed,omitempty"`
 }
 
 func NewClusterConfigComparison() *ClusterConfigComparison {
