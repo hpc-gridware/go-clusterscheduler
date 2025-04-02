@@ -1926,7 +1926,7 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 	if err != nil {
 		return err
 	}
-	//defer os.RemoveAll(filepath.Dir(file.Name()))
+	defer os.RemoveAll(filepath.Dir(file.Name()))
 
 	_, err = file.WriteString(fmt.Sprintf("qname             %s\n", queue.Name))
 	if err != nil {
@@ -1983,12 +1983,12 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 		return err
 	}
 	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n",
-		JoinList(queue.CkptList, ",")))
+		JoinListWithOverrides(queue.CkptList, " ")))
 	if err != nil {
 		return err
 	}
 	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n",
-		JoinList(queue.PeList, ",")))
+		JoinListWithOverrides(queue.PeList, " ")))
 	if err != nil {
 		return err
 	}
@@ -2196,6 +2196,7 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 	if err != nil {
 		return ClusterQueueConfig{}, err
 	}
+	// switching to single line output
 	lines := strings.Split(out, "\n")
 	cfg := ClusterQueueConfig{Name: queueName}
 	for i, line := range lines {
@@ -2227,9 +2228,9 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "qtype":
 			cfg.QType = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "ckpt_list":
-			cfg.CkptList = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.CkptList = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "pe_list":
-			cfg.PeList = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.PeList = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "rerun":
 			cfg.Rerun = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "slots":
@@ -3199,15 +3200,16 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", JoinList(cfg.QType, " ")))
+	_, err = file.WriteString(fmt.Sprintf("qtype             %s\n", JoinList(cfg.QType, ",")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", JoinList(cfg.CkptList, " ")))
+	_, err = file.WriteString(fmt.Sprintf("ckpt_list          %s\n", JoinListWithOverrides(cfg.CkptList, " ")))
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", JoinList(cfg.PeList, " ")))
+	// pe1,p2 vs p1,[host=p2]
+	_, err = file.WriteString(fmt.Sprintf("pe_list            %s\n", JoinListWithOverrides(cfg.PeList, " ")))
 	if err != nil {
 		return err
 	}

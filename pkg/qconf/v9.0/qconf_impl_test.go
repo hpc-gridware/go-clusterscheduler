@@ -1037,6 +1037,7 @@ gid_range                    20000-20100`, "\n")
 					Hosts: []string{},
 				})
 			Expect(err).To(BeNil())
+
 		})
 
 		AfterEach(func() {
@@ -1090,6 +1091,7 @@ gid_range                    20000-20100`, "\n")
 				HostList:       []string{"@allhosts", "@newhosts"},
 				SeqNo:          []string{"99"},
 				LoadThresholds: []string{"np_load_avg=1.75"},
+				PeList:         []string{"p1", "[master=p2]"},
 				Slots:          []string{"50"},
 				MinCpuInterval: []string{"00:01:00"},
 				QType:          []string{"BATCH", "INTERACTIVE"},

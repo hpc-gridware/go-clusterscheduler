@@ -34,6 +34,31 @@ func JoinList(elements []string, sep string) string {
 	return strings.Join(elements, sep)
 }
 
+// JoinListWithOverrides needs to create strings like this:
+// pe1,p2,[host=p2],[master=pe1]
+func JoinListWithOverrides(elements []string, sep string) string {
+	if len(elements) == 0 {
+		return "NONE"
+	}
+	// join all elements without [] by sep first
+	overrides := make([]string, 0)
+	mainelems := make([]string, 0)
+	for _, elem := range elements {
+		if strings.Contains(elem, "[") {
+			overrides = append(overrides, elem)
+			continue
+		}
+		mainelems = append(mainelems, elem)
+	}
+
+	mainstr := strings.Join(mainelems, sep)
+
+	for _, override := range overrides {
+		mainstr += "," + override
+	}
+	return mainstr
+}
+
 func JoinStringFloatMap(m map[string]float64, sep string) string {
 	if len(m) == 0 {
 		return "NONE"
@@ -74,6 +99,34 @@ func ParseSpaceSeparatedMultiLineValues(lines []string, i int) []string {
 	return entries
 }
 
+// ParseSpaceSeparatedValuesWithOverrides. Like PE list in queue config.
+// It can look like this: pe1 p2,[host=p2]
+func ParseSpaceSeparatedValuesWithOverrides(lines []string, i int) []string {
+	// Assuming single line output! First part is the name of the element.
+	// pe_list       make test test2,[master=make test2],[global=test]
+	// remove the "pe_list" (which can have different names)
+	values := strings.SplitAfterN(lines[i], " ", 2)
+	if len(values) == 1 {
+		return nil
+	}
+
+	value := strings.TrimSpace(values[1])
+
+	if value == "NONE" {
+		return nil
+	}
+
+	// now split on ","
+	fields := strings.Split(value, ",")
+
+	// fields 0 has only space separated values
+	pelist := strings.Split(fields[0], " ")
+
+	// in fields[1:] we have the overrides ([master=make test2])
+	return append(pelist, fields[1:]...)
+}
+
+// pe1,p2 vs p1,[host=p2]
 // ParseSpaceAndCommaSeparatedMultiLineValues splits on spaces and commas.
 func ParseSpaceAndCommaSeparatedMultiLineValues(lines []string, i int) []string {
 	vals, _ := ParseMultiLineValue(lines, i)

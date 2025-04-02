@@ -83,8 +83,7 @@ var _ = Describe("CompareTo", func() {
 			Expect(comparison.DiffAdded.AdminHosts[0]).To(Equal("NewAdminHost1"))
 
 			Expect(comparison.DiffAdded.SubmitHosts).To(HaveLen(2))
-			Expect(comparison.DiffAdded.SubmitHosts[0]).To(Equal("submitHost1"))
-			Expect(comparison.DiffAdded.SubmitHosts[1]).To(Equal("submitHost2"))
+			Expect(comparison.DiffAdded.SubmitHosts).To(ContainElements("submitHost1", "submitHost2"))
 
 			// Validate the DiffModified section
 			Expect(comparison.DiffModified.Calendars).To(HaveLen(1))
