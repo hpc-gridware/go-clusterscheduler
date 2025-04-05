@@ -35,12 +35,15 @@ func JoinList(elements []string, sep string) string {
 }
 
 // JoinListWithOverrides needs to create strings like this:
-// pe1,p2,[host=p2],[master=pe1]
+// pe1,p2,[host=p2],[master=pe1] or
+// slots=10,mem_free=1G,[sim1=slots=20 mem_free=2G],[sim2=slots=30,mem_free=3G]
+// but always the non override elements first and then the overrides.
 func JoinListWithOverrides(elements []string, sep string) string {
 	if len(elements) == 0 {
 		return "NONE"
 	}
-	// join all elements without [] by sep first
+
+	// Separate regular elements from overrides
 	overrides := make([]string, 0)
 	mainelems := make([]string, 0)
 	for _, elem := range elements {
@@ -51,12 +54,21 @@ func JoinListWithOverrides(elements []string, sep string) string {
 		mainelems = append(mainelems, elem)
 	}
 
-	mainstr := strings.Join(mainelems, sep)
-
-	for _, override := range overrides {
-		mainstr += "," + override
+	// If there are no main elements, just join the overrides
+	if len(mainelems) == 0 {
+		return strings.Join(overrides, sep)
 	}
-	return mainstr
+
+	// Join main elements first
+	result := strings.Join(mainelems, sep)
+
+	// Add overrides at the end with proper separator - it always "
+	if len(overrides) > 0 {
+		// Only add separator if we have main elements
+		result += "," + strings.Join(overrides, ",")
+	}
+
+	return result
 }
 
 func JoinStringFloatMap(m map[string]float64, sep string) string {

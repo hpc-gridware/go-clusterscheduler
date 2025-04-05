@@ -371,6 +371,27 @@ gid_range                    20000-20100`, "\n")
 
 	Context("Host configuration", func() {
 
+		It("should add an empty host configuration", func() {
+
+			// Skip test if sim1 is not reachable
+			if !IsHostReachable("sim1") {
+				Skip("sim1 is not reachable")
+			}
+
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			hostName := "sim1"
+			hostConfig := qconf.HostConfiguration{
+				Name: hostName,
+			}
+			// empty overrides are failing
+			err = qc.AddHostConfiguration(hostConfig)
+			Expect(err).NotTo(BeNil())
+
+		})
+
 		It("should show, add, list, and delete host configurations", func() {
 			// We expect that this host is part of the cluster
 			hostName, _ := os.Hostname()
@@ -1102,7 +1123,7 @@ gid_range                    20000-20100`, "\n")
 				Priority: []string{"0"},
 				Slots:    []string{"10"},
 				PeList:   []string{"p1", "p2"},
-				QType:    []string{qconf.QTypeBatch, qconf.QTypeInteractive},
+				QType:    []string{qconf.QTypeBatch, "[@allhosts=BATCH]", qconf.QTypeInteractive},
 				//ChktList
 				OwnerList:     []string{"root"},
 				UserLists:     []string{"arusers", "deadlineusers"},
@@ -1124,6 +1145,11 @@ gid_range                    20000-20100`, "\n")
 			Expect(err).To(BeNil())
 			// add some default values which are not set
 			qconf.SetDefaultQueueValues(&queueConfig)
+
+			// change overrides order, as they get changed by the system
+			queueConfig.QType = []string{qconf.QTypeBatch,
+				qconf.QTypeInteractive, "[@allhosts=BATCH]"}
+
 			Expect(retrievedQueueConfig).To(Equal(queueConfig))
 
 			newQueueConfig := qconf.ClusterQueueConfig{
@@ -1134,7 +1160,7 @@ gid_range                    20000-20100`, "\n")
 				PeList:         []string{"p1", "[master=p2]"},
 				Slots:          []string{"50"},
 				MinCpuInterval: []string{"00:01:00"},
-				QType:          []string{"BATCH", "INTERACTIVE"},
+				QType:          []string{"BATCH", "INTERACTIVE", "[@allhosts=BATCH]"},
 				Prolog:         []string{"/new/prolog"},
 				Epilog:         []string{"/new/epilog"},
 				InitialState:   []string{"disabled"},
