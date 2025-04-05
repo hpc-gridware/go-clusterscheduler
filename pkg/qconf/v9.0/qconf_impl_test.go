@@ -20,6 +20,7 @@
 package qconf_test
 
 import (
+	"net"
 	"os"
 	"strings"
 
@@ -30,6 +31,12 @@ import (
 )
 
 var _ = Describe("QconfImpl", func() {
+
+	IsHostReachable := func(host string) bool {
+		// check if host is reachable
+		_, err := net.LookupHost(host)
+		return err == nil
+	}
 
 	Context("Helper functions", func() {
 
@@ -514,7 +521,7 @@ gid_range                    20000-20100`, "\n")
 			err = qc.DeleteAttribute("hostgroup", "hostlist", "master", "@allhosts")
 			Expect(err).To(BeNil())
 
-			// now it should work
+			// now it must work
 			err = qc.DeleteExecHost("master")
 			Expect(err).To(BeNil())
 
@@ -1031,6 +1038,35 @@ gid_range                    20000-20100`, "\n")
 			)
 			Expect(err).To(BeNil())
 
+			err = qc.AddProject(
+				qconf.ProjectConfig{
+					Name: "project1",
+				},
+			)
+			Expect(err).To(BeNil())
+
+			err = qc.AddProject(
+				qconf.ProjectConfig{
+					Name: "project2",
+				},
+			)
+			Expect(err).To(BeNil())
+
+			// calendar
+			err = qc.AddCalendar(
+				qconf.CalendarConfig{
+					Name: "cal1",
+				},
+			)
+			Expect(err).To(BeNil())
+
+			err = qc.AddCalendar(
+				qconf.CalendarConfig{
+					Name: "cal2",
+				},
+			)
+			Expect(err).To(BeNil())
+
 			err = qc.AddHostGroup(
 				qconf.HostGroupConfig{
 					Name:  "@newhosts",
@@ -1045,6 +1081,10 @@ gid_range                    20000-20100`, "\n")
 			qc.DeleteParallelEnvironment("p1")
 			qc.DeleteParallelEnvironment("p2")
 			qc.DeleteHostGroup("@newhosts")
+			qc.DeleteProject([]string{"project1", "project2"})
+			qc.DeleteCalendar("cal1")
+			qc.DeleteCalendar("cal2")
+			qc.DeleteHostGroup("@allhosts")
 		})
 
 		It("should show, add, list, and delete cluster queues", func() {
@@ -1124,6 +1164,270 @@ gid_range                    20000-20100`, "\n")
 			_, err = qc.ShowClusterQueue(queueName)
 			Expect(err).NotTo(BeNil())
 		})
+
+		// Cluster Queue with overrides
+		It("should should handle to parse overrides", func() {
+
+			// skip test if sim1 is not reachable
+			if !IsHostReachable("sim1") {
+				Skip("sim1 is not reachable; need to be in simulated environment")
+			}
+			// skip test if sim2 is not reachable
+			if !IsHostReachable("sim2") {
+				Skip("sim2 is not reachable; need to be in simulated environment")
+			}
+
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
+				Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			queueName := "queue-with-overrides"
+
+			// Create a queue with various types of overrides
+			queueConfig := qconf.ClusterQueueConfig{
+				Name:     queueName,
+				HostList: []string{"@allhosts"},
+				// Numeric value with host and hostgroup overrides
+				SeqNo: []string{"10", "[@allhosts=20]", "[sim1=30]"},
+				// Boolean value with overrides
+				Rerun: []string{"TRUE", "[@allhosts=FALSE]"},
+				// String value with overrides
+				Shell: []string{"/bin/bash", "[sim1=/bin/sh]"},
+				// Multiple values with overrides
+				QType: []string{qconf.QTypeBatch, qconf.QTypeInteractive, "[@allhosts=BATCH]"},
+				// Time value with overrides
+				MinCpuInterval: []string{"00:05:00", "[sim1=00:10:00]", "[sim2=00:15:00]"},
+				// Resource value with overrides
+				Slots: []string{"16", "[@allhosts=8]", "[sim1=32]", "[sim2=64]"},
+				// List with overrides (note different format for these)
+				PeList: []string{"make", "p1", "[sim1=make]", "[sim2=p2]"},
+				// Complex values with overrides
+				ComplexValues: []string{"slots=10", "mem_free=1G", "[sim1=slots=20 mem_free=2G]", "[sim2=slots=30,mem_free=3G]"},
+				OwnerList:     []string{"root", "[sim1=arusers]", "[sim2=deadlineusers]"},
+				UserLists:     []string{"arusers", "deadlineusers", "[sim1=arusers]", "[sim2=deadlineusers]"},
+				XUserLists:    []string{"arusers", "deadlineusers", "[sim1=arusers]", "[sim2=deadlineusers]"},
+				Projects:      []string{"project1", "project2", "[sim1=project1]", "[sim2=project2]"},
+				XProjects:     []string{"project1", "project2", "[sim1=project1]", "[sim2=project2]"},
+				Calendar:      []string{"cal1", "[sim1=cal1]", "[sim2=cal2]"},
+				InitialState:  []string{"enabled", "[sim1=disabled]", "[sim2=enabled]"},
+			}
+
+			// Add the queue with overrides
+			err = qc.AddClusterQueue(queueConfig)
+			Expect(err).To(BeNil())
+			defer qc.DeleteClusterQueue(queueName)
+
+			// Retrieve the queue configuration
+			retrievedQueueConfig, err := qc.ShowClusterQueue(queueName)
+			Expect(err).To(BeNil())
+
+			// Verify numeric value overrides were parsed correctly
+			Expect(retrievedQueueConfig.SeqNo).To(ContainElements(
+				"10", "[@allhosts=20]", "[sim1=30]"))
+
+			// Verify boolean value overrides were parsed correctly
+			Expect(retrievedQueueConfig.Rerun).To(ContainElements("TRUE", "[@allhosts=FALSE]"))
+
+			// Verify string value overrides were parsed correctly
+			Expect(retrievedQueueConfig.Shell).To(ContainElements(
+				"/bin/bash", "[sim1=/bin/sh]"))
+
+			// Verify multiple value overrides were parsed correctly
+			Expect(retrievedQueueConfig.QType).To(ContainElements(
+				qconf.QTypeBatch, qconf.QTypeInteractive, "[@allhosts=BATCH]"))
+
+			// Verify time value overrides were parsed correctly
+			Expect(retrievedQueueConfig.MinCpuInterval).To(ContainElements(
+				"00:05:00", "[sim1=00:10:00]", "[sim2=00:15:00]"))
+
+			// Verify resource value overrides were parsed correctly
+			Expect(retrievedQueueConfig.Slots).To(ContainElements(
+				"16", "[@allhosts=8]", "[sim1=32]", "[sim2=64]"))
+
+			// Verify PE list overrides were parsed correctly
+			Expect(retrievedQueueConfig.PeList).To(ContainElements(
+				"make", "p1", "[sim1=make]", "[sim2=p2]"))
+
+			// Verify complex values overrides were parsed correctly
+			Expect(retrievedQueueConfig.ComplexValues).To(ContainElements(
+				"slots=10", "mem_free=1G", "[sim1=slots=20,mem_free=2G]", "[sim2=slots=30,mem_free=3G]"))
+
+			// Verify owner list overrides were parsed correctly
+			Expect(retrievedQueueConfig.OwnerList).To(ContainElements(
+				"root", "[sim1=arusers]", "[sim2=deadlineusers]"))
+
+			// Verify user list overrides were parsed correctly
+			Expect(retrievedQueueConfig.UserLists).To(ContainElements(
+				"arusers", "deadlineusers", "[sim1=arusers]", "[sim2=deadlineusers]"))
+
+			// Verify X user list overrides were parsed correctly
+			Expect(retrievedQueueConfig.XUserLists).To(ContainElements(
+				"arusers", "deadlineusers", "[sim1=arusers]", "[sim2=deadlineusers]"))
+
+			// Verify project list overrides were parsed correctly
+			Expect(retrievedQueueConfig.Projects).To(ContainElements(
+				"project1", "project2", "[sim1=project1]", "[sim2=project2]"))
+
+			// Verify X project list overrides were parsed correctly
+			Expect(retrievedQueueConfig.XProjects).To(ContainElements(
+				"project1", "project2", "[sim1=project1]", "[sim2=project2]"))
+
+			// Verify calendar list overrides were parsed correctly
+			Expect(retrievedQueueConfig.Calendar).To(ContainElements(
+				"cal1", "[sim1=cal1]", "[sim2=cal2]"))
+
+			// Verify initial state overrides were parsed correctly
+			Expect(retrievedQueueConfig.InitialState).To(ContainElements(
+				"enabled", "[sim1=disabled]", "[sim2=enabled]"))
+		})
+
+		It("should handle complex hierarchical overrides", func() {
+			// skip test if sim1 is not reachable
+			if !IsHostReachable("sim1") {
+				Skip("sim1 is not reachable; need to be in simulated environment")
+			}
+
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			queueName := "queue-with-hierarchical-overrides"
+
+			// Create a queue with hierarchical overrides (host overrides take precedence over hostgroup)
+			queueConfig := qconf.ClusterQueueConfig{
+				Name:     queueName,
+				HostList: []string{"@allhosts", "sim1"},
+				// Default 10 slots, but @allhosts gets 20, and sim1 gets 30
+				Slots: []string{"10", "[@allhosts=20]", "[sim1=30]"},
+				// Default S_RT is 1 hour, but @allhosts gets 2 hours, and global gets 4 hours
+				SRt: []string{"01:00:00", "[@allhosts=02:00:00]", "[sim1=04:00:00]"},
+				// Default priority is 0, but @allhosts gets 10, and global gets 20
+				Priority: []string{"0", "[@allhosts=10]", "[sim1=20]"},
+			}
+
+			// Add the queue with overrides
+			err = qc.AddClusterQueue(queueConfig)
+			Expect(err).To(BeNil())
+			defer qc.DeleteClusterQueue(queueName)
+
+			// Retrieve the queue configuration
+			retrievedQueueConfig, err := qc.ShowClusterQueue(queueName)
+			Expect(err).To(BeNil())
+
+			// Verify slot overrides
+			Expect(retrievedQueueConfig.Slots).To(
+				ContainElements("10", "[@allhosts=20]", "[sim1=30]"))
+
+			// Verify S_RT overrides
+			Expect(retrievedQueueConfig.SRt).To(
+				ContainElements("01:00:00", "[@allhosts=02:00:00]", "[sim1=04:00:00]"))
+
+			// Verify priority overrides
+			Expect(retrievedQueueConfig.Priority).To(
+				ContainElements("0", "[@allhosts=10]", "[sim1=20]"))
+		})
+
+		It("should handle overrides for resource limits", func() {
+			// skip test if sim1 is not reachable
+			if !IsHostReachable("sim1") {
+				Skip("sim1 is not reachable; need to be in simulated environment")
+			}
+
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			queueName := "queue-with-resource-limits"
+
+			// Create a queue with overrides for resource limits
+			queueConfig := qconf.ClusterQueueConfig{
+				Name:     queueName,
+				HostList: []string{"@allhosts", "sim1"},
+				// Runtime limits with overrides
+				HRt: []string{"08:00:00", "[sim1=12:00:00]"},
+				SRt: []string{"04:00:00", "[sim1=06:00:00]"},
+				// CPU limits with overrides
+				HCpu: []string{"04:00:00", "[sim1=06:00:00]"},
+				SCpu: []string{"02:00:00", "[sim1=03:00:00]"},
+				// Memory limits with overrides
+				HVmem: []string{"4G", "[sim1=8G]"},
+				SVmem: []string{"2G", "[sim1=4G]"},
+				// File size limits with overrides
+				HSize: []string{"2G", "[sim1=4G]"},
+				SSize: []string{"1G", "[sim1=2G]"},
+				// Data limits with overrides
+				HData: []string{"3G", "[sim1=6G]"},
+				SData: []string{"1.5G", "[sim1=3G]"},
+				// Stack limits with overrides
+				HStack: []string{"512M", "[sim1=1G]"},
+				SStack: []string{"256M", "[sim1=512M]"},
+				// Core limits with overrides
+				HCore: []string{"1G", "[sim1=2G]"},
+				SCore: []string{"500M", "[sim1=1G]"},
+				// RSS limits with overrides
+				HRss: []string{"2G", "[sim1=4G]"},
+				SRss: []string{"1G", "[sim1=2G]"},
+			}
+
+			// Add the queue with overrides
+			err = qc.AddClusterQueue(queueConfig)
+			Expect(err).To(BeNil())
+			defer qc.DeleteClusterQueue(queueName)
+
+			// Retrieve the queue configuration
+			retrievedQueueConfig, err := qc.ShowClusterQueue(queueName)
+			Expect(err).To(BeNil())
+
+			// Verify H_RT overrides
+			Expect(retrievedQueueConfig.HRt).To(ContainElements("08:00:00", "[sim1=12:00:00]"))
+
+			// Verify S_RT overrides
+			Expect(retrievedQueueConfig.SRt).To(ContainElements("04:00:00", "[sim1=06:00:00]"))
+
+			// Verify H_CPU overrides
+			Expect(retrievedQueueConfig.HCpu).To(ContainElements("04:00:00", "[sim1=06:00:00]"))
+
+			// Verify S_CPU overrides
+			Expect(retrievedQueueConfig.SCpu).To(ContainElements("02:00:00", "[sim1=03:00:00]"))
+
+			// Verify H_VMEM overrides
+			Expect(retrievedQueueConfig.HVmem).To(ContainElements("4G", "[sim1=8G]"))
+
+			// Verify S_VMEM overrides
+			Expect(retrievedQueueConfig.SVmem).To(ContainElements("2G", "[sim1=4G]"))
+
+			// Verify H_FSIZE overrides
+			Expect(retrievedQueueConfig.HSize).To(ContainElements("2G", "[sim1=4G]"))
+
+			// Verify S_FSIZE overrides
+			Expect(retrievedQueueConfig.SSize).To(ContainElements("1G", "[sim1=2G]"))
+
+			// Verify H_DATA overrides
+			Expect(retrievedQueueConfig.HData).To(ContainElements("3G", "[sim1=6G]"))
+
+			// Verify S_DATA overrides
+			Expect(retrievedQueueConfig.SData).To(ContainElements("1.5G", "[sim1=3G]"))
+
+			// Verify H_STACK overrides
+			Expect(retrievedQueueConfig.HStack).To(ContainElements("512M", "[sim1=1G]"))
+
+			// Verify S_STACK overrides
+			Expect(retrievedQueueConfig.SStack).To(ContainElements("256M", "[sim1=512M]"))
+
+			// Verify H_CORE overrides
+			Expect(retrievedQueueConfig.HCore).To(ContainElements("1G", "[sim1=2G]"))
+
+			// Verify S_CORE overrides
+			Expect(retrievedQueueConfig.SCore).To(ContainElements("500M", "[sim1=1G]"))
+
+			// Verify H_RSS overrides
+			Expect(retrievedQueueConfig.HRss).To(ContainElements("2G", "[sim1=4G]"))
+
+			// Verify S_RSS overrides
+			Expect(retrievedQueueConfig.SRss).To(ContainElements("1G", "[sim1=2G]"))
+
+		})
+
 	})
 
 	Context("Submit Host configuration", func() {

@@ -123,7 +123,9 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	for _, host := range hostConfigs {
 		hc, err := c.ShowHostConfiguration(host)
 		if err != nil {
-			return cc, fmt.Errorf("failed to read host config: %v", err)
+			// host is might be unreachable
+			fmt.Printf("warning: host %s is unreachable\n", host)
+			continue
 		}
 		cc.HostConfigurations[host] = hc
 	}
@@ -188,7 +190,8 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	for _, execHost := range execHosts {
 		eh, err := c.ShowExecHost(execHost)
 		if err != nil {
-			return cc, fmt.Errorf("failed to read exec host: %v", err)
+			fmt.Printf("warning: exec host %s is unreachable\n", execHost)
+			continue
 		}
 		cc.ExecHosts[execHost] = eh
 	}
@@ -2083,7 +2086,7 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 		return err
 	}
 	_, err = file.WriteString(fmt.Sprintf("xprojects         %s\n",
-		JoinList(queue.XProjects, " ")))
+		JoinList(queue.XProjects, ",")))
 	if err != nil {
 		return err
 	}
@@ -2210,101 +2213,101 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 		case "hostlist":
 			cfg.HostList = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "seq_no":
-			cfg.SeqNo = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SeqNo = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "load_thresholds":
-			cfg.LoadThresholds = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.LoadThresholds = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "suspend_thresholds":
-			cfg.SuspendThresholds = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SuspendThresholds = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "nsuspend":
-			cfg.NSuspend = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.NSuspend = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "suspend_interval":
-			cfg.SuspendInterval = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SuspendInterval = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "priority":
-			cfg.Priority = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Priority = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "min_cpu_interval":
-			cfg.MinCpuInterval = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.MinCpuInterval = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "processors":
-			cfg.Processors = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Processors = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "qtype":
-			cfg.QType = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.QType = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "ckpt_list":
 			cfg.CkptList = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "pe_list":
 			cfg.PeList = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "rerun":
-			cfg.Rerun = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Rerun = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "slots":
-			cfg.Slots = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Slots = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "tmpdir":
-			cfg.TmpDir = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.TmpDir = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "shell":
-			cfg.Shell = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Shell = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "prolog":
-			cfg.Prolog = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Prolog = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "epilog":
-			cfg.Epilog = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Epilog = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "shell_start_mode":
-			cfg.ShellStartMode = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.ShellStartMode = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "starter_method":
-			cfg.StarterMethod = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.StarterMethod = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "suspend_method":
-			cfg.SuspendMethod = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SuspendMethod = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "resume_method":
-			cfg.ResumeMethod = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.ResumeMethod = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "terminate_method":
-			cfg.TerminateMethod = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.TerminateMethod = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "notify":
-			cfg.Notify = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.Notify = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "owner_list":
-			cfg.OwnerList = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.OwnerList = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "user_lists":
-			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.UserLists = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "xuser_lists":
-			cfg.XUserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.XUserLists = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "subordinate_list":
-			cfg.SubordinateList = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.SubordinateList = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "complex_values":
-			cfg.ComplexValues = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.ComplexValues = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "projects":
-			cfg.Projects = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.Projects = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "xprojects":
-			cfg.XProjects = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.XProjects = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "calendar":
-			cfg.Calendar = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.Calendar = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "initial_state":
-			cfg.InitialState = ParseSpaceSeparatedMultiLineValues(lines, i)
+			cfg.InitialState = ParseSpaceSeparatedValuesWithOverrides(lines, i)
 		case "s_rt":
-			cfg.SRt = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SRt = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_rt":
-			cfg.HRt = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HRt = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_cpu":
-			cfg.SCpu = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SCpu = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_cpu":
-			cfg.HCpu = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HCpu = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_fsize":
-			cfg.SSize = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SSize = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_fsize":
-			cfg.HSize = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HSize = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_data":
-			cfg.SData = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SData = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_data":
-			cfg.HData = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HData = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_stack":
-			cfg.SStack = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SStack = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_stack":
-			cfg.HStack = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HStack = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_core":
-			cfg.SCore = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SCore = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_core":
-			cfg.HCore = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HCore = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_rss":
-			cfg.SRss = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SRss = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_rss":
-			cfg.HRss = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HRss = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "s_vmem":
-			cfg.SVmem = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.SVmem = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_vmem":
-			cfg.HVmem = ParseCommaSeparatedMultiLineValues(lines, i)
+			cfg.HVmem = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		}
 	}
 

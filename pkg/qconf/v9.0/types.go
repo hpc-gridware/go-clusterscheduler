@@ -238,8 +238,9 @@ const QTypeInteractive string = "INTERACTIVE"
 
 // ClusterQueueConfig represents the configuration for a cluster queue.
 type ClusterQueueConfig struct {
-	Name              string   `json:"qname"`
-	HostList          []string `json:"hostlist"`
+	Name     string   `json:"qname"`
+	HostList []string `json:"hostlist"`
+	// All values below support host and hostgroup overrides. 1 2,[x=3],[y=4]
 	SeqNo             []string `json:"seq_no"`
 	LoadThresholds    []string `json:"load_thresholds"`
 	SuspendThresholds []string `json:"suspend_thresholds"`

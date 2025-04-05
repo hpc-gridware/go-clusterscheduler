@@ -126,6 +126,86 @@ func ParseSpaceSeparatedValuesWithOverrides(lines []string, i int) []string {
 	return append(pelist, fields[1:]...)
 }
 
+// ParseCommaSeparatedValuesWithOverrides. Like complex_values in queue config.
+// It can look like this: slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G]
+func ParseCommaSeparatedValuesWithOverrides(lines []string, i int) []string {
+	// Example:
+	// slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G],[sim2=slots=30,mem_free=3G]
+	// results in:
+	// []string{"slots=10", "mem_free=1G", "[sim1=slots=20,mem_free=2G]", "[sim2=slots=30,mem_free=3G]"}
+
+	// Assuming single line output! First part is the name of the element.
+	// complex_values    slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G],[sim2=slots=30,mem_free=3G]
+	// remove the field name (which can have different names)
+	values := strings.SplitAfterN(lines[i], " ", 2)
+	if len(values) == 1 {
+		return nil
+	}
+
+	value := strings.TrimSpace(values[1])
+	if value == "NONE" {
+		return nil
+	}
+
+	// Process the value string to handle the special case of overrides
+	var result []string
+	var currentValue string
+	var inOverride bool
+	var overrideDepth int
+
+	for _, char := range value {
+		switch char {
+		case '[':
+			if inOverride {
+				// Nested override - just add to current value
+				overrideDepth++
+				currentValue += string(char)
+			} else {
+				// Start of an override
+				inOverride = true
+				// If we have a current value, add it to results
+				if currentValue != "" {
+					result = append(result, strings.TrimSpace(currentValue))
+					currentValue = ""
+				}
+				currentValue += string(char)
+			}
+		case ']':
+			if overrideDepth > 0 {
+				// Closing a nested override
+				overrideDepth--
+				currentValue += string(char)
+			} else {
+				// End of an override
+				inOverride = false
+				currentValue += string(char)
+				result = append(result, strings.TrimSpace(currentValue))
+				currentValue = ""
+			}
+		case ',':
+			if inOverride {
+				// Comma inside an override - just add to current value
+				currentValue += string(char)
+			} else {
+				// Comma outside override - end of a value
+				if currentValue != "" {
+					result = append(result, strings.TrimSpace(currentValue))
+					currentValue = ""
+				}
+			}
+		default:
+			currentValue += string(char)
+		}
+	}
+
+	// Add any remaining value
+	if currentValue != "" {
+		result = append(result, strings.TrimSpace(currentValue))
+	}
+
+	return result
+}
+
 // pe1,p2 vs p1,[host=p2]
 // ParseSpaceAndCommaSeparatedMultiLineValues splits on spaces and commas.
 func ParseSpaceAndCommaSeparatedMultiLineValues(lines []string, i int) []string {
