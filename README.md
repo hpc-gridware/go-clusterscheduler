@@ -17,11 +17,15 @@ container based simulator of a real "Grid Engine" cluster. It can
 dump the configuration of a SGE or Open Grid Engine cluster and
 apply changes to a cluster simulated within a container.
 (See the [`cmd/simulator`](cmd/simulator) directory for more information.)
-- **`sharetree` Application**: This application implements a
+- **`sharetree` GUI Editor**: This application implements a
 simple web-based visualization and editing tool for Open Cluster
 Scheduler (OCS) and Gridware Cluster Scheduler (GCS) sharetree
 configurations.
 (See the [`cmd/sharetree`](cmd/sharetree) directory for more information.)
+- **[mcp-server](https://github.com/hpc-gridware/go-clusterscheduler/tree/main/cmd/describe-mcp)**: Implements an example MCP (Model Context Protocol) for
+interacting with the cluster. Process job details, accounting information,
+cluster configuration details with your favorite AI application (like Claude)
+which supports MCP extensions.
 
 ## Go API Development Container
 
