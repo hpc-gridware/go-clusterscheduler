@@ -54,8 +54,18 @@ cd /opt/helpers
 cp autoinstall.template ${MOUNT_DIR}/
 cd ${MOUNT_DIR}
 
+# Installer calls: 
+#./utilbin/lx-amd64/filestat -owner .
+# linux namespaces cause a different ownership of the host mounted
+# directory - this causes the installer to abort on Linux
+
+rm ./utilbin/lx-amd64/filestat
+echo "#!/bin/bash" > ./utilbin/lx-amd64/filestat
+echo "echo root\n" >> ./utilbin/lx-amd64/filestat
+chmod +x ./utilbin/lx-amd64/filestat
+
 # install qmaster and execd from scratch when container starts
-cat ./autoinstall.template | sed -e 's:docker:$HOSTNAME:g' > ./template_host
+sed "s:docker:${HOSTNAME}:g" ./autoinstall.template > ./template_host
 ./inst_sge -m -x -auto ./template_host
 
 # make sure installation is in path and libraries can be accessed
