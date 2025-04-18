@@ -30,29 +30,27 @@ import (
 )
 
 // This is a simple MCP server that can be used to answer questions
-// about the Gridware Cluster Scheduler. It is mainly for research and
-// educational purposes.
+// about the Open Cluster Scheduler. It can be used for research and
+// educational purposes. It allows to dive deeper into the cluster
+// configuration and understanding the current state of the cluster.
 
 // Define a static ClusterConfig for demonstration purposes
 var clusterConfig = &qconf.ClusterConfig{}
 
 func main() {
 
-	// if READ_ONLY is set, we run in read-only mode
-	readOnly := os.Getenv("READ_ONLY")
+	// if WITH_WRITE_ACCESS is set, the cluster configuration can be modified
+	// which is dangerous, but useful research purposes
+	withWriteAccessBool, _ := strconv.ParseBool(
+		os.Getenv("WITH_WRITE_ACCESS"))
 
-	// is true value (use parsebool)
-	if readOnly == "" {
-		readOnly = "false"
-	}
-
-	readOnlyBool, err := strconv.ParseBool(readOnly)
-	if err != nil {
-		log.Fatalf("Error parsing READ_ONLY environment variable: %v", err)
-	}
+	// if WITH_JOB_SUBMISSION_ACCESS is set, jobs can be submitted
+	withJobSubmissionAccessBool, _ := strconv.ParseBool(
+		os.Getenv("WITH_JOB_SUBMISSION_ACCESS"))
 
 	server, err := NewSchedulerServer(SchedulerServerConfig{
-		ReadOnly: readOnlyBool,
+		ReadOnly:                !withWriteAccessBool,
+		WithJobSubmissionAccess: withJobSubmissionAccessBool,
 	})
 	if err != nil {
 		log.Fatalf("Error: %v", err)
