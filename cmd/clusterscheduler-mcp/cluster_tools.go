@@ -30,13 +30,28 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
+// GetClusterConfigurationDescription is the description for the get_cluster_configuration tool
+const GetClusterConfigurationDescription = `Fetch the complete cluster configuration of the Gridware Cluster Scheduler. 
+This tool retrieves all configuration data including hosts, queues, users, projects, and resource settings, 
+formatted as JSON. Use this method for efficient retrieval of the entire configuration state.`
+
+// SetClusterConfigurationDescription is the description for the set_cluster_configuration tool
+const SetClusterConfigurationDescription = `Apply a complete cluster configuration to the Gridware Cluster Scheduler. 
+This tool accepts a JSON representation of the entire cluster configuration and applies it to the system. 
+Use this for bulk updates, migrations, or restoring configuration from a backup. 
+The configuration must be properly formatted JSON matching the ClusterConfig structure.`
+
+// SetClusterConfigurationParamDescription is the description for the set_cluster_configuration tool parameter
+const SetClusterConfigurationParamDescription = `Complete JSON representation of the cluster configuration to set. 
+Must be a valid JSON string matching the ClusterConfig structure. 
+A valid JSON string can be generated using the get_cluster_configuration tool.`
+
 // registerClusterTools registers all cluster configuration related tools
 func registerClusterTools(s *SchedulerServer, config SchedulerServerConfig) error {
 	// Add get_cluster_configuration tool
 	s.server.AddTool(mcp.NewTool(
 		"get_cluster_configuration",
-		mcp.WithDescription(
-			"Fetch the complete cluster configuration of the Gridware Cluster Scheduler. This tool retrieves all configuration data including hosts, queues, users, projects, and resource settings, formatted as JSON. Use this method for efficient retrieval of the entire configuration state."),
+		mcp.WithDescription(GetClusterConfigurationDescription),
 	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		log.Printf("Getting cluster configuration")
 		clusterConfig, err := s.conn.GetClusterConfiguration()
@@ -101,9 +116,9 @@ func registerClusterTools(s *SchedulerServer, config SchedulerServerConfig) erro
 		// Add set_cluster_configuration tool
 		s.server.AddTool(mcp.NewTool(
 			"set_cluster_configuration",
-			mcp.WithDescription("Apply a complete cluster configuration to the Gridware Cluster Scheduler. This tool accepts a JSON representation of the entire cluster configuration and applies it to the system. Use this for bulk updates, migrations, or restoring configuration from a backup. The configuration must be properly formatted JSON matching the ClusterConfig structure."),
+			mcp.WithDescription(SetClusterConfigurationDescription),
 			mcp.WithString("cluster_configuration",
-				mcp.Description("Complete JSON representation of the cluster configuration to set. Must be a valid JSON string matching the ClusterConfig structure. A valid JSON string can be generated using the get_cluster_configuration tool."),
+				mcp.Description(SetClusterConfigurationParamDescription),
 				mcp.Required(),
 			),
 		), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -39,6 +39,9 @@ type SchedulerServerConfig struct {
 	// configuration. All tools that modify the cluster configuration
 	// will be disabled.
 	ReadOnly bool
+
+	// WithJobSubmissionAccess is true if the server can submit jobs
+	WithJobSubmissionAccess bool
 }
 
 // NewSchedulerServer creates a new instance of the scheduler MCP server
@@ -70,6 +73,10 @@ func NewSchedulerServer(config SchedulerServerConfig) (*SchedulerServer, error) 
 	}
 
 	if err := registerAccountingTools(s, config); err != nil {
+		return nil, err
+	}
+
+	if err := RegisterPrompts(s); err != nil {
 		return nil, err
 	}
 

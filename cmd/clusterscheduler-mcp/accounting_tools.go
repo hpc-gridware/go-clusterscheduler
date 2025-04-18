@@ -30,14 +30,33 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
+// QAcctToolDescription is the description for the qacct tool
+const QAcctToolDescription = `Retrieves accounting information about finished jobs in the Gridware Cluster Scheduler. 
+This tool allows querying job history, resource usage, and execution details for completed jobs. 
+Use with various options or specify job IDs to get detailed information about specific jobs.`
+
+// QAcctArgumentsDescription is the description for the qacct tool arguments
+const QAcctArgumentsDescription = `Command line arguments for qacct (e.g., '-j 123' for job information, 
+'-u username' for user jobs, '-help' for help documentation).`
+
+// JobDetailsToolDescription is the description for the job_details tool
+const JobDetailsToolDescription = `Retrieves detailed accounting information about finished jobs in a structured format. 
+This tool returns comprehensive data about job execution, including resource usage, submission parameters, 
+and execution timelines. Specify job IDs to get information about specific jobs or leave empty to get 
+details for all finished jobs.`
+
+// JobDetailsJobIdsDescription is the description for the job_details tool job_ids parameter
+const JobDetailsJobIdsDescription = `List of job IDs to retrieve details for. If omitted, details for all 
+finished jobs will be returned.`
+
 // registerAccountingTools registers all job accounting related tools
 func registerAccountingTools(s *SchedulerServer, config SchedulerServerConfig) error {
 	// Add qacct tool
 	s.server.AddTool(mcp.NewTool(
 		"qacct",
-		mcp.WithDescription("Retrieves accounting information about finished jobs in the Gridware Cluster Scheduler. This tool allows querying job history, resource usage, and execution details for completed jobs. Use with various options or specify job IDs to get detailed information about specific jobs."),
+		mcp.WithDescription(QAcctToolDescription),
 		mcp.WithArray("arguments",
-			mcp.Description("Command line arguments for qacct (e.g., '-j 123' for job information, '-u username' for user jobs, '-help' for help documentation)."),
+			mcp.Description(QAcctArgumentsDescription),
 		),
 	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		log.Printf("Executing qacct command")
@@ -82,9 +101,9 @@ func registerAccountingTools(s *SchedulerServer, config SchedulerServerConfig) e
 	// Add job_details tool
 	s.server.AddTool(mcp.NewTool(
 		"job_details",
-		mcp.WithDescription("Retrieves detailed accounting information about finished jobs in a structured format. This tool returns comprehensive data about job execution, including resource usage, submission parameters, and execution timelines. Specify job IDs to get information about specific jobs or leave empty to get details for all finished jobs."),
+		mcp.WithDescription(JobDetailsToolDescription),
 		mcp.WithArray("job_ids",
-			mcp.Description("List of job IDs to retrieve details for. If omitted, details for all finished jobs will be returned."),
+			mcp.Description(JobDetailsJobIdsDescription),
 		),
 	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		log.Printf("Retrieving job details")
