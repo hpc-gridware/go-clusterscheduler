@@ -18,7 +18,15 @@
 ###########################################################################
 #___INFO__MARK_END_NEW__
 
-# This Makefile is used for development and testing purposes only.
+# --------------------------------------------------------------------
+# This configuration is intended for local development on Darwin/macOS 
+# with ARM architecture (such as M4). 
+# 
+# Usage on Linux systems and/or AMD64 architectures may require 
+# adjustments to ensure images build and run correctly. 
+# 
+# Contributions to broaden compatibility are welcome!
+# --------------------------------------------------------------------
 
 IMAGE_NAME = $(shell basename $(CURDIR))
 IMAGE_TAG = V902_TAG
@@ -36,14 +44,14 @@ build:
 run-privileged: build
 	@echo "Running the Open Cluster Scheduler container in privileged mode..."
 	mkdir -p ./installation
-	docker run -p 7070:7070 --rm -it -h master --privileged -v /dev/fuse:/dev/fuse --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
+	docker run -p 7070:7070 --rm -it -h master --privileged -v /dev/fuse:/dev/fuse --cap-add SYS_ADMIN --name $(CONTAINER_NAME) -v ${PWD}/installation:/opt/cs-install -v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
 .PHONY: run
 run: build
 	@echo "Running the Open Cluster Scheduler container..."
 	@echo "For a new installation, you need to remove the ./installation subdirectory first."
 	mkdir -p ./installation
-	docker run --platform=linux/amd64 -p 7070:7070 -p 9464:9464 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
+	docker run --platform=linux/amd64 -p 7070:7070 -p 9464:9464 --rm -it -h master --name $(CONTAINER_NAME) -v ${PWD}/installation:/opt/cs-install -v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash
 
 # Running apptainers in containers requires more permissions. You can drop
 # the --privileged flag and the --cap-add SYS_ADMIN flag if you don't need
@@ -55,7 +63,7 @@ simulate:
 	rm -rf ./installation
 	@echo "Creating new subdirectory for installation..."
 	mkdir -p ./installation
-	docker run --platform=linux/amd64 --rm -it -h master --privileged --cap-add SYS_ADMIN -p 9464:9464 -p 8888:8888 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && go build . && ./simulator run ../../cluster.json && /bin/bash"
+	docker run --platform=linux/amd64 --rm -it -h master --privileged --cap-add SYS_ADMIN -p 9464:9464 -p 8888:8888 --name $(CONTAINER_NAME) -v ${PWD}/installation:/opt/cs-install -v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/simulator && GOFLAGS=-buildvcs=false go build . && ./simulator run ../../cluster.json && /bin/bash"
 
 #.PHONY: simulate
 #simulate:
@@ -68,14 +76,14 @@ adapter:
 	@echo "Running the adapter on port 8282...POST to http://localhost:8282/api/v0/command"
 	@echo "Example: curl -X POST http://localhost:8282/api/v0/command -d '{\"method\": \"ShowSchedulerConfiguration\"}'"
 	mkdir -p ./installation
-	docker run --platform=linux/amd64 --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter"
+	docker run --platform=linux/amd64 --rm -it -h master -p 8282:8282 --name $(CONTAINER_NAME) -v ${PWD}/installation:/opt/cs-install -v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && GOFLAGS=-buildvcs=false go build . && ./adapter"
 
 .PHONY: run-rest
 run-rest: build
 	@echo "Running the Open Cluster Scheduler container with REST adapter..."
 	@echo "For a new installation, you need to remove the ./installation subdirectory first."
 	mkdir -p ./installation
-	docker run --platform=linux/amd64 -p 7070:7070 -p 9464:9464 -p 9898:9898 --rm -it -h master --name $(CONTAINER_NAME) -v ./installation:/opt/cs-install -v ./:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && go build . && ./adapter --port 9898 & exec bash"
+	docker run --platform=linux/amd64 -p 7070:7070 -p 9464:9464 -p 9898:9898 --rm -it -h master --name $(CONTAINER_NAME) -v ${PWD}/installation:/opt/cs-install -v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && GOFLAGS=-buildvcs=false go build . && ./adapter --port 9898 & exec bash"
 
 .PHONY: clean
 clean:
