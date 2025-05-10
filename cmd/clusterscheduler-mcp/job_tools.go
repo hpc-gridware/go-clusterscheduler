@@ -54,7 +54,8 @@ const SubmitJobArgumentsDescription = `SGE-compatible command line arguments for
 // QStatDescription is the description for the qstat tool
 const QStatDescription = `Retrieves information about jobs and queues in the Gridware Cluster Scheduler. 
 This tool allows viewing job status, queue information, and other scheduling details. 
-Use with various options like '-j job_id' to see specific job details or '-help' to see all available options.`
+Use with various options like '-j job_id' to see specific job details or '-help' to see all available options.
+Assuming that the timestamps is in microseconds (1/1,000,000 second).`
 
 // QStatArgumentsDescription is the description for the qstat tool arguments parameter
 const QStatArgumentsDescription = `Command line arguments for qstat (e.g., '-j 123' for job information, 

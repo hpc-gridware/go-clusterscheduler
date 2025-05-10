@@ -33,7 +33,8 @@ import (
 // QAcctToolDescription is the description for the qacct tool
 const QAcctToolDescription = `Retrieves accounting information about finished jobs in the Gridware Cluster Scheduler. 
 This tool allows querying job history, resource usage, and execution details for completed jobs. 
-Use with various options or specify job IDs to get detailed information about specific jobs.`
+Use with various options or specify job IDs to get detailed information about specific jobs.
+Assuming that the timestamps is in microseconds (1/1,000,000 second).`
 
 // QAcctArgumentsDescription is the description for the qacct tool arguments
 const QAcctArgumentsDescription = `Command line arguments for qacct (e.g., '-j 123' for job information, 
@@ -43,7 +44,7 @@ const QAcctArgumentsDescription = `Command line arguments for qacct (e.g., '-j 1
 const JobDetailsToolDescription = `Retrieves detailed accounting information about finished jobs in a structured format. 
 This tool returns comprehensive data about job execution, including resource usage, submission parameters, 
 and execution timelines. Specify job IDs to get information about specific jobs or leave empty to get 
-details for all finished jobs.`
+details for all finished jobs. Assuming that the timestamps is in microseconds (1/1,000,000 second).`
 
 // JobDetailsJobIdsDescription is the description for the job_details tool job_ids parameter
 const JobDetailsJobIdsDescription = `List of job IDs to retrieve details for. If omitted, details for all 
