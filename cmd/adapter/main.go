@@ -60,7 +60,14 @@ func runAdapter(cmd *cobra.Command, args []string) {
 	}
 
 	router := mux.NewRouter()
-	router.Handle("/api/v0/command", adapter.NewAdapter(qc)).Methods("POST")
+	adapterHandler := adapter.NewAdapter(qc)
+	
+	// Command endpoint (POST only)
+	router.Handle("/api/v0/command", adapterHandler).Methods("POST")
+	
+	// Health and methods endpoints (GET only)
+	router.Handle("/health", adapterHandler).Methods("GET")
+	router.Handle("/methods", adapterHandler).Methods("GET")
 
 	// Use the port from command line flag
 	serverAddress := fmt.Sprintf(":%d", port)

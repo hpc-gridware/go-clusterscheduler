@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
@@ -42,9 +43,10 @@ import (
 const name = "go.hpc-gridware.com/example/qconf"
 
 var (
-	tracer = otel.Tracer(name)
-	meter  = otel.Meter(name)
-	logger = otelslog.NewLogger(name)
+	tracer    = otel.Tracer(name)
+	meter     = otel.Meter(name)
+	logger    = otelslog.NewLogger(name)
+	startTime = time.Now()
 )
 
 func init() {
@@ -68,6 +70,24 @@ func init() {
 type CommandRequest struct {
 	MethodName string            `json:"method"`
 	Args       []json.RawMessage `json:"args"`
+}
+
+type HealthResponse struct {
+	Status    string `json:"status"`
+	Timestamp string `json:"timestamp"`
+	Uptime    string `json:"uptime"`
+}
+
+type MethodInfo struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Parameters  []string `json:"parameters"`
+	ReturnType  string   `json:"return_type"`
+}
+
+type MethodsResponse struct {
+	Methods []MethodInfo `json:"methods"`
+	Count   int          `json:"count"`
 }
 
 // NewAdapter creates an http.Handler for any Go interface.
@@ -109,6 +129,18 @@ type adapter struct {
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "request")
 	defer span.End()
+
+	// Handle GET endpoints without timeout
+	if r.Method == "GET" {
+		a.handleGetEndpoints(w, r)
+		return
+	}
+
+	// Only POST method requires timeout and JSON parsing
+	if r.Method != "POST" {
+		a.fail(ctx, w, r, http.StatusMethodNotAllowed, "Method not allowed. Use POST for commands or GET for health/methods", nil)
+		return
+	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -187,15 +219,109 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logger.InfoContext(ctx, "request successfully processed", "method", req.MethodName)
 }
 
+func (a *adapter) handleGetEndpoints(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	
+	switch r.URL.Path {
+	case "/health":
+		a.handleHealth(w, r)
+	case "/methods":
+		a.handleMethods(w, r)
+	default:
+		response := map[string]string{"error": "Not found. Available GET endpoints: /health, /methods"}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+func (a *adapter) handleHealth(w http.ResponseWriter, r *http.Request) {
+	uptime := time.Since(startTime)
+	health := HealthResponse{
+		Status:    "healthy",
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Uptime:    uptime.String(),
+	}
+	
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(health)
+}
+
+func (a *adapter) handleMethods(w http.ResponseWriter, r *http.Request) {
+	instanceValue := reflect.ValueOf(a.instance)
+	instanceType := instanceValue.Type()
+	
+	var methods []MethodInfo
+	for i := 0; i < instanceType.NumMethod(); i++ {
+		method := instanceType.Method(i)
+		methodType := method.Type
+		
+		// Get parameter types
+		var params []string
+		for j := 1; j < methodType.NumIn(); j++ { // Skip receiver (index 0)
+			params = append(params, methodType.In(j).String())
+		}
+		
+		// Get return type
+		var returnType string
+		if methodType.NumOut() > 0 {
+			returnTypes := make([]string, methodType.NumOut())
+			for j := 0; j < methodType.NumOut(); j++ {
+				returnTypes[j] = methodType.Out(j).String()
+			}
+			returnType = strings.Join(returnTypes, ", ")
+		} else {
+			returnType = "void"
+		}
+		
+		// Generate description based on method name
+		description := a.generateMethodDescription(method.Name)
+		
+		methods = append(methods, MethodInfo{
+			Name:        method.Name,
+			Description: description,
+			Parameters:  params,
+			ReturnType:  returnType,
+		})
+	}
+	
+	response := MethodsResponse{
+		Methods: methods,
+		Count:   len(methods),
+	}
+	
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+func (a *adapter) generateMethodDescription(methodName string) string {
+	// Generate basic descriptions based on method name patterns
+	switch {
+	case strings.HasPrefix(methodName, "Show"):
+		return "Retrieve information about " + strings.ToLower(strings.TrimPrefix(methodName, "Show"))
+	case strings.HasPrefix(methodName, "Get"):
+		return "Get " + strings.ToLower(strings.TrimPrefix(methodName, "Get"))
+	case strings.HasPrefix(methodName, "Add"):
+		return "Add a new " + strings.ToLower(strings.TrimPrefix(methodName, "Add"))
+	case strings.HasPrefix(methodName, "Delete"):
+		return "Delete " + strings.ToLower(strings.TrimPrefix(methodName, "Delete"))
+	case strings.HasPrefix(methodName, "Modify"):
+		return "Modify " + strings.ToLower(strings.TrimPrefix(methodName, "Modify"))
+	case strings.HasPrefix(methodName, "Apply"):
+		return "Apply " + strings.ToLower(strings.TrimPrefix(methodName, "Apply"))
+	default:
+		return "Execute " + methodName + " operation"
+	}
+}
+
 func (a *adapter) fail(ctx context.Context, w http.ResponseWriter, r *http.Request, status int, message string, err error) {
 	w.WriteHeader(status)
+	w.Header().Set("Content-Type", "application/json")
 	response := map[string]string{"error": message}
 	logger.InfoContext(ctx, message, "URL", r.URL.Path)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		logger.ErrorContext(ctx, "Failed to encode error response", "error", err)
 	}
-	// write the error to the response body
-	w.Write([]byte(message))
+	// Removed duplicate error writing - JSON response already contains the error
 }
 
 func newLoggerProvider() (*log.LoggerProvider, error) {
