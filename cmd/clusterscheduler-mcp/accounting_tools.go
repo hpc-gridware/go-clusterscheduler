@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 
 	qacct "github.com/hpc-gridware/go-clusterscheduler/pkg/qacct/v9.0"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -63,14 +62,7 @@ func registerAccountingTools(s *SchedulerServer, config SchedulerServerConfig) e
 		log.Printf("Executing qacct command")
 
 		// Get optional arguments
-		var arguments []string
-		if args, ok := req.Params.Arguments["arguments"].([]interface{}); ok {
-			for _, arg := range args {
-				if strArg, ok := arg.(string); ok {
-					arguments = append(arguments, strArg)
-				}
-			}
-		}
+		arguments := req.GetStringSlice("arguments", []string{})
 
 		// Execute qacct command
 		output, err := getAccountingInfo(ctx, arguments)
@@ -110,25 +102,14 @@ func registerAccountingTools(s *SchedulerServer, config SchedulerServerConfig) e
 		log.Printf("Retrieving job details")
 
 		// Parse job IDs if provided
-		var jobIDs []int64
-		if ids, ok := req.Params.Arguments["job_ids"].([]interface{}); ok && len(ids) > 0 {
-			for _, id := range ids {
-				// Handle different possible formats (string, number)
-				switch v := id.(type) {
-				case string:
-					if jobID, err := strconv.ParseInt(v, 10, 64); err == nil {
-						jobIDs = append(jobIDs, jobID)
-					} else {
-						log.Printf("Invalid job ID format: %s", v)
-					}
-				case float64:
-					jobIDs = append(jobIDs, int64(v))
-				}
-			}
+		jobIDs := req.GetIntSlice("job_ids", []int{})
+		var jobIDs64 []int64
+		for _, id := range jobIDs {
+			jobIDs64 = append(jobIDs64, int64(id))
 		}
 
 		// Get job details
-		output, err := getStructuredJobDetails(ctx, jobIDs)
+		output, err := getStructuredJobDetails(ctx, jobIDs64)
 		if err != nil {
 			log.Printf("Failed to get job details: %v", err)
 			return &mcp.CallToolResult{

@@ -114,8 +114,8 @@ func registerJobTools(s *SchedulerServer, config SchedulerServerConfig) error {
 			log.Printf("Submitting job")
 
 			// Get command from the request
-			command, ok := req.Params.Arguments["command"].(string)
-			if !ok || len(strings.TrimSpace(command)) == 0 {
+			command := req.GetString("command", "")
+			if len(strings.TrimSpace(command)) == 0 {
 				log.Printf("Invalid or missing command")
 				return &mcp.CallToolResult{
 					Content: []mcp.Content{
@@ -129,14 +129,7 @@ func registerJobTools(s *SchedulerServer, config SchedulerServerConfig) error {
 			}
 
 			// Get optional arguments
-			var arguments []string
-			if args, ok := req.Params.Arguments["arguments"].([]interface{}); ok {
-				for _, arg := range args {
-					if strArg, ok := arg.(string); ok {
-						arguments = append(arguments, strArg)
-					}
-				}
-			}
+			arguments := req.GetStringSlice("arguments", []string{})
 
 			// Prepare submission arguments
 			submitArgs := append(arguments, command)
@@ -180,14 +173,7 @@ func registerJobTools(s *SchedulerServer, config SchedulerServerConfig) error {
 		log.Printf("Executing qstat command")
 
 		// Get optional arguments
-		var arguments []string
-		if args, ok := req.Params.Arguments["arguments"].([]interface{}); ok {
-			for _, arg := range args {
-				if strArg, ok := arg.(string); ok {
-					arguments = append(arguments, strArg)
-				}
-			}
-		}
+		arguments := req.GetStringSlice("arguments", []string{})
 
 		// Execute qstat command
 		output, err := getJobStatus(ctx, arguments)
@@ -225,8 +211,8 @@ func registerJobTools(s *SchedulerServer, config SchedulerServerConfig) error {
 		),
 	), func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
-		jobID, ok := req.Params.Arguments["job_id"].(string)
-		if !ok {
+		jobID := req.GetString("job_id", "")
+		if jobID == "" {
 			return &mcp.CallToolResult{
 				Content: []mcp.Content{
 					mcp.TextContent{

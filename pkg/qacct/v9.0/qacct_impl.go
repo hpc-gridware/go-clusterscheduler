@@ -75,76 +75,16 @@ func (q *QAcctImpl) NativeSpecification(args []string) (string, error) {
 	return string(out), nil
 }
 
-func (q *QAcctImpl) ListAdvanceReservations(arID string) ([]ReservationUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) JobsAccountedTo(accountString string) (Usage, error) {
-	return Usage{}, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) JobsStartedAfter(beginTime string) (Usage, error) {
-	return Usage{}, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) JobsStartedBefore(endTime string) (Usage, error) {
-	return Usage{}, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) JobsStartedLastDays(days int) (Usage, error) {
-	return Usage{}, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListDepartment(department string) ([]DepartmentUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListGroup(groupIDOrName string) ([]GroupUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListHost(host string) ([]HostUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListJobs(jobIDOrNameOrPattern string) ([]JobDetail, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) RequestComplexAttributes(attributes string) ([]JobInfo, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListOwner(owner string) ([]OwnerUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListParallelEnvironment(peName string) ([]PeUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListProject(project string) ([]ProjectUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListQueue(queue string) ([]QueueUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListJobUsageBySlots(usedSlots int) ([]SlotsUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (q *QAcctImpl) ListTasks(jobID, taskIDRange string) ([]TaskUsage, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
 func (q *QAcctImpl) ShowHelp() (string, error) {
-	return "", fmt.Errorf("not implemented")
+	return q.NativeSpecification([]string{"-help"})
 }
 
-func (q *QAcctImpl) ShowTotalSystemUsage() (Usage, error) {
-	return Usage{}, fmt.Errorf("not implemented")
+func (q *QAcctImpl) Summary() *SummaryBuilder {
+	return NewSummaryBuilder(q)
+}
+
+func (q *QAcctImpl) Jobs() *JobsBuilder {
+	return NewJobsBuilder(q)
 }
 
 // ShowJobDetails returns the job details for the given job IDs. If the jobIDs

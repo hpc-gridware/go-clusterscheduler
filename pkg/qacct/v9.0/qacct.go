@@ -21,32 +21,28 @@ package qacct
 
 // QAcct defines the methods for interacting with the Open Cluster Scheduler
 // to retrieve accounting information for finished jobs using the qacct command.
-//
-// The interface replicates the qacct command line options and arguments 1:1 so
-// that it can be used for automating and testing.
 type QAcct interface {
 	WithAlternativeAccountingFile(accountingFile string) error
 	WithDefaultAccountingFile()
 	// NativeSpecification calls qacct with the given command and args
 	// and returns the raw unparsed output.
 	NativeSpecification(args []string) (string, error)
-	ListAdvanceReservations(arID string) ([]ReservationUsage, error)
-	JobsAccountedTo(accountString string) (Usage, error)
-	JobsStartedAfter(beginTime string) (Usage, error)
-	JobsStartedBefore(endTime string) (Usage, error)
-	JobsStartedLastDays(days int) (Usage, error)
-	ListDepartment(department string) ([]DepartmentUsage, error)
-	ListGroup(groupIDOrName string) ([]GroupUsage, error)
-	ListHost(host string) ([]HostUsage, error)
-	ListJobs(jobIDOrNameOrPattern string) ([]JobDetail, error)
-	RequestComplexAttributes(attributes string) ([]JobInfo, error)
-	ListOwner(owner string) ([]OwnerUsage, error)
-	ListParallelEnvironment(peName string) ([]PeUsage, error)
-	ListProject(project string) ([]ProjectUsage, error)
-	ListQueue(queue string) ([]QueueUsage, error)
-	ListJobUsageBySlots(usedSlots int) ([]SlotsUsage, error)
-	ListTasks(jobID, taskIDRange string) ([]TaskUsage, error)
 	ShowHelp() (string, error)
-	ShowTotalSystemUsage() (Usage, error)
 	ShowJobDetails(jobID []int64) ([]JobDetail, error)
+	// Summary returns a builder for summary usage queries
+	Summary() *SummaryBuilder
+	// Jobs returns a builder for job detail queries with filtering
+	Jobs() *JobsBuilder
+}
+
+// SummaryBuilder provides a fluent interface for building summary usage queries
+type SummaryBuilder struct {
+	qacct QAcct
+	args  []string
+}
+
+// JobsBuilder provides a fluent interface for building job detail queries with filtering
+type JobsBuilder struct {
+	qacct QAcct
+	args  []string
 }

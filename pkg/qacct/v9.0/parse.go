@@ -22,6 +22,7 @@ package qacct
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -199,4 +200,98 @@ func ParseAccountingJSONLine(line string) (JobDetail, error) {
 		return JobDetail{}, err
 	}
 	return job, nil
+}
+
+// ParseSummaryOutput parses the summary output from qacct command
+// and returns aggregated usage statistics.
+func ParseSummaryOutput(output string) (Usage, error) {
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	
+	for scanner.Scan() {
+		line := scanner.Text()
+		
+		// Look for the "Total System Usage" section first
+		if strings.Contains(line, "Total System Usage") {
+			// Skip the header line
+			if !scanner.Scan() {
+				continue
+			}
+			// Skip the separator line
+			if !scanner.Scan() {
+				continue
+			}
+			// Parse the values line
+			if scanner.Scan() {
+				valuesLine := strings.TrimSpace(scanner.Text())
+				return parseSummaryValues(valuesLine, []string{"WALLCLOCK", "UTIME", "STIME", "CPU", "MEMORY", "IO", "IOW"})
+			}
+		}
+		
+		// Look for dynamic header (contains WALLCLOCK and other usage columns)
+		if strings.Contains(line, "WALLCLOCK") && strings.Contains(line, "CPU") {
+			headers := strings.Fields(line)
+			
+			// Skip the separator line
+			if !scanner.Scan() {
+				continue
+			}
+			
+			// Try to parse the data line
+			if scanner.Scan() {
+				valuesLine := strings.TrimSpace(scanner.Text())
+				// Check if there's actually data (not empty line)
+				if valuesLine != "" {
+					return parseSummaryValues(valuesLine, headers)
+				}
+			}
+			// If no data line or empty, return empty usage
+			return Usage{}, nil
+		}
+	}
+	
+	// If no summary section found, return empty usage
+	return Usage{}, nil
+}
+
+// parseSummaryValues parses a line with dynamic headers
+// Headers like: ["OWNER", "WALLCLOCK", "UTIME", "STIME", "CPU", "MEMORY", "IO", "IOW"]
+// Values like:  ["root", "133", "1.422", "1.081", "2.503", "0.236", "0.000", "0.000"]
+func parseSummaryValues(line string, headers []string) (Usage, error) {
+	fields := strings.Fields(line)
+	
+	usage := Usage{}
+	var err error
+	
+	// Find actual positions of usage columns in the data
+	// Usage data appears as the last 7 fields consistently
+	usageStart := len(fields) - 7
+	if usageStart < 0 {
+		return Usage{}, fmt.Errorf("insufficient fields for usage data: got %d, need at least 7", len(fields))
+	}
+	
+	// Parse usage fields from the last 7 positions
+	// Fields are: WALLCLOCK, UTIME, STIME, CPU, MEMORY, IO, IOW
+	if usage.WallClock, err = strconv.ParseFloat(fields[usageStart], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing wallclock: %w", err)
+	}
+	if usage.UserTime, err = strconv.ParseFloat(fields[usageStart+1], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing utime: %w", err)
+	}
+	if usage.SystemTime, err = strconv.ParseFloat(fields[usageStart+2], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing stime: %w", err)
+	}
+	if usage.CPU, err = strconv.ParseFloat(fields[usageStart+3], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing cpu: %w", err)
+	}
+	if usage.Memory, err = strconv.ParseFloat(fields[usageStart+4], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing memory: %w", err)
+	}
+	if usage.IO, err = strconv.ParseFloat(fields[usageStart+5], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing io: %w", err)
+	}
+	if usage.IOWait, err = strconv.ParseFloat(fields[usageStart+6], 64); err != nil {
+		return Usage{}, fmt.Errorf("error parsing iow: %w", err)
+	}
+	
+	return usage, nil
 }
