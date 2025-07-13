@@ -32,6 +32,11 @@ IMAGE_NAME = $(shell basename $(CURDIR))
 IMAGE_TAG = V902_TAG
 CONTAINER_NAME = $(IMAGE_NAME)
 
+# openSUSE-based images for testing against released versions
+OPENSUSE_IMAGE_NAME = $(IMAGE_NAME)-opensuse
+OPENSUSE_IMAGE_TAG = leap15.6-ocs907
+OPENSUSE_CONTAINER_NAME = $(OPENSUSE_IMAGE_NAME)
+
 .PHONY: build
 build:
 	@echo "Building the Open Cluster Scheduler image..."
@@ -85,6 +90,72 @@ run-rest: build
 	mkdir -p ./installation
 	docker run --platform=linux/amd64 -p 7070:7070 -p 9464:9464 -p 9898:9898 --rm -it -h master --name $(CONTAINER_NAME) -v ${PWD}/installation:/opt/cs-install -v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler $(IMAGE_NAME):$(IMAGE_TAG) /bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler/cmd/adapter && GOFLAGS=-buildvcs=false go build . && ./adapter --port 9898 & exec bash"
 
+.PHONY: test
+test: build
+	@echo "Running unit tests in container (no cluster required)..."
+	docker run --platform=linux/amd64 --rm \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(IMAGE_NAME):$(IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
+
+.PHONY: test-all
+test-all: build
+	@echo "Running all tests in container (includes expected failures for integration tests)..."
+	docker run --platform=linux/amd64 --rm \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(IMAGE_NAME):$(IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
+
+.PHONY: test-integration
+test-integration: build
+	@echo "Running integration tests in container with cluster..."
+	@echo "This requires interactive container with cluster setup. Use 'make run' for full integration testing."
+	mkdir -p ./installation
+	docker run --platform=linux/amd64 --rm -it -h master \
+		-v ${PWD}/installation:/opt/cs-install \
+		-v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(IMAGE_NAME):$(IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && echo 'Run: find ./pkg -name \"*_test.go\" -path \"*/v9.0/*\" | xargs -I {} dirname {} | sort -u | xargs -I {} sh -c \"cd {} && ginkgo -v\"' && /bin/bash"
+
+# openSUSE-based targets for testing against released versions
+.PHONY: build-opensuse
+build-opensuse:
+	@echo "Building openSUSE-based OCS image for released version testing..."
+	docker build --platform=linux/amd64 -f Dockerfile.opensuse -t $(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) .
+
+.PHONY: test-opensuse
+test-opensuse: build-opensuse
+	@echo "Running unit tests in openSUSE container against released OCS version..."
+	docker run --platform=linux/amd64 --rm \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
+
+.PHONY: test-opensuse-all
+test-opensuse-all: build-opensuse
+	@echo "Running all tests in openSUSE container against released OCS version..."
+	docker run --platform=linux/amd64 --rm \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
+
+.PHONY: run-opensuse
+run-opensuse: build-opensuse
+	@echo "Running openSUSE-based OCS container for interactive testing..."
+	docker run --platform=linux/amd64 -p 6444:6444 -p 6445:6445 -p 8888:8888 --rm -it -h master \
+		--name $(OPENSUSE_CONTAINER_NAME) \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) /bin/bash
+
+.PHONY: test-integration-opensuse
+test-integration-opensuse: build-opensuse
+	@echo "Running integration tests in openSUSE container with released OCS..."
+	@echo "This provides an interactive environment for testing against released versions."
+	docker run --platform=linux/amd64 --rm -it -h master \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && echo 'Testing against released OCS version. Run: find ./pkg -name \"*_test.go\" -path \"*/v9.0/*\" | xargs -I {} dirname {} | sort -u | xargs -I {} sh -c \"cd {} && ginkgo -v\"' && /bin/bash"
+
 .PHONY: clean
 clean:
 	@echo "Removing the container..."
@@ -93,3 +164,13 @@ clean:
 	docker rmi $(IMAGE_NAME):$(IMAGE_TAG) || true
 	@echo "Removing the installation directory..."
 	rm -rf ./installation
+
+.PHONY: clean-opensuse
+clean-opensuse:
+	@echo "Removing openSUSE containers and images..."
+	docker rm -f $(OPENSUSE_CONTAINER_NAME) || true
+	docker rmi $(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) || true
+
+.PHONY: clean-all
+clean-all: clean clean-opensuse
+	@echo "All containers and images removed."

@@ -125,8 +125,8 @@ func registerClusterTools(s *SchedulerServer, config SchedulerServerConfig) erro
 			log.Printf("Setting cluster configuration")
 
 			// Get the configuration string from the request
-			clusterConfigStr, ok := req.Params.Arguments["cluster_configuration"].(string)
-			if !ok {
+			clusterConfigStr := req.GetString("cluster_configuration", "")
+			if clusterConfigStr == "" {
 				log.Printf("Invalid input: configuration must be provided as a string")
 				return &mcp.CallToolResult{
 					Content: []mcp.Content{
