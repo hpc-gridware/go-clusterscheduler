@@ -236,6 +236,15 @@ type ProjectConfig struct {
 const QTypeBatch string = "BATCH"
 const QTypeInteractive string = "INTERACTIVE"
 
+// Complex entry resource types
+const ResourceTypeInt string = "INT"
+const ResourceTypeDouble string = "DOUBLE"
+const ResourceTypeMemory string = "MEMORY"
+const ResourceTypeTime string = "TIME"
+const ResourceTypeString string = "STRING"
+const ResourceTypeBool string = "BOOL"
+const ResourceTypeRSMAP string = "RSMAP"
+
 // ClusterQueueConfig represents the configuration for a cluster queue.
 type ClusterQueueConfig struct {
 	Name     string   `json:"qname"`
