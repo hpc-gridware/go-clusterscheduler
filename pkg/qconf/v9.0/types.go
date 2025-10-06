@@ -67,10 +67,10 @@ type CalendarConfig struct {
 type ComplexEntryConfig struct {
 	Name        string `json:"name"`
 	Shortcut    string `json:"shortcut"`
-	Type        string `json:"type"`
+	Type        string `json:"type"` // Use ResourceType* constants
 	Relop       string `json:"relop"`
-	Requestable string `json:"requestable"`
-	Consumable  string `json:"consumable"`
+	Requestable string `json:"requestable"` // YES or NO
+	Consumable  string `json:"consumable"`  // Use Consumable* constants (YES, NO, JOB, HOST)
 	Default     string `json:"default"`
 	Urgency     int    `json:"urgency"`
 }
@@ -244,6 +244,21 @@ const ResourceTypeTime string = "TIME"
 const ResourceTypeString string = "STRING"
 const ResourceTypeBool string = "BOOL"
 const ResourceTypeRSMAP string = "RSMAP"
+
+// Complex entry consumable types
+// ConsumableYES indicates a per-slot consumable resource where the limit
+// is multiplied by the number of slots being used by the job before being applied.
+const ConsumableYES string = "YES"
+
+// ConsumableNO indicates the resource is not managed as a consumable.
+const ConsumableNO string = "NO"
+
+// ConsumableJOB indicates a per-job consumable resource where the resource
+// is debited as requested (without slot multiplication) from the allocated master queue.
+const ConsumableJOB string = "JOB"
+
+// ConsumableHOST indicates a per-host consumable resource (new in Open Cluster Scheduler).
+const ConsumableHOST string = "HOST"
 
 // ClusterQueueConfig represents the configuration for a cluster queue.
 type ClusterQueueConfig struct {

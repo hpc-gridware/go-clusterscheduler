@@ -182,7 +182,7 @@ func addExampleResource(qc qconf.QConf) {
 		Type:        qconf.ResourceTypeInt,
 		Relop:       "<=",
 		Requestable: "YES",
-		Consumable:  "YES",
+		Consumable:  qconf.ConsumableYES,
 		Default:     "0",
 		Urgency:     500,
 	}
@@ -211,7 +211,7 @@ func addRSMAPResource(qc qconf.QConf) {
 		Type:        qconf.ResourceTypeRSMAP,
 		Relop:       "<=",
 		Requestable: "YES",
-		Consumable:  "YES",
+		Consumable:  qconf.ConsumableYES,
 		Default:     "0",
 		Urgency:     600,
 	}

@@ -23,6 +23,35 @@ import (
 	v90 "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 )
 
+// Constants
+
+const QTypeBatch string = "BATCH"
+const QTypeInteractive string = "INTERACTIVE"
+
+// Complex entry resource types
+const ResourceTypeInt string = "INT"
+const ResourceTypeDouble string = "DOUBLE"
+const ResourceTypeMemory string = "MEMORY"
+const ResourceTypeTime string = "TIME"
+const ResourceTypeString string = "STRING"
+const ResourceTypeBool string = "BOOL"
+const ResourceTypeRSMAP string = "RSMAP"
+
+// Complex entry consumable types
+// ConsumableYES indicates a per-slot consumable resource where the limit
+// is multiplied by the number of slots being used by the job before being applied.
+const ConsumableYES string = "YES"
+
+// ConsumableNO indicates the resource is not managed as a consumable.
+const ConsumableNO string = "NO"
+
+// ConsumableJOB indicates a per-job consumable resource where the resource
+// is debited as requested (without slot multiplication) from the allocated master queue.
+const ConsumableJOB string = "JOB"
+
+// ConsumableHOST indicates a per-host consumable resource (new in Open Cluster Scheduler).
+const ConsumableHOST string = "HOST"
+
 type ClusterConfig struct {
 	ClusterEnvironment   *ClusterEnvironment                  `json:"cluster_environment"`
 	GlobalConfig         *GlobalConfig                        `json:"global_config"`
