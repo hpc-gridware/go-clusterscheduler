@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2024-2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -163,6 +163,108 @@ gid_range                    20000-20100`, "\n")
 
 			err = qc.ModifyAllComplexes(all)
 			Expect(err).To(BeNil())
+		})
+
+		It("should handle all consumable values (YES, NO, JOB, HOST)", func() {
+			if !IsHostReachable("master") {
+				Skip("master not reachable")
+			}
+
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			// Test ConsumableNO
+			ceNo := qconf.ComplexEntryConfig{
+				Name:        "test_consumable_no",
+				Shortcut:    "tcno",
+				Type:        qconf.ResourceTypeInt,
+				Relop:       "<=",
+				Requestable: "YES",
+				Consumable:  qconf.ConsumableNO,
+				Default:     "0",
+				Urgency:     100,
+			}
+			err = qc.AddComplexEntry(ceNo)
+			Expect(err).To(BeNil())
+			defer qc.DeleteComplexEntry("test_consumable_no")
+
+			retrieved, err := qc.ShowComplexEntry("test_consumable_no")
+			Expect(err).To(BeNil())
+			Expect(retrieved.Consumable).To(Equal(qconf.ConsumableNO))
+
+			// Test ConsumableYES
+			ceYes := qconf.ComplexEntryConfig{
+				Name:        "test_consumable_yes",
+				Shortcut:    "tcyes",
+				Type:        qconf.ResourceTypeInt,
+				Relop:       "<=",
+				Requestable: "YES",
+				Consumable:  qconf.ConsumableYES,
+				Default:     "0",
+				Urgency:     200,
+			}
+			err = qc.AddComplexEntry(ceYes)
+			Expect(err).To(BeNil())
+			defer qc.DeleteComplexEntry("test_consumable_yes")
+
+			retrieved, err = qc.ShowComplexEntry("test_consumable_yes")
+			Expect(err).To(BeNil())
+			Expect(retrieved.Consumable).To(Equal(qconf.ConsumableYES))
+
+			// Test ConsumableJOB
+			ceJob := qconf.ComplexEntryConfig{
+				Name:        "test_consumable_job",
+				Shortcut:    "tcjob",
+				Type:        qconf.ResourceTypeInt,
+				Relop:       "<=",
+				Requestable: "YES",
+				Consumable:  qconf.ConsumableJOB,
+				Default:     "0",
+				Urgency:     300,
+			}
+			err = qc.AddComplexEntry(ceJob)
+			Expect(err).To(BeNil())
+			defer qc.DeleteComplexEntry("test_consumable_job")
+
+			retrieved, err = qc.ShowComplexEntry("test_consumable_job")
+			Expect(err).To(BeNil())
+			Expect(retrieved.Consumable).To(Equal(qconf.ConsumableJOB))
+
+			// Test ConsumableHOST
+			ceHost := qconf.ComplexEntryConfig{
+				Name:        "test_consumable_host",
+				Shortcut:    "tchost",
+				Type:        qconf.ResourceTypeInt,
+				Relop:       "<=",
+				Requestable: "YES",
+				Consumable:  qconf.ConsumableHOST,
+				Default:     "0",
+				Urgency:     400,
+			}
+			err = qc.AddComplexEntry(ceHost)
+			Expect(err).To(BeNil())
+			defer qc.DeleteComplexEntry("test_consumable_host")
+
+			retrieved, err = qc.ShowComplexEntry("test_consumable_host")
+			Expect(err).To(BeNil())
+			Expect(retrieved.Consumable).To(Equal(qconf.ConsumableHOST))
+		})
+
+		It("should set default consumable value to NO", func() {
+			ce := qconf.ComplexEntryConfig{
+				Name:        "test",
+				Type:        qconf.ResourceTypeInt,
+				Requestable: "YES",
+				// Consumable not set - should default to NO
+			}
+
+			qconf.SetDefaultComplexEntryValues(&ce)
+
+			Expect(ce.Consumable).To(Equal(qconf.ConsumableNO))
+			Expect(ce.Shortcut).To(Equal("test"))
+			Expect(ce.Requestable).To(Equal("YES"))
+			Expect(ce.Default).To(Equal("0"))
+			Expect(ce.Relop).To(Equal("=="))
 		})
 	})
 

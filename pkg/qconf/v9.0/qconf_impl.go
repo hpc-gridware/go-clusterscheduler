@@ -397,13 +397,13 @@ func SetDefaultComplexEntryValues(c *ComplexEntryConfig) {
 		c.Shortcut = c.Name
 	}
 	if c.Requestable == "" {
-		c.Requestable = "NO"
+		c.Requestable = ConsumableNO
 	}
 	if c.Consumable == "" {
-		c.Consumable = "NO"
+		c.Consumable = ConsumableNO
 	}
 	if c.Default == "" {
-		if c.Type == "STRING" {
+		if c.Type == ResourceTypeString {
 			c.Default = "NONE"
 		} else {
 			c.Default = "0"
