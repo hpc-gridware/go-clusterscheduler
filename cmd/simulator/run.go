@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -20,13 +20,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"time"
 
 	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
 	"github.com/spf13/cobra"
@@ -35,234 +31,90 @@ import (
 func run(cmd *cobra.Command, args []string) {
 	configFile := args[0]
 
-	var config qconf.ClusterConfig
-
-	// Read ClusterConfig from specified JSON file
-	file, err := os.Open(configFile)
-	FatalOnError(err)
-	defer file.Close()
-
-	// Decode JSON file into ClusterConfig
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&config)
+	// Read cluster configuration from JSON file
+	config, err := readClusterConfig(configFile)
 	FatalOnError(err)
 
+	// Initialize qconf client
 	cs, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
 		Executable: "qconf",
 	})
 	FatalOnError(err)
 
-	// Add simulated hosts to /etc/hosts so that they are resolvable
-	err = AddHostsToEtcHosts(config)
+	// Add simulated hosts to /etc/hosts for name resolution
+	err = addHostsToEtcHosts(config)
 	FatalOnError(err)
-	fmt.Printf("Hosts added to /etc/hosts\n")
+	fmt.Println("Hosts added to /etc/hosts")
 
-	// Add load_report_host complex in current configuration...
-	err = addComplex(cs)
+	// Prepare simulation configuration (add complex, params, etc.)
+	err = prepareSimulationConfig(cs, &config)
 	FatalOnError(err)
-	fmt.Printf("Complex added to current configuration\n")
 
-	// ...and in new configuration
-	addComplexToConfig(&config)
-
-	// Add simulation related qmaster_params and execd_params
-	err = addGlobalConfig(cs)
-	FatalOnError(err)
-	fmt.Printf("Global configuration added to current configuration\n")
-
-	// ...and in new configuration
-	addGlobalConfigToConfig(&config)
-
-	var allhosts qconf.HostGroupConfig
-
-	allhosts = config.HostGroups["@allhosts"]
-	if allhosts.Name == "" {
-		allhosts.Name = "@allhosts"
-	}
-
-	// Go through each host and add it to the cluster
-	for k, v := range config.ExecHosts {
-		// add "master" host (here in the container) to be load
-		// report host for the simulated host
-		if v.ComplexValues == nil {
-			v.ComplexValues = make(map[string]string)
-		}
-		v.ComplexValues["load_report_host"] = "master"
-		config.ExecHosts[k] = v
-		// add to @allhosts
-		allhosts.Hosts = append(allhosts.Hosts, v.Name)
-	}
-
-	// add @allhosts to the list of host groups (TODO should be map)
-	config.HostGroups["@allhosts"] = allhosts
-
-	// append "master" host to the list of hosts as it severs
-	// the fake load for all simulated hosts and is not in the
-	// list of hosts from the JSON file
-	if config.ExecHosts == nil {
-		config.ExecHosts = make(map[string]qconf.HostExecConfig)
-	}
-	config.ExecHosts["master"] = qconf.HostExecConfig{
-		Name: "master",
-	}
-	// add root as operator
-	if config.Users == nil {
-		config.Users = make(map[string]qconf.UserConfig)
-	}
-	config.Users["root"] = qconf.UserConfig{
-		Name: "root",
-	}
-	config.Operators = append(config.Operators, "root")
-	config.Managers = append(config.Managers, "root")
-
-	// Get the curernt cluster configuration (of the container here)
+	// Get current cluster configuration
 	currentConfig, err := cs.GetClusterConfiguration()
 	FatalOnError(err)
 
-	// Compare the current configuration with the simulated configuration
+	// Ensure default entities (master host, root user) exist
+	ensureDefaultEntities(&config)
+
+	// Clean up invalid PE references in the configuration
+	cleanupInvalidPEReferences(&config)
+
+	// Compare configurations to determine changes needed
 	comparison, err := currentConfig.CompareTo(config)
 	FatalOnError(err)
 
-	// add everything to the cluster which is not already there
-	_, err = qconf.AddAllEntries(cs, *comparison.DiffAdded)
-	FatalOnError(err)
+	// Apply changes: Add, Modify, then Delete
+	applyConfigurationChanges(cs, currentConfig, comparison)
 
-	// change everything which is different
-	_, err = qconf.ModifyAllEntries(cs, *comparison.DiffModified)
-	FatalOnError(err)
+	fmt.Println("Simulated cluster configuration applied")
 
-	// remove everything which is not in the simulated configuration
-	_, err = qconf.DeleteAllEnries(cs, *comparison.DiffRemoved, true)
-	PrintOnError(err)
-
-	fmt.Printf("Simulated cluster configuration applied\n")
-
-	// Restart the qmaster so that simulated hosts get the load
-	// from the "real" host "master".
-	RestartQmaster(currentConfig, cs)
+	// Restart qmaster to activate simulation
+	restartQmaster(currentConfig, cs)
 }
 
-func RestartQmaster(config qconf.ClusterConfig, cs *qconf.CommandLineQConf) error {
-	fmt.Printf("Restarting qmaster\n")
-	err := cs.ShutdownMasterDaemon()
+// readClusterConfig reads and parses a cluster configuration from a JSON file
+func readClusterConfig(configFile string) (qconf.ClusterConfig, error) {
+	var config qconf.ClusterConfig
+
+	file, err := os.Open(configFile)
 	if err != nil {
-		return fmt.Errorf("Error shutting down qmaster: %s", err)
+		return config, err
 	}
-	<-time.After(5 * time.Second)
-	cs.ShutdownMasterDaemon()
-	fmt.Printf("waiting for qmaster to shut down...\n")
-	<-time.After(30 * time.Second)
-	sgemaster := filepath.Join(config.ClusterEnvironment.Root,
-		config.ClusterEnvironment.Cell, "common", "sgemaster")
-	cmd := exec.Command(sgemaster, []string{"start"}...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	err = cmd.Run()
-	if err != nil {
-		return fmt.Errorf("Error restarting qmaster: %s", out.String())
-	}
-	fmt.Printf(out.String())
-	fmt.Printf("qmaster restarted\n")
-	return nil
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&config)
+	return config, err
 }
 
-func AddHostsToEtcHosts(config qconf.ClusterConfig) error {
-	hostsFile, err := os.OpenFile("/etc/hosts", os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
+// applyConfigurationChanges applies the configuration differences to the cluster
+func applyConfigurationChanges(cs *qconf.CommandLineQConf,
+	currentConfig qconf.ClusterConfig, comparison *qconf.ClusterConfigComparison) {
+
+	// Add new entries
+	if comparison.DiffAdded != nil {
+		_, err := qconf.AddAllEntries(cs, *comparison.DiffAdded)
+		FatalOnError(err)
 	}
-	defer hostsFile.Close()
 
-	// Presuming starting at private address 10.0.0.1
-	baseIP := [4]int{10, 0, 0, 0}
+	// Modify existing entries
+	if comparison.DiffModified != nil {
+		_, err := qconf.ModifyAllEntries(cs, *comparison.DiffModified)
+		FatalOnError(err)
+	}
 
-	// Add simulated hosts to /etc/hosts so that they are resolvable
-	i := 0
-	for _, host := range config.ExecHosts {
-		thirdOctet := i / 256
-		fourthOctet := i % 256
-		ip := fmt.Sprintf("10.%d.%d.%d", baseIP[1], baseIP[2]+thirdOctet, fourthOctet)
-		line := fmt.Sprintf("%s %s\n", ip, host.Name)
-		_, err := hostsFile.WriteString(line)
-		if err != nil {
-			return err
+	// Handle deletions with dependency cleanup
+	if comparison.DiffRemoved != nil {
+		// Before deleting PEs, remove references from queues
+		if len(comparison.DiffRemoved.ParallelEnvironments) > 0 {
+			err := removeQueuePEReferences(cs, currentConfig,
+				comparison.DiffRemoved.ParallelEnvironments)
+			PrintOnError(err)
 		}
-		if baseIP[2]+thirdOctet == 255 && fourthOctet == 255 {
-			// Increment the second octet and reset the third and fourth octet if we
-			// reach the limit.
-			baseIP[1]++
-			baseIP[2] = 0
-		}
-		i++
-	}
-	return nil
-}
 
-func addComplex(cs *qconf.CommandLineQConf) error {
-	complexes, err := cs.ShowAllComplexes()
-	if err != nil {
-		return err
+		// Delete removed entries
+		_, err := qconf.DeleteAllEnries(cs, *comparison.DiffRemoved, true)
+		PrintOnError(err)
 	}
-
-	for _, complex := range complexes {
-		if complex.Name == "load_report_host" {
-			fmt.Println("Complex already exists")
-			return nil
-		}
-	}
-
-	return cs.AddComplexEntry(qconf.ComplexEntryConfig{
-		Name:        "load_report_host",
-		Shortcut:    "lrh",
-		Type:        "STRING",
-		Relop:       "==",
-		Requestable: "YES",
-		Consumable:  "NO",
-		Default:     "NONE",
-		Urgency:     0,
-	})
-}
-
-func addComplexToConfig(config *qconf.ClusterConfig) {
-	for _, complex := range config.ComplexEntries {
-		if complex.Name == "load_report_host" {
-			return
-		}
-	}
-	config.ComplexEntries["load_report_host"] = qconf.ComplexEntryConfig{
-		Name:        "load_report_host",
-		Shortcut:    "lrh",
-		Type:        "STRING",
-		Relop:       "==",
-		Requestable: "YES",
-		Consumable:  "NO",
-		Default:     "NONE",
-		Urgency:     0,
-	}
-}
-
-func addGlobalConfig(cs *qconf.CommandLineQConf) error {
-	global, err := cs.ShowGlobalConfiguration()
-	if err != nil {
-		return err
-	}
-	global.QmasterParams = append(global.QmasterParams, "SIMULATE_EXECDS=TRUE")
-	global.ExecdParams = append(global.ExecdParams, "SIMULATE_JOBS=TRUE")
-	return cs.ModifyGlobalConfig(*global)
-}
-
-func addGlobalConfigToConfig(config *qconf.ClusterConfig) {
-	config.GlobalConfig.QmasterParams = append(config.GlobalConfig.QmasterParams,
-		"SIMULATE_EXECDS=TRUE")
-	config.GlobalConfig.ExecdParams = append(config.GlobalConfig.ExecdParams,
-		"SIMULATE_JOBS=TRUE")
-}
-
-func addExecHost(cs *qconf.CommandLineQConf, host qconf.HostExecConfig) error {
-	if host.ComplexValues == nil {
-		host.ComplexValues = make(map[string]string)
-	}
-	host.ComplexValues["load_report_host"] = "master"
-	return cs.AddExecHost(host)
 }

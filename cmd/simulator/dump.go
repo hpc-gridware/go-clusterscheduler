@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -20,9 +20,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
 	"time"
 
 	qconf "github.com/hpc-gridware/go-clusterscheduler/pkg/qconf/v9.0"
@@ -41,23 +38,4 @@ func dump(cmd *cobra.Command, args []string) {
 	FatalOnError(err)
 
 	prettyPrint(clusterConfig)
-}
-
-func prettyPrint(v interface{}) {
-	js, err := json.MarshalIndent(v, "", "  ")
-	FatalOnError(err)
-	fmt.Println(string(js))
-}
-
-func FatalOnError(err error) {
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
-func PrintOnError(err error) {
-	if err != nil {
-		fmt.Println(err)
-	}
 }
