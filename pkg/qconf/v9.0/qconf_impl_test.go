@@ -66,6 +66,78 @@ gid_range                    20000-20100`, "\n")
 			Expect(value).To(Equal("none"))
 		})
 
+		It("should read and parse a bootstrap file", func() {
+			// Create a temporary bootstrap file
+			tempFile, err := os.CreateTemp("", "bootstrap-test-*")
+			Expect(err).To(BeNil())
+			defer os.Remove(tempFile.Name())
+
+			bootstrapContent := `# Version: 9.0.8
+#
+admin_user              none
+default_domain          none
+ignore_fqdn             true
+spooling_method         classic
+spooling_lib            libspoolc
+spooling_params         /opt/cs-install/default/common;/opt/cs-install/default/spool/master
+binary_path             /opt/cs-install/bin
+qmaster_spool_dir       /opt/cs-install/default/spool/master
+security_mode           none
+listener_threads        4
+worker_threads          4
+reader_threads          4
+scheduler_threads       1
+`
+			_, err = tempFile.WriteString(bootstrapContent)
+			Expect(err).To(BeNil())
+			tempFile.Close()
+
+			// Read and parse the bootstrap file
+			bootstrapFile, err := qconf.ReadBootstrapFile(tempFile.Name())
+			Expect(err).To(BeNil())
+
+			// Verify all fields were parsed correctly
+			Expect(bootstrapFile.Version).To(Equal("9.0.8"))
+			Expect(bootstrapFile.AdminUser).To(Equal("none"))
+			Expect(bootstrapFile.DefaultDomain).To(Equal("none"))
+			Expect(bootstrapFile.IgnoreFqdn).To(BeTrue())
+			Expect(bootstrapFile.SpoolingMethod).To(Equal("classic"))
+			Expect(bootstrapFile.SpoolingLib).To(Equal("libspoolc"))
+			Expect(bootstrapFile.SpoolingParams).To(Equal("/opt/cs-install/default/common;/opt/cs-install/default/spool/master"))
+			Expect(bootstrapFile.BinaryPath).To(Equal("/opt/cs-install/bin"))
+			Expect(bootstrapFile.QmasterSpoolDir).To(Equal("/opt/cs-install/default/spool/master"))
+			Expect(bootstrapFile.SecurityMode).To(Equal("none"))
+			Expect(bootstrapFile.ListenerThreads).To(Equal(4))
+			Expect(bootstrapFile.WorkerThreads).To(Equal(4))
+			Expect(bootstrapFile.ReaderThreads).To(Equal(4))
+			Expect(bootstrapFile.SchedulerThreads).To(Equal(1))
+		})
+
+		It("should handle ignore_fqdn as false", func() {
+			// Create a temporary bootstrap file with ignore_fqdn set to false
+			tempFile, err := os.CreateTemp("", "bootstrap-test-*")
+			Expect(err).To(BeNil())
+			defer os.Remove(tempFile.Name())
+
+			bootstrapContent := `# Version: 9.0.7
+ignore_fqdn             false
+`
+			_, err = tempFile.WriteString(bootstrapContent)
+			Expect(err).To(BeNil())
+			tempFile.Close()
+
+			// Read and parse the bootstrap file
+			bootstrapFile, err := qconf.ReadBootstrapFile(tempFile.Name())
+			Expect(err).To(BeNil())
+			Expect(bootstrapFile.IgnoreFqdn).To(BeFalse())
+		})
+
+		It("should handle non-existent file", func() {
+			_, err := qconf.ReadBootstrapFile("/non/existent/path")
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("failed to read bootstrap file"))
+		})
+
 	})
 
 	Context("Cluster configuration", func() {
@@ -265,6 +337,30 @@ gid_range                    20000-20100`, "\n")
 			Expect(ce.Requestable).To(Equal("YES"))
 			Expect(ce.Default).To(Equal("0"))
 			Expect(ce.Relop).To(Equal("=="))
+		})
+
+		It("should reject invalid default value with leading zeros", func() {
+			if !IsHostReachable("master") {
+				Skip("master not reachable")
+			}
+
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			ce := qconf.ComplexEntryConfig{
+				Name:        "adsfasdf",
+				Shortcut:    "adsfasdf",
+				Type:        "INT",
+				Relop:       "==",
+				Requestable: "YES",
+				Consumable:  "NO",
+				Default:     "0234",
+				Urgency:     0,
+			}
+
+			err = qc.AddComplexEntry(ce)
+			Expect(err).NotTo(BeNil())
+			Expect(err.Error()).To(ContainSubstring("cannot have a default value"))
 		})
 	})
 

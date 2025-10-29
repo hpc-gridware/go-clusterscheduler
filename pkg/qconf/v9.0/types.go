@@ -19,6 +19,25 @@
 
 package qconf
 
+// BootstrapFile represents the bootstrap file located in
+// the common directory of the cluster ($SGE_ROOT/$SGE_CELL/common/bootstrap).
+type BootstrapFile struct {
+	Version          string `json:"version"`
+	AdminUser        string `json:"admin_user"`
+	DefaultDomain    string `json:"default_domain"`
+	IgnoreFqdn       bool   `json:"ignore_fqdn"`
+	SpoolingMethod   string `json:"spooling_method"`
+	SpoolingLib      string `json:"spooling_lib"`
+	SpoolingParams   string `json:"spooling_params"`
+	BinaryPath       string `json:"binary_path"`
+	QmasterSpoolDir  string `json:"qmaster_spool_dir"`
+	SecurityMode     string `json:"security_mode"`
+	ListenerThreads  int    `json:"listener_threads"`
+	WorkerThreads    int    `json:"worker_threads"`
+	ReaderThreads    int    `json:"reader_threads"`
+	SchedulerThreads int    `json:"scheduler_threads"`
+}
+
 // ClusterConfig represents the complete configuration of a cluster.
 type ClusterConfig struct {
 	ClusterEnvironment   *ClusterEnvironment                  `json:"cluster_environment"`
