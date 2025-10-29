@@ -92,7 +92,94 @@ func GetEnvironment() (*ClusterEnvironment, error) {
 	clusterEnvironment.Cell = os.Getenv("SGE_CELL")
 	clusterEnvironment.QmasterPort, _ = GetEnvInt("SGE_QMASTER_PORT")
 	clusterEnvironment.ExecdPort, _ = GetEnvInt("SGE_EXECD_PORT")
+
+	bootstrapFile, _ := ReadBootstrapFile(filepath.Join(
+		clusterEnvironment.Root, clusterEnvironment.Cell, "common", "bootstrap"))
+
+	// ignore error
+	if bootstrapFile.Version == "" {
+		return &clusterEnvironment, nil
+	}
+	clusterEnvironment.Version = bootstrapFile.Version
+
 	return &clusterEnvironment, nil
+}
+
+func ReadBootstrapFile(path string) (BootstrapFile, error) {
+	bootstrapFile := BootstrapFile{}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return BootstrapFile{}, fmt.Errorf("failed to read bootstrap file: %v", err)
+	}
+	lines := strings.Split(string(raw), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// Parse version from comment
+		if strings.HasPrefix(line, "# Version:") {
+			bootstrapFile.Version = strings.TrimSpace(
+				strings.TrimPrefix(line, "# Version:"))
+			continue
+		}
+
+		// Skip other comment lines
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse key-value pairs
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+
+		key := fields[0]
+		value := strings.Join(fields[1:], " ")
+
+		switch key {
+		case "admin_user":
+			bootstrapFile.AdminUser = value
+		case "default_domain":
+			bootstrapFile.DefaultDomain = value
+		case "ignore_fqdn":
+			bootstrapFile.IgnoreFqdn = value == "true" || value == "TRUE" || value == "1"
+		case "spooling_method":
+			bootstrapFile.SpoolingMethod = value
+		case "spooling_lib":
+			bootstrapFile.SpoolingLib = value
+		case "spooling_params":
+			bootstrapFile.SpoolingParams = value
+		case "binary_path":
+			bootstrapFile.BinaryPath = value
+		case "qmaster_spool_dir":
+			bootstrapFile.QmasterSpoolDir = value
+		case "security_mode":
+			bootstrapFile.SecurityMode = value
+		case "listener_threads":
+			if threads, err := strconv.Atoi(value); err == nil {
+				bootstrapFile.ListenerThreads = threads
+			}
+		case "worker_threads":
+			if threads, err := strconv.Atoi(value); err == nil {
+				bootstrapFile.WorkerThreads = threads
+			}
+		case "reader_threads":
+			if threads, err := strconv.Atoi(value); err == nil {
+				bootstrapFile.ReaderThreads = threads
+			}
+		case "scheduler_threads":
+			if threads, err := strconv.Atoi(value); err == nil {
+				bootstrapFile.SchedulerThreads = threads
+			}
+		}
+	}
+
+	return bootstrapFile, nil
 }
 
 func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
@@ -427,8 +514,7 @@ func (c *CommandLineQConf) AddComplexEntry(e ComplexEntryConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("file: %s\n", file.Name())
-	//defer os.RemoveAll(filepath.Dir(file.Name()))
+	defer os.RemoveAll(filepath.Dir(file.Name()))
 
 	// Format complex entry configuration.
 	_, err = file.WriteString(fmt.Sprintf("name        %s\n", e.Name))
