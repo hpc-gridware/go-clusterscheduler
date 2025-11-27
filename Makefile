@@ -62,7 +62,7 @@ run: build
 	@echo "For a new installation, you need to remove the ./installation subdirectory first."
 	mkdir -p ./installation
 	docker run --platform=linux/amd64 --rm -it -h master \
-		-p 8888:8888 -p 7070:7070 -p 9464:9464 \
+		-p 8888:8888 -p 7070:7070 \
 		--name $(CONTAINER_NAME) \
 		-v ${PWD}/installation:/opt/cs-install \
 		-v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \

@@ -173,7 +173,8 @@ ignore_fqdn             false
 		It("should show, add, list, modify, and delete resources", func() {
 			complexName := "go-qconf-impl-test"
 
-			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			qc, err := qconf.NewCommandLineQConf(
+				qconf.CommandLineQConfConfig{Executable: "qconf"})
 			Expect(err).To(BeNil())
 
 			ces, err := qc.ShowComplexEntries()
@@ -748,6 +749,10 @@ ignore_fqdn             false
 			Expect(err).To(BeNil())
 
 			err = qc.AddAttribute("hostgroup", "hostlist", "master", "@allhosts")
+			Expect(err).To(BeNil())
+
+			// make it submit host
+			err = qc.AddSubmitHosts([]string{hostName})
 			Expect(err).To(BeNil())
 
 		})
