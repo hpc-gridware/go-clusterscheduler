@@ -20,9 +20,14 @@ HEAD_JOB_OUTPUT=$(qsub -b y -cwd -j y -o ray_head.log -N ray-head \
   ray start --head --port=$RAY_PORT --dashboard-host=0.0.0.0 --block 2>&1)
 
 # Extract job ID - try multiple patterns for different SGE versions
-HEAD_JOB_ID=$(echo "$HEAD_JOB_OUTPUT" | grep -oP '(?<=Your job )\d+' || \
-              echo "$HEAD_JOB_OUTPUT" | grep -oP '(?<=Your job-ID is )\d+' || \
-              echo "$HEAD_JOB_OUTPUT" | grep -oP '\d+' | head -1)
+# Use POSIX-compliant regex for better portability
+HEAD_JOB_ID=$(echo "$HEAD_JOB_OUTPUT" | sed -n 's/.*Your job \([0-9][0-9]*\).*/\1/p' | head -1)
+if [ -z "$HEAD_JOB_ID" ]; then
+  HEAD_JOB_ID=$(echo "$HEAD_JOB_OUTPUT" | sed -n 's/.*Your job-ID is \([0-9][0-9]*\).*/\1/p' | head -1)
+fi
+if [ -z "$HEAD_JOB_ID" ]; then
+  HEAD_JOB_ID=$(echo "$HEAD_JOB_OUTPUT" | grep -o '[0-9][0-9]*' | head -1)
+fi
 
 if [ -z "$HEAD_JOB_ID" ]; then
   echo "Error: Could not extract job ID from qsub output:"
@@ -67,9 +72,14 @@ WORKER_JOB_OUTPUT=$(qsub -b y -cwd -j y -o ray_worker.\$TASK_ID.log -N ray-worke
   ray start --address=$HEAD_HOST:$RAY_PORT --block 2>&1)
 
 # Extract job ID - try multiple patterns for different SGE versions
-WORKER_JOB_ID=$(echo "$WORKER_JOB_OUTPUT" | grep -oP '(?<=Your job-array )\d+' || \
-                echo "$WORKER_JOB_OUTPUT" | grep -oP '(?<=Your job )\d+' || \
-                echo "$WORKER_JOB_OUTPUT" | grep -oP '\d+' | head -1)
+# Use POSIX-compliant regex for better portability
+WORKER_JOB_ID=$(echo "$WORKER_JOB_OUTPUT" | sed -n 's/.*Your job-array \([0-9][0-9]*\).*/\1/p' | head -1)
+if [ -z "$WORKER_JOB_ID" ]; then
+  WORKER_JOB_ID=$(echo "$WORKER_JOB_OUTPUT" | sed -n 's/.*Your job \([0-9][0-9]*\).*/\1/p' | head -1)
+fi
+if [ -z "$WORKER_JOB_ID" ]; then
+  WORKER_JOB_ID=$(echo "$WORKER_JOB_OUTPUT" | grep -o '[0-9][0-9]*' | head -1)
+fi
 
 if [ -z "$WORKER_JOB_ID" ]; then
   echo "Warning: Could not extract worker job ID from qsub output:"

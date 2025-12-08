@@ -42,7 +42,7 @@ Ray provides a cluster launcher that can be extended to support SGE. This approa
 
 - SGE/Grid Engine cluster properly configured
 - Ray installed on all execution hosts
-- Python 3.7+ on all nodes
+- Python 3.8+ on all nodes (Python 3.9+ recommended)
 - Network connectivity between all SGE execution hosts
 
 ## Configuration

@@ -27,7 +27,7 @@ Ray is a unified framework for scaling AI and Python applications. This integrat
    pip install ray[default]
    ```
 
-2. **Python 3.7+**:
+2. **Python 3.8+** (Python 3.9+ recommended):
    ```bash
    python --version
    ```
