@@ -15,9 +15,20 @@ echo "Starting Ray cluster with $NUM_WORKERS workers..."
 
 # Submit Ray head node
 echo "Submitting Ray head node..."
-HEAD_JOB_ID=$(qsub -b y -cwd -j y -o ray_head.log -N ray-head \
+HEAD_JOB_OUTPUT=$(qsub -b y -cwd -j y -o ray_head.log -N ray-head \
   -l mem_free=$HEAD_MEMORY \
-  ray start --head --port=$RAY_PORT --dashboard-host=0.0.0.0 --block | grep -oP '(?<=Your job )\d+')
+  ray start --head --port=$RAY_PORT --dashboard-host=0.0.0.0 --block 2>&1)
+
+# Extract job ID - try multiple patterns for different SGE versions
+HEAD_JOB_ID=$(echo "$HEAD_JOB_OUTPUT" | grep -oP '(?<=Your job )\d+' || \
+              echo "$HEAD_JOB_OUTPUT" | grep -oP '(?<=Your job-ID is )\d+' || \
+              echo "$HEAD_JOB_OUTPUT" | grep -oP '\d+' | head -1)
+
+if [ -z "$HEAD_JOB_ID" ]; then
+  echo "Error: Could not extract job ID from qsub output:"
+  echo "$HEAD_JOB_OUTPUT"
+  exit 1
+fi
 
 echo "Head node submitted with job ID: $HEAD_JOB_ID"
 echo "Waiting for head node to start..."
@@ -50,10 +61,21 @@ fi
 
 # Submit Ray workers as job array
 echo "Submitting $NUM_WORKERS Ray workers..."
-WORKER_JOB_ID=$(qsub -b y -cwd -j y -o ray_worker.\$TASK_ID.log -N ray-worker \
+WORKER_JOB_OUTPUT=$(qsub -b y -cwd -j y -o ray_worker.\$TASK_ID.log -N ray-worker \
   -t 1-$NUM_WORKERS \
   -l mem_free=$WORKER_MEMORY \
-  ray start --address=$HEAD_HOST:$RAY_PORT --block | grep -oP '(?<=Your job-array )\d+')
+  ray start --address=$HEAD_HOST:$RAY_PORT --block 2>&1)
+
+# Extract job ID - try multiple patterns for different SGE versions
+WORKER_JOB_ID=$(echo "$WORKER_JOB_OUTPUT" | grep -oP '(?<=Your job-array )\d+' || \
+                echo "$WORKER_JOB_OUTPUT" | grep -oP '(?<=Your job )\d+' || \
+                echo "$WORKER_JOB_OUTPUT" | grep -oP '\d+' | head -1)
+
+if [ -z "$WORKER_JOB_ID" ]; then
+  echo "Warning: Could not extract worker job ID from qsub output:"
+  echo "$WORKER_JOB_OUTPUT"
+  echo "Workers may not have been submitted correctly."
+fi
 
 echo "Workers submitted with job array ID: $WORKER_JOB_ID"
 

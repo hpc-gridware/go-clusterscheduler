@@ -22,12 +22,14 @@ def compute_pi_sample(n_samples):
     """
     Monte Carlo estimation of Pi using random sampling.
     Each task generates n_samples random points.
+    Uses vectorized operations for better performance.
     """
-    inside_circle = 0
-    for _ in range(n_samples):
-        x, y = np.random.random(), np.random.random()
-        if x*x + y*y <= 1:
-            inside_circle += 1
+    # Generate random points efficiently using numpy
+    points = np.random.random((n_samples, 2))
+    # Calculate distances from origin
+    distances_squared = np.sum(points**2, axis=1)
+    # Count points inside unit circle
+    inside_circle = np.sum(distances_squared <= 1)
     return inside_circle
 
 

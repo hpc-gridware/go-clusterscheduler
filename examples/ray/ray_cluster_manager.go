@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -104,6 +105,11 @@ func (r *RayClusterManager) GetHeadNodeAddress(ctx context.Context) (string, err
 				// Extract hostname from queue info
 				// Format is typically: queue@hostname
 				if job.Queue != "" {
+					// Extract hostname from queue@hostname format
+					parts := strings.Split(job.Queue, "@")
+					if len(parts) >= 2 {
+						return parts[1], nil
+					}
 					return job.Queue, nil
 				}
 			}
@@ -250,9 +256,12 @@ func main() {
 	headAddress, err := manager.GetHeadNodeAddress(ctx)
 	if err != nil {
 		fmt.Printf("Error getting head node address: %v\n", err)
-		fmt.Println("You may need to manually check qstat and get the hostname")
-		// Continue anyway with a placeholder
-		headAddress = "localhost"
+		fmt.Println("\nPlease manually determine the head node hostname:")
+		fmt.Printf("  1. Run: qstat -j %d\n", headJobID)
+		fmt.Println("  2. Look for 'exec_host' line and note the hostname")
+		fmt.Println("  3. Re-run this tool or manually submit workers")
+		manager.Shutdown(ctx)
+		os.Exit(1)
 	} else {
 		fmt.Printf("✓ Head node running at: %s:%d\n", headAddress, rayPort)
 	}
