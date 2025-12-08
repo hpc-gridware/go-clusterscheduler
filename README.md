@@ -26,6 +26,11 @@ configurations.
 interacting with the cluster. Process job details, accounting information,
 cluster configuration details with your favorite AI application (like Claude)
 which supports MCP extensions.
+- **Ray Integration**: Examples and tools for integrating SGE/Grid Engine with
+[Ray](https://www.ray.io/), a distributed computing framework. Deploy Ray clusters
+on SGE infrastructure with automated head and worker node management.
+(See the [`examples/ray`](examples/ray) directory and [`docs/ray-integration.md`](docs/ray-integration.md)
+for more information.)
 
 ## Go API Development Container
 
