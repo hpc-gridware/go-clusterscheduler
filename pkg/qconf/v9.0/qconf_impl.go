@@ -2526,7 +2526,9 @@ func (c *CommandLineQConf) AddUserSetList(userSetListName string, u UserSetListC
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(fmt.Sprintf("entries           %s\n", JoinList(u.Entries, " ")))
+	// this is a comma separated list of entries
+	_, err = file.WriteString(fmt.Sprintf("entries           %s\n",
+		strings.Join(u.Entries, ",")))
 	if err != nil {
 		return err
 	}
@@ -3506,8 +3508,9 @@ func (c *CommandLineQConf) ModifyUserset(listnameList string, cfg UserSetListCon
 	if err != nil {
 		return err
 	}
+	// this is a comma separated list of entries
 	_, err = file.WriteString(fmt.Sprintf("entries %s\n",
-		JoinList(cfg.Entries, " ")))
+		JoinList(cfg.Entries, ",")))
 	if err != nil {
 		return err
 	}

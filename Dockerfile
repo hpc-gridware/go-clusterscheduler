@@ -67,7 +67,7 @@ RUN wget -O /opt/ocs/ocs-9.0.8-common.tar.gz "https://hpc-gridware.com/download/
 RUN apt-get update && apt-get install -y git tar binutils sudo make wget bash libtirpc3 libtirpc-dev
 
 # Install Go
-ARG GOLANG_VERSION=1.23.6
+ARG GOLANG_VERSION=1.24.11
 
 RUN apt-get update && \
     apt-get install -y curl wget git gcc make vim libhwloc-dev hwloc software-properties-common man-db  && \

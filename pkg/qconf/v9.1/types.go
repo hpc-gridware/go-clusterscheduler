@@ -94,6 +94,9 @@ type GlobalConfig struct {
 	v90.GlobalConfig
 	MailTag          string `json:"mail_tag"`
 	GDIRequestLimits string `json:"gdi_request_limits"`
+
+	BindingParams map[string]string `json:"binding_params"` // key-value pairs
+
 }
 
 type SchedulerConfig struct {

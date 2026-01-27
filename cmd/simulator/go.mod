@@ -1,8 +1,8 @@
 module github.com/hpc-gridware/go-clusterscheduler/cmd/simulator
 
-go 1.23.1
+go 1.24.0
 
-toolchain go1.23.4
+toolchain go1.24.11
 
 replace github.com/hpc-gridware/go-clusterscheduler => ../..
 

@@ -1762,7 +1762,7 @@ ignore_fqdn             false
 			Expect(err).To(BeNil())
 			Expect(len(retrievedUserSetListConfig.Entries)).To(Equal(1))
 
-			// Modify
+			// Modify - this should restore both users since userSetListConfig still has both
 			userSetListConfig.OTicket = 20
 			err = qc.ModifyUserset(listName, userSetListConfig)
 			Expect(err).To(BeNil())
@@ -1771,6 +1771,9 @@ ignore_fqdn             false
 			Expect(err).To(BeNil())
 
 			Expect(modifiedUserSetListConfig.OTicket).To(Equal(20))
+			// Verify entries are properly comma-separated and preserved
+			Expect(modifiedUserSetListConfig.Entries).To(
+				ContainElements(user, user2))
 
 			err = qc.DeleteUserSetList(listName)
 			Expect(err).To(BeNil())
@@ -1783,6 +1786,38 @@ ignore_fqdn             false
 
 			// Show the specific user set list, should return an error
 			_, err = qc.ShowUserSetList(listName)
+			Expect(err).NotTo(BeNil())
+		})
+
+		It("should create a user set list with multiple users and manipulate the list configuration", func() {
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{Executable: "qconf"})
+			Expect(err).To(BeNil())
+
+			userSetListConfig := qconf.UserSetListConfig{
+				Name:    listName,
+				Type:    "ACL DEPT",
+				FShare:  100,
+				OTicket: 10,
+				Entries: []string{user, user2},
+			}
+
+			err = qc.AddUserSetList(listName, userSetListConfig)
+			Expect(err).To(BeNil())
+			retrievedUserSetListConfig, err := qc.ShowUserSetList(listName)
+			Expect(err).To(BeNil())
+			Expect(retrievedUserSetListConfig.Entries).To(
+				ContainElements(userSetListConfig.Entries))
+
+			userSetListConfig.Entries = []string{user2}
+			err = qc.ModifyUserset(listName, userSetListConfig)
+			Expect(err).To(BeNil())
+			retrievedUserSetListConfig, err = qc.ShowUserSetList(listName)
+			Expect(err).To(BeNil())
+			Expect(retrievedUserSetListConfig.Entries).To(ContainElements(userSetListConfig.Entries))
+
+			err = qc.DeleteUserSetList(listName)
+			Expect(err).To(BeNil())
+			retrievedUserSetListConfig, err = qc.ShowUserSetList(listName)
 			Expect(err).NotTo(BeNil())
 		})
 	})
