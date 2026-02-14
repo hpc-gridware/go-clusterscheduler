@@ -138,6 +138,69 @@ ignore_fqdn             false
 			Expect(err.Error()).To(ContainSubstring("failed to read bootstrap file"))
 		})
 
+		It("should parse GCS version with build info", func() {
+			output := `GCS 9.1.0beta1 (130126-1240)
+usage: qhost [options]
+  [-F [resource_attribute]]  show (selected) resources
+  [-help]                    print this help`
+
+			version, err := qconf.ParseVersionInfo(output)
+			Expect(err).To(BeNil())
+			Expect(version.Product).To(Equal(qconf.ClusterSchedulerProductGCS))
+			Expect(version.Version).To(Equal("9.1.0beta1"))
+			Expect(version.Major).To(Equal(9))
+			Expect(version.Minor).To(Equal(1))
+			Expect(version.Patch).To(Equal(0))
+			Expect(version.Extra).To(Equal("beta1"))
+			Expect(version.BuildInfo).To(Equal("130126-1240"))
+			Expect(version.IsGCS()).To(BeTrue())
+			Expect(version.IsOCS()).To(BeFalse())
+		})
+
+		It("should parse OCS version without build info", func() {
+			output := `OCS 9.0.7
+usage: qhost [options]`
+
+			version, err := qconf.ParseVersionInfo(output)
+			Expect(err).To(BeNil())
+			Expect(version.Product).To(Equal(qconf.ClusterSchedulerProductOCS))
+			Expect(version.Version).To(Equal("9.0.7"))
+			Expect(version.Major).To(Equal(9))
+			Expect(version.Minor).To(Equal(0))
+			Expect(version.Patch).To(Equal(7))
+			Expect(version.Extra).To(BeEmpty())
+			Expect(version.BuildInfo).To(BeEmpty())
+			Expect(version.IsGCS()).To(BeFalse())
+			Expect(version.IsOCS()).To(BeTrue())
+		})
+
+		It("should parse SGE version with build info", func() {
+			output := `SGE 8.1.9 (12345-6789)
+usage: qhost [options]`
+
+			version, err := qconf.ParseVersionInfo(output)
+			Expect(err).To(BeNil())
+			Expect(string(version.Product)).To(Equal("SGE"))
+			Expect(version.Version).To(Equal("8.1.9"))
+			Expect(version.Major).To(Equal(8))
+			Expect(version.Minor).To(Equal(1))
+			Expect(version.Patch).To(Equal(9))
+			Expect(version.Extra).To(BeEmpty())
+			Expect(version.BuildInfo).To(Equal("12345-6789"))
+			Expect(version.IsGCS()).To(BeFalse())
+			Expect(version.IsOCS()).To(BeFalse())
+		})
+
+		It("should fail on empty output", func() {
+			_, err := qconf.ParseVersionInfo("")
+			Expect(err).NotTo(BeNil())
+		})
+
+		It("should fail on malformed version line", func() {
+			_, err := qconf.ParseVersionInfo("invalid")
+			Expect(err).NotTo(BeNil())
+		})
+
 	})
 
 	Context("Cluster configuration", func() {
@@ -741,11 +804,20 @@ ignore_fqdn             false
 			err = qc.DeleteAttribute("hostgroup", "hostlist", "master", "@allhosts")
 			Expect(err).To(BeNil())
 
+			// remove direct host-level reference from all.q (created by
+			// host-specific overrides like slots set during cluster setup)
+			err = qc.DeleteAttribute("queue", "hostlist", "master", "all.q")
+			Expect(err).To(BeNil())
+
 			// now it must work
 			err = qc.DeleteExecHost("master")
 			Expect(err).To(BeNil())
 
 			err = qc.AddExecHost(eh)
+			Expect(err).To(BeNil())
+
+			// restore master in all.q and @allhosts
+			err = qc.AddAttribute("queue", "hostlist", "master", "all.q")
 			Expect(err).To(BeNil())
 
 			err = qc.AddAttribute("hostgroup", "hostlist", "master", "@allhosts")
