@@ -92,11 +92,17 @@ type CkptInterfaceConfig struct {
 
 type GlobalConfig struct {
 	v90.GlobalConfig
-	MailTag          string `json:"mail_tag"`
-	GDIRequestLimits string `json:"gdi_request_limits"`
 
-	BindingParams map[string]string `json:"binding_params"` // key-value pairs
+	// Reprioritize shadows the v9.0 field; removed in v9.1.
+	// omitempty ensures the zero value is not serialized.
+	Reprioritize int `json:"reprioritize,omitempty"`
 
+	// New fields in v9.1
+	JsvParams        string            `json:"jsv_params"`
+	TopologyFile     string            `json:"topology_file"`
+	MailTag          string            `json:"mail_tag"`
+	GDIRequestLimits string            `json:"gdi_request_limits"`
+	BindingParams    map[string]string `json:"binding_params"` // key-value pairs
 }
 
 type SchedulerConfig struct {
