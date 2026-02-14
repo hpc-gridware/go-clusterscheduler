@@ -401,3 +401,43 @@ type ShareTreeNode struct {
 	Node  string
 	Share int
 }
+
+// ClusterSchedulerProduct represents the product name of a cluster scheduler.
+type ClusterSchedulerProduct string
+
+const (
+	// ClusterSchedulerProductGCS is the product name for Gridware Cluster Scheduler.
+	ClusterSchedulerProductGCS ClusterSchedulerProduct = "GCS"
+	// ClusterSchedulerProductOCS is the product name for Open Cluster Scheduler.
+	ClusterSchedulerProductOCS ClusterSchedulerProduct = "OCS"
+)
+
+// ClusterSchedulerVersion represents the version information of a cluster
+// scheduler installation as returned by commands like "qhost -help".
+// Example version line: "GCS 9.1.0beta1 (130126-1240)"
+type ClusterSchedulerVersion struct {
+	// Product is the product name, e.g. "GCS", "OCS", "SGE".
+	Product ClusterSchedulerProduct `json:"product"`
+	// Version is the full version string, e.g. "9.1.0beta1".
+	Version string `json:"version"`
+	// Major is the major version number.
+	Major int `json:"major"`
+	// Minor is the minor version number.
+	Minor int `json:"minor"`
+	// Patch is the patch version number.
+	Patch int `json:"patch"`
+	// Extra is an optional pre-release or build suffix, e.g. "beta1".
+	Extra string `json:"extra,omitempty"`
+	// BuildInfo is the build identifier in parentheses, e.g. "130126-1240".
+	BuildInfo string `json:"build_info,omitempty"`
+}
+
+// IsGCS returns true if the product is Gridware Cluster Scheduler.
+func (v ClusterSchedulerVersion) IsGCS() bool {
+	return v.Product == ClusterSchedulerProductGCS
+}
+
+// IsOCS returns true if the product is Open Cluster Scheduler.
+func (v ClusterSchedulerVersion) IsOCS() bool {
+	return v.Product == ClusterSchedulerProductOCS
+}

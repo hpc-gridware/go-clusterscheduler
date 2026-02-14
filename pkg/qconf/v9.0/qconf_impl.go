@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -74,6 +75,94 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 			out.String(), err)
 	}
 	return out.String(), err
+}
+
+// GetVersion returns the version information of the cluster scheduler
+// by running "qhost -help" and parsing the first line of output.
+// The qhost binary is derived from the configured qconf executable path.
+func (c *CommandLineQConf) GetVersion() (ClusterSchedulerVersion, error) {
+	if c.config.DryRun {
+		fmt.Printf("Executing: qhost -help")
+		return ClusterSchedulerVersion{}, nil
+	}
+
+	// Derive qhost path from qconf executable path
+	qhostPath := deriveQhostPath(c.config.Executable)
+
+	cmd := exec.Command(qhostPath, "-help")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	// qhost -help may return a non-zero exit code, but the output
+	// still contains the version information we need.
+	_ = cmd.Run()
+
+	output := out.String()
+	if output == "" {
+		return ClusterSchedulerVersion{}, fmt.Errorf(
+			"no output from %s -help", qhostPath)
+	}
+
+	return ParseVersionInfo(output)
+}
+
+// deriveQhostPath derives the qhost executable path from the qconf
+// executable path by replacing "qconf" with "qhost".
+func deriveQhostPath(qconfPath string) string {
+	dir := filepath.Dir(qconfPath)
+	if dir == "." {
+		// qconf is in PATH, so qhost should also be in PATH
+		return "qhost"
+	}
+	return filepath.Join(dir, "qhost")
+}
+
+// ParseVersionInfo parses the version information from the first line
+// of a cluster scheduler command help output.
+// Expected format: "PRODUCT VERSION (BUILD_INFO)"
+// Examples:
+//   - "GCS 9.1.0beta1 (130126-1240)"
+//   - "OCS 9.0.7"
+//   - "SGE 8.1.9 (12345-6789)"
+func ParseVersionInfo(output string) (ClusterSchedulerVersion, error) {
+	lines := strings.Split(output, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) == "" {
+		return ClusterSchedulerVersion{}, fmt.Errorf("empty output")
+	}
+
+	firstLine := strings.TrimSpace(lines[0])
+	var version ClusterSchedulerVersion
+
+	// Extract build info in parentheses if present
+	if idx := strings.Index(firstLine, "("); idx != -1 {
+		if endIdx := strings.Index(firstLine, ")"); endIdx > idx {
+			version.BuildInfo = strings.TrimSpace(firstLine[idx+1 : endIdx])
+		}
+		firstLine = strings.TrimSpace(firstLine[:idx])
+	}
+
+	// Split remaining into product and version
+	fields := strings.Fields(firstLine)
+	if len(fields) < 2 {
+		return ClusterSchedulerVersion{}, fmt.Errorf(
+			"unexpected version format: %q", lines[0])
+	}
+
+	version.Product = ClusterSchedulerProduct(fields[0])
+	version.Version = fields[1]
+
+	// Parse version components: MAJOR.MINOR.PATCHextra
+	// e.g. "9.1.0beta1" -> Major=9, Minor=1, Patch=0, Extra="beta1"
+	re := regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)$`)
+	matches := re.FindStringSubmatch(version.Version)
+	if matches != nil {
+		version.Major, _ = strconv.Atoi(matches[1])
+		version.Minor, _ = strconv.Atoi(matches[2])
+		version.Patch, _ = strconv.Atoi(matches[3])
+		version.Extra = matches[4]
+	}
+
+	return version, nil
 }
 
 func GetEnvInt(env string) (int, error) {

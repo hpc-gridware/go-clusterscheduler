@@ -132,17 +132,19 @@ run-rest: build
 test: build
 	@echo "Running unit tests in container (no cluster required)..."
 	docker run --platform=linux/amd64 --rm \
+		--entrypoint /bin/bash \
 		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
 		$(IMAGE_NAME):$(IMAGE_TAG) \
-		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
+		-c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
 
 .PHONY: test-all
 test-all: build
 	@echo "Running all tests in container (includes expected failures for integration tests)..."
 	docker run --platform=linux/amd64 --rm \
+		--entrypoint /bin/bash \
 		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
 		$(IMAGE_NAME):$(IMAGE_TAG) \
-		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
+		-c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
 
 .PHONY: test-integration
 test-integration: build
@@ -165,17 +167,19 @@ build-opensuse:
 test-opensuse: build-opensuse
 	@echo "Running unit tests in openSUSE container against released OCS version..."
 	docker run --platform=linux/amd64 --rm \
+		--entrypoint /bin/bash \
 		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
 		$(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) \
-		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
+		-c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
 
 .PHONY: test-opensuse-all
 test-opensuse-all: build-opensuse
 	@echo "Running all tests in openSUSE container against released OCS version..."
 	docker run --platform=linux/amd64 --rm \
+		--entrypoint /bin/bash \
 		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
 		$(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) \
-		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
+		-c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
 
 .PHONY: run-opensuse
 run-opensuse: build-opensuse
