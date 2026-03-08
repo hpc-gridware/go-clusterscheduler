@@ -157,6 +157,62 @@ test-integration: build
 		$(IMAGE_NAME):$(IMAGE_TAG) \
 		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && echo 'Run: find ./pkg -name \"*_test.go\" -path \"*/v9.0/*\" | xargs -I {} dirname {} | sort -u | xargs -I {} sh -c \"cd {} && ginkgo -v\"' && /bin/bash"
 
+# GCS 9.1.0beta1 targets for testing against local packages
+GCS910_IMAGE_NAME = $(IMAGE_NAME)-gcs910
+GCS910_IMAGE_TAG = 9.1.0beta1
+GCS910_CONTAINER_NAME = $(GCS910_IMAGE_NAME)
+
+.PHONY: build-gcs910
+build-gcs910:
+	@echo "Building GCS 9.1.0beta1 image from local packages..."
+	docker build --platform=linux/amd64 -f Dockerfile.gcs910 -t $(GCS910_IMAGE_NAME):$(GCS910_IMAGE_TAG) .
+
+.PHONY: run-gcs910
+run-gcs910: build-gcs910
+	@echo "Running GCS 9.1.0beta1 container..."
+	@echo "For a new installation, you need to remove the ./installation subdirectory first."
+	mkdir -p ./installation
+	docker run --platform=linux/amd64 --rm -it -h master \
+		-p 8889:8888 -p 7070:7070 \
+		--name $(GCS910_CONTAINER_NAME) \
+		-v ${PWD}/installation:/opt/cs-install \
+		-v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(GCS910_IMAGE_NAME):$(GCS910_IMAGE_TAG) /bin/bash
+
+.PHONY: test-gcs910
+test-gcs910: build-gcs910
+	@echo "Running unit tests in GCS 9.1.0beta1 container..."
+	docker run --platform=linux/amd64 --rm \
+		--entrypoint /bin/bash \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(GCS910_IMAGE_NAME):$(GCS910_IMAGE_TAG) \
+		-c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
+
+.PHONY: test-gcs910-all
+test-gcs910-all: build-gcs910
+	@echo "Running all tests in GCS 9.1.0beta1 container..."
+	docker run --platform=linux/amd64 --rm \
+		--entrypoint /bin/bash \
+		-v ${PWD}:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(GCS910_IMAGE_NAME):$(GCS910_IMAGE_TAG) \
+		-c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && go test ./pkg/... -v"
+
+.PHONY: test-integration-gcs910
+test-integration-gcs910: build-gcs910
+	@echo "Running integration tests in GCS 9.1.0beta1 container with cluster..."
+	mkdir -p ./installation
+	docker run --platform=linux/amd64 --rm -it -h master \
+		-v ${PWD}/installation:/opt/cs-install \
+		-v ${PWD}/:/root/go/src/github.com/hpc-gridware/go-clusterscheduler \
+		$(GCS910_IMAGE_NAME):$(GCS910_IMAGE_TAG) \
+		/bin/bash -c "cd /root/go/src/github.com/hpc-gridware/go-clusterscheduler && echo 'Run integration tests manually' && /bin/bash"
+
+.PHONY: clean-gcs910
+clean-gcs910:
+	@echo "Removing GCS 9.1.0beta1 containers and images..."
+	docker rm -f $(GCS910_CONTAINER_NAME) || true
+	docker rmi $(GCS910_IMAGE_NAME):$(GCS910_IMAGE_TAG) || true
+
 # openSUSE-based targets for testing against released versions
 .PHONY: build-opensuse
 build-opensuse:
@@ -214,5 +270,5 @@ clean-opensuse:
 	docker rmi $(OPENSUSE_IMAGE_NAME):$(OPENSUSE_IMAGE_TAG) || true
 
 .PHONY: clean-all
-clean-all: clean clean-opensuse
+clean-all: clean clean-opensuse clean-gcs910
 	@echo "All containers and images removed."

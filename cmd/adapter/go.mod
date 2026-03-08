@@ -1,12 +1,15 @@
 module github.com/hpc-gridware/go-clusterscheduler/cmd/adapter
 
-go 1.23.1
+go 1.24.0
+
+toolchain go1.24.11
 
 replace github.com/hpc-gridware/go-clusterscheduler => ./../../
 
 require (
 	github.com/gorilla/mux v1.8.1
 	github.com/hpc-gridware/go-clusterscheduler v0.0.0-20240914092021-0285da16cc31
+	github.com/spf13/cobra v1.9.1
 )
 
 require (
@@ -14,7 +17,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.8.0 // indirect
@@ -28,5 +30,5 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.9.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 )
