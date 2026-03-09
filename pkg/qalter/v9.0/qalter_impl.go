@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2025 HPC-Gridware GmbH
+*  Copyright 2026 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -20,56 +20,29 @@
 package qalter
 
 import (
-	"bytes"
-	"fmt"
-	"os/exec"
-	"time"
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/qalter/core"
 )
 
+// CommandLineQAlter extends the core implementation with v9.0-specific
+// binding support.
 type CommandLineQAlter struct {
-	config CommandLineQAlterConfig
+	core.CommandLineQAlter
 }
 
-type CommandLineQAlterConfig struct {
-	Executable string
-	DryRun     bool
-	// DelayAfter is the time to wait after executing a command.
-	// This is useful for not overloading qmaster when 1000s of
-	// configuration objects (like queues) are defined.
-	DelayAfter time.Duration
-}
+// CommandLineQAlterConfig is a type alias to the core configuration.
+type CommandLineQAlterConfig = core.CommandLineQAlterConfig
 
 // NewCommandLineQAlter creates a new instance of CommandLineQAlter.
 func NewCommandLineQAlter(config CommandLineQAlterConfig) (*CommandLineQAlter, error) {
-	if config.Executable == "" {
-		config.Executable = "qalter"
-	}
-	return &CommandLineQAlter{config: config}, nil
-}
-
-func (q *CommandLineQAlter) NativeSpecification(args []string) (string, error) {
-	return q.RunCommand(args...)
-}
-
-// RunCommand executes the qalter command with the specified arguments.
-func (c *CommandLineQAlter) RunCommand(args ...string) (string, error) {
-	if c.config.DryRun {
-		fmt.Printf("Executing: %s, %v", c.config.Executable, args)
-		return "", nil
-	}
-	cmd := exec.Command(c.config.Executable, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	// ensure that qalter returns a single line of output for each entry
-	cmd.Env = append(cmd.Environ(), "SGE_SINGLE_LINE=true")
-	err := cmd.Run()
-	if c.config.DelayAfter != 0 {
-		<-time.After(c.config.DelayAfter)
-	}
+	c, err := core.NewCommandLineQAlter(config)
 	if err != nil {
-		return out.String(), fmt.Errorf("failed to run command (%s): %v",
-			out.String(), err)
+		return nil, err
 	}
-	return out.String(), err
+	return &CommandLineQAlter{CommandLineQAlter: *c}, nil
+}
+
+// SetBinding binds the job to processor cores
+// (-binding [env|pe|set] exp|lin|str).
+func (c *CommandLineQAlter) SetBinding(jobTaskList, instance, spec string) (string, error) {
+	return c.RunCommand("-binding", instance, spec, jobTaskList)
 }

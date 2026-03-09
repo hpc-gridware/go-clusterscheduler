@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestV9_0(t *testing.T) {
+func TestQalter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "V9.0 QalterSuite")
+	RunSpecs(t, "V9.1 QalterSuite")
 }
