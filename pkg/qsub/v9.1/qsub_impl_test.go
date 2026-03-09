@@ -21,6 +21,7 @@ package qsub_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -257,6 +258,94 @@ var _ = Describe("Qsub v9.1", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			var _ qsub.Qsub = qs
+		})
+	})
+
+	Context("JobBuilder", func() {
+
+		var qs qsub.Qsub
+
+		BeforeEach(func() {
+			var err error
+			qs, err = qsub.NewCommandLineQSub(qsub.CommandLineQSubConfig{
+				DryRun: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should build a simple binary job", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "10").
+				Binary().
+				Name("builder-job").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-terse"))
+			Expect(output).To(ContainSubstring("-b y"))
+			Expect(output).To(ContainSubstring("-N builder-job"))
+			Expect(output).To(ContainSubstring("sleep 10"))
+		})
+
+		It("should support common options with v9.1 client", func() {
+			ctx := context.Background()
+			startTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+
+			_, output, err := qsub.NewJobBuilder(qs, "echo", "hello").
+				Binary().
+				Name("full-job").
+				Account("acct1").
+				Project("proj1").
+				Priority(100).
+				Queue("all.q").
+				Resource("mem_free", "4G").
+				StdOut("/tmp/out").
+				MergeOutput().
+				StartTime(startTime).
+				ExportAllEnv().
+				Env("FOO", "bar").
+				Reservation().
+				Restartable(true).
+				Submit(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			for _, s := range []string{
+				"-b y", "-N full-job", "-A acct1", "-P proj1",
+				"-p 100", "-q all.q", "-l mem_free=4G",
+				"-o /tmp/out", "-j y",
+				"-a " + qsub.ConvertTimeToQsubDateTime(startTime),
+				"-V", "-v FOO=bar", "-R y", "-r y",
+				"echo hello",
+			} {
+				Expect(output).To(ContainSubstring(s),
+					fmt.Sprintf("expected output to contain %q", s))
+			}
+		})
+
+		It("should support v9.1 binding options via Flag()", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "0").
+				Binary().
+				Flag("-bamount", "4").
+				Flag("-bstrategy", "linear").
+				Flag("-btype", "host").
+				Flag("-bunit", "C").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-bamount 4"))
+			Expect(output).To(ContainSubstring("-bstrategy linear"))
+			Expect(output).To(ContainSubstring("-btype host"))
+			Expect(output).To(ContainSubstring("-bunit C"))
+			Expect(output).NotTo(ContainSubstring("-binding"))
+		})
+
+		It("should support Flag() without value for boolean flags", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "0").
+				Binary().
+				Flag("-notify").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-notify"))
 		})
 	})
 })

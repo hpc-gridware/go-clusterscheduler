@@ -27,3 +27,10 @@ import (
 func NewCommandLineQSub(config CommandLineQSubConfig) (Qsub, error) {
 	return core.NewCommandLineQSub(config)
 }
+
+type JobBuilder = core.JobBuilder
+
+// NewJobBuilder creates a new fluent JobBuilder for the given command.
+func NewJobBuilder(q Qsub, command string, args ...string) *JobBuilder {
+	return core.NewJobBuilder(q, command, args...)
+}

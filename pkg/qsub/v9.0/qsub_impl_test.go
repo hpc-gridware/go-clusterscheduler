@@ -22,6 +22,7 @@ package qsub_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -215,6 +216,142 @@ var _ = Describe("QsubImpl", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(jobId).To(BeNumerically(">", int64(0)))
 			Expect(output).To(ContainSubstring(fmt.Sprintf("%d", jobId)))
+		})
+
+	})
+
+	Context("JobBuilder", func() {
+
+		var qs qsub.Qsub
+
+		BeforeEach(func() {
+			var err error
+			qs, err = qsub.NewCommandLineQSub(qsub.CommandLineQSubConfig{
+				DryRun: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should build a simple binary job", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "10").
+				Binary().
+				Name("test-job").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-terse"))
+			Expect(output).To(ContainSubstring("-b y"))
+			Expect(output).To(ContainSubstring("-N test-job"))
+			Expect(output).To(ContainSubstring("sleep 10"))
+		})
+
+		It("should support all major options", func() {
+			ctx := context.Background()
+			startTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+
+			_, output, err := qsub.NewJobBuilder(qs, "echo", "hello").
+				Binary().
+				Name("full-job").
+				Account("acct1").
+				Project("proj1").
+				Priority(100).
+				Queue("all.q", "highmem.q").
+				PE("smp 1-8").
+				Resource("mem_free", "4G").
+				StdOut("/tmp/out").
+				StdErr("/tmp/err").
+				StdIn("/tmp/in").
+				MergeOutput().
+				WorkDir("/home/user").
+				Shell(true).
+				Interpreter("/bin/bash").
+				StartTime(startTime).
+				ExportAllEnv().
+				Env("FOO", "bar").
+				MailOptions("bea").
+				MailTo("user@example.com").
+				Notify().
+				Hold().
+				Reservation().
+				Restartable(true).
+				PTY().
+				Now().
+				JobShare(10).
+				MasterQueue("all.q").
+				Department("engineering").
+				Submit(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			for _, s := range []string{
+				"-b y", "-N full-job", "-A acct1", "-P proj1",
+				"-p 100", "-q all.q,highmem.q", "-pe smp 1-8",
+				"-l mem_free=4G", "-o /tmp/out", "-e /tmp/err",
+				"-i /tmp/in", "-j y", "-wd /home/user",
+				"-shell y", "-S /bin/bash",
+				"-a " + qsub.ConvertTimeToQsubDateTime(startTime),
+				"-V", "-v FOO=bar", "-m bea",
+				"-M user@example.com", "-notify", "-h y",
+				"-R y", "-r y", "-pty y", "-now y",
+				"-js 10", "-masterq all.q", "-dept engineering",
+				"echo hello",
+			} {
+				Expect(output).To(ContainSubstring(s),
+					fmt.Sprintf("expected output to contain %q", s))
+			}
+		})
+
+		It("should support job arrays", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "script.sh").
+				Array("1-100:2").
+				MaxConcurrentTasks(5).
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-t 1-100:2"))
+			Expect(output).To(ContainSubstring("-tc 5"))
+		})
+
+		It("should support context variables", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "0").
+				Binary().
+				AddContext("key1", "val1").
+				SetContext("key2", "val2").
+				DeleteContext("key3").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-ac key1=val1"))
+			Expect(output).To(ContainSubstring("-sc key2=val2"))
+			Expect(output).To(ContainSubstring("-dc key3"))
+		})
+
+		It("should support the Flag escape hatch", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "0").
+				Binary().
+				Flag("-custom", "value").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-custom value"))
+		})
+
+		It("should expose accumulated args via Args()", func() {
+			args := qsub.NewJobBuilder(qs, "sleep", "0").
+				Binary().
+				Name("test").
+				Priority(5).
+				Args()
+			Expect(strings.Join(args, " ")).To(Equal("-b y -N test -p 5"))
+		})
+
+		It("should support v9.0 legacy binding", func() {
+			ctx := context.Background()
+			_, output, err := qsub.NewJobBuilder(qs, "sleep", "0").
+				Binary().
+				Binding("linear:4").
+				Submit(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(output).To(ContainSubstring("-binding linear:4"))
 		})
 
 	})
