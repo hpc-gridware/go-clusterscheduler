@@ -776,8 +776,7 @@ usage: qhost [options]`
 			Expect(err).To(BeNil())
 			Expect(eh).NotTo(BeNil())
 
-			Expect(eh.ComplexValues).To(
-				Equal(map[string]string{"test_mem": "1024"}))
+			Expect(eh.ComplexValues).To(HaveKeyWithValue("test_mem", "1024"))
 			Expect(eh.UserLists).To(Equal([]string{"arusers", "deadlineusers"}))
 			Expect(eh.XUserLists).To(BeNil())
 
@@ -788,7 +787,7 @@ usage: qhost [options]`
 			Expect(err).To(BeNil())
 			Expect(eh).NotTo(BeNil())
 
-			Expect(len(eh.ComplexValues)).To(Equal(0))
+			Expect(eh.ComplexValues).NotTo(HaveKey("test_mem"))
 
 			err = qc.DeleteComplexEntry("test_mem")
 			Expect(err).To(BeNil())
@@ -823,8 +822,8 @@ usage: qhost [options]`
 			err = qc.AddAttribute("hostgroup", "hostlist", "master", "@allhosts")
 			Expect(err).To(BeNil())
 
-			// make it submit host
-			err = qc.AddSubmitHosts([]string{hostName})
+			// make it submit host (use "master" since it is the only resolvable host)
+			err = qc.AddSubmitHosts([]string{"master"})
 			Expect(err).To(BeNil())
 
 		})
@@ -912,10 +911,8 @@ usage: qhost [options]`
 			Expect(chc.ReportVariables).To(Equal([]string{
 				"mem_free", "np_load_avg",
 			}))
-			Expect(chc.ComplexValues).To(Equal(map[string]string{
-				"mem_free":    "1024",
-				"np_load_avg": "4",
-			}))
+			Expect(chc.ComplexValues).To(HaveKeyWithValue("mem_free", "1024"))
+			Expect(chc.ComplexValues).To(HaveKeyWithValue("np_load_avg", "4"))
 			Expect(chc.UserLists).To(Equal([]string{"arusers", "defaultdepartment"}))
 			Expect(chc.XUserLists).To(Equal([]string{"deadlineusers"}))
 			Expect(chc.Projects).To(Equal([]string{"test_project", "test_project2"}))

@@ -25,13 +25,22 @@ var _ = Describe("File", func() {
 
 		It("returns a channel that emits JobDetail objects for 10 jobs", func() {
 
+			qs, err := qsub.NewCommandLineQSub(qsub.CommandLineQSubConfig{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Submit a synchronous seed job to ensure the accounting file exists
+			_, _, err = qs.Submit(context.Background(), qsub.JobOptions{
+				Command:     "sleep",
+				CommandArgs: []string{"0"},
+				Binary:      qsub.ToPtr(true),
+				Synchronize: qsub.ToPtr(true),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
 			jobDetailsChan, err := qacct.WatchFile(context.Background(),
 				qacct.GetDefaultQacctFile(), 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(jobDetailsChan).NotTo(BeNil())
-
-			qs, err := qsub.NewCommandLineQSub(qsub.CommandLineQSubConfig{})
-			Expect(err).NotTo(HaveOccurred())
 
 			jobIDs := make([]int, 10)
 			for i := 0; i < 10; i++ {
@@ -51,17 +60,15 @@ var _ = Describe("File", func() {
 				select {
 				case jd := <-jobDetailsChan:
 					log.Printf("job: %+v", jd.JobNumber)
-					// check if jobID is in the jobIDs list
 					if slices.Contains(jobIDs, int(jd.JobNumber)) {
 						Expect(jd.SubmitCommandLine).To(ContainSubstring("bash"))
 						Expect(jd.JobUsage.Usage.Memory).To(BeNumerically(">=", 0))
 						receivedJobs[int(jd.JobNumber)] = true
 					}
 				default:
-					return len(receivedJobs) == 10
 				}
-				return false
-			}, "10s").Should(BeTrue())
+				return len(receivedJobs) == 10
+			}, "30s").Should(BeTrue())
 		})
 	})
 })

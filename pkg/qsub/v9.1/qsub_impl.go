@@ -87,6 +87,15 @@ func (c *qsubClient) SubmitSimpleBinary(ctx context.Context, command string, arg
 	return c.Submit(ctx, opts)
 }
 
+type JobBuilder = core.JobBuilder
+
+// NewJobBuilder creates a new fluent JobBuilder for the given command.
+// Use Flag() for v9.1-specific binding options: -bamount, -bstop,
+// -bfilter, -binstance, -bsort, -bstart, -bstrategy, -btype, -bunit.
+func NewJobBuilder(q Qsub, command string, args ...string) *JobBuilder {
+	return core.NewJobBuilder(q, command, args...)
+}
+
 func appendBindingArgs(args []string, opts JobOptions) []string {
 	if opts.BindingAmount != nil {
 		args = append(args, "-bamount", fmt.Sprintf("%d", *opts.BindingAmount))
