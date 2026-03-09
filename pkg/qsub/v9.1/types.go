@@ -25,7 +25,6 @@ import (
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/qsub/core"
 )
 
-type JobOptions = core.JobOptions
 type ResourceRequest = core.ResourceRequest
 type CommandLineQSubConfig = core.CommandLineQSubConfig
 
@@ -46,4 +45,36 @@ func SimpleLRequest(resources map[string]string) map[string]map[string]ResourceR
 
 func ConvertTimeToQsubDateTime(t time.Time) string {
 	return core.ConvertTimeToQsubDateTime(t)
+}
+
+// JobOptions extends core.JobOptions with GCS 9.1 binding options.
+// The legacy ProcessorBinding field (inherited from core) is ignored;
+// use the new granular binding fields instead.
+type JobOptions struct {
+	core.JobOptions
+
+	// BindingAmount defines the number of binding units (-bamount).
+	BindingAmount *int `flag:"-bamount"`
+	// BindingStop defines the stop position for binding (-bstop).
+	// Values: S, s, C, c, E, e, N, n, X, x, Y, y
+	BindingStop *string `flag:"-bstop"`
+	// BindingFilter specifies a binding filter to mask binding units (-bfilter).
+	BindingFilter *string `flag:"-bfilter"`
+	// BindingInstance defines the instance applying the binding (-binstance).
+	// Values: set, env, pe
+	BindingInstance *string `flag:"-binstance"`
+	// BindingSort enables and specifies binding sort order (-bsort).
+	// Values: S, s, C, c, E, e, N, n, X, x, Y, y
+	BindingSort *string `flag:"-bsort"`
+	// BindingStart defines the start position for binding (-bstart).
+	// Values: S, s, C, c, E, e, N, n, X, x, Y, y
+	BindingStart *string `flag:"-bstart"`
+	// BindingStrategy defines the binding strategy (-bstrategy).
+	BindingStrategy *string `flag:"-bstrategy"`
+	// BindingType sets the type of binding (-btype).
+	// Values: host, slot
+	BindingType *string `flag:"-btype"`
+	// BindingUnit sets the binding unit (-bunit).
+	// Values: T, ET, C, E, S, ES, X, EX, Y, EY, N, EN
+	BindingUnit *string `flag:"-bunit"`
 }

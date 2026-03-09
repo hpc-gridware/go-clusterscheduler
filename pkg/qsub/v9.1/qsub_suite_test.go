@@ -28,5 +28,5 @@ import (
 
 func TestQsub(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Qsub Suite")
+	RunSpecs(t, "Qsub v9.1 Suite")
 }
