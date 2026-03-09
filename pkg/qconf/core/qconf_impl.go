@@ -3278,7 +3278,7 @@ func (c *CommandLineQConf) ModifyResourceQuotaSet(rqsName string, cfg ResourceQu
 	}
 	file.Close()
 
-	_, err = c.RunCommand("-Mrqs", file.Name())
+	_, err = c.RunCommand("-Mrqs", file.Name(), rqsName)
 	return err
 }
 
