@@ -28,5 +28,5 @@ import (
 
 func TestQacct(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Qacct Suite")
+	RunSpecs(t, "Qacct v9.1 Suite")
 }

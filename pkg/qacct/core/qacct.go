@@ -17,18 +17,32 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package qacct
-
-import (
-	"github.com/hpc-gridware/go-clusterscheduler/pkg/qacct/core"
-)
+package core
 
 // QAcct defines the methods for interacting with the Open Cluster Scheduler
 // to retrieve accounting information for finished jobs using the qacct command.
-type QAcct = core.QAcct
+type QAcct interface {
+	WithAlternativeAccountingFile(accountingFile string) error
+	WithDefaultAccountingFile()
+	// NativeSpecification calls qacct with the given command and args
+	// and returns the raw unparsed output.
+	NativeSpecification(args []string) (string, error)
+	ShowHelp() (string, error)
+	ShowJobDetails(jobID []int64) ([]JobDetail, error)
+	// Summary returns a builder for summary usage queries
+	Summary() *SummaryBuilder
+	// Jobs returns a builder for job detail queries with filtering
+	Jobs() *JobsBuilder
+}
 
 // SummaryBuilder provides a fluent interface for building summary usage queries
-type SummaryBuilder = core.SummaryBuilder
+type SummaryBuilder struct {
+	qacct QAcct
+	args  []string
+}
 
 // JobsBuilder provides a fluent interface for building job detail queries with filtering
-type JobsBuilder = core.JobsBuilder
+type JobsBuilder struct {
+	qacct QAcct
+	args  []string
+}

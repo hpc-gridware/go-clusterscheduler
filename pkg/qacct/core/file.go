@@ -1,4 +1,23 @@
-package qacct
+/*___INFO__MARK_BEGIN__*/
+/*************************************************************************
+*  Copyright 2026 HPC-Gridware GmbH
+*
+*  Licensed under the Apache License, Version 2.0 (the "License");
+*  you may not use this file except in compliance with the License.
+*  You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+*
+************************************************************************/
+/*___INFO__MARK_END__*/
+
+package core
 
 import (
 	"bufio"
@@ -13,7 +32,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
-// DefaultQacctFile returns the path to the default accounting file based
+// GetDefaultQacctFile returns the path to the default accounting file based
 // on the SGE_ROOT and SGE_CELL environment variables.
 func GetDefaultQacctFile() string {
 	sgeRoot := os.Getenv("SGE_ROOT")
@@ -36,7 +55,6 @@ func WatchFile(ctx context.Context, path string, bufferSize int) (<-chan JobDeta
 
 	jobDetailsChan := make(chan JobDetail, bufferSize)
 
-	// offset points to the last processed line
 	var offset int64 = 0
 
 	go func() {
@@ -54,7 +72,6 @@ func WatchFile(ctx context.Context, path string, bufferSize int) (<-chan JobDeta
 			for scanner.Scan() {
 				var job JobDetail
 				line := scanner.Text()
-				// TODO parsing can be done in parallel
 				err := json.Unmarshal([]byte(line), &job)
 				if err != nil {
 					log.Printf("failed to unmarshal line: %v", err)
@@ -68,14 +85,12 @@ func WatchFile(ctx context.Context, path string, bufferSize int) (<-chan JobDeta
 				return
 			}
 
-			// store processed offset
 			offset, err = file.Seek(0, io.SeekCurrent)
 			if err != nil {
 				log.Printf("failed to get current offset: %v", err)
 				return
 			}
 
-			// wait a little before re-scanning for new data and reset scanner
 			select {
 			case <-ctx.Done():
 				return

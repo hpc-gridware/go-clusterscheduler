@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2024 HPC-Gridware GmbH
+*  Copyright 2026 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package qacct
+package core
 
 import (
 	"bufio"
@@ -125,6 +125,8 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 			job.JobUsage.RUsage.RuNsignals = parseInt64(value)
 		case "ru_nvcsw":
 			job.JobUsage.RUsage.RuNvcsw = parseInt64(value)
+		case "ru_nivcsw":
+			job.JobUsage.RUsage.RuNivcsw = parseInt64(value)
 		case "wallclock":
 			job.JobUsage.Usage.WallClock = parseFloat(value)
 		case "cpu":
@@ -133,6 +135,8 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 			job.JobUsage.Usage.Memory = parseFloat(value)
 		case "io":
 			job.JobUsage.Usage.IO = parseFloat(value)
+		case "ioops":
+			job.JobUsage.Usage.IOOps = parseInt64(value)
 		case "iow":
 			job.JobUsage.Usage.IOWait = parseFloat(value)
 		case "maxvmem":
@@ -151,7 +155,7 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 	return jobs, nil
 }
 
-// ParseQacctOutput parses the output of the qacct command and returns
+// ParseQAcctJobOutput parses the output of the qacct command and returns
 // a slice of JobDetail.
 func ParseQAcctJobOutput(output string) ([]JobDetail, error) {
 	scanner := bufio.NewScanner(strings.NewReader(output))
@@ -162,15 +166,8 @@ func ParseQAcctJobOutput(output string) ([]JobDetail, error) {
 	return jobs, nil
 }
 
-/*
-qsub_time                          2024-09-27 07:41:44.421951
-submit_cmd_line                    qsub -b y -t 1-100:2 sleep 0
-start_time                         2024-09-27 07:42:07.265733
-end_time                           2024-09-27 07:42:08.796845
-*/
 func parseTime(value string) int64 {
-	// fix layout to match the output: "2024-09-27 07:42:08.796845"
-	layout := "2006-01-02 15:04:05.999999" // Correct layout for the given examples
+	layout := "2006-01-02 15:04:05.999999"
 	t, err := time.Parse(layout, value)
 	if err != nil {
 		return 0
@@ -206,71 +203,54 @@ func ParseAccountingJSONLine(line string) (JobDetail, error) {
 // and returns aggregated usage statistics.
 func ParseSummaryOutput(output string) (Usage, error) {
 	scanner := bufio.NewScanner(strings.NewReader(output))
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		
-		// Look for the "Total System Usage" section first
+
 		if strings.Contains(line, "Total System Usage") {
-			// Skip the header line
 			if !scanner.Scan() {
 				continue
 			}
-			// Skip the separator line
 			if !scanner.Scan() {
 				continue
 			}
-			// Parse the values line
 			if scanner.Scan() {
 				valuesLine := strings.TrimSpace(scanner.Text())
 				return parseSummaryValues(valuesLine, []string{"WALLCLOCK", "UTIME", "STIME", "CPU", "MEMORY", "IO", "IOW"})
 			}
 		}
-		
-		// Look for dynamic header (contains WALLCLOCK and other usage columns)
+
 		if strings.Contains(line, "WALLCLOCK") && strings.Contains(line, "CPU") {
 			headers := strings.Fields(line)
-			
-			// Skip the separator line
+
 			if !scanner.Scan() {
 				continue
 			}
-			
-			// Try to parse the data line
+
 			if scanner.Scan() {
 				valuesLine := strings.TrimSpace(scanner.Text())
-				// Check if there's actually data (not empty line)
 				if valuesLine != "" {
 					return parseSummaryValues(valuesLine, headers)
 				}
 			}
-			// If no data line or empty, return empty usage
 			return Usage{}, nil
 		}
 	}
-	
-	// If no summary section found, return empty usage
+
 	return Usage{}, nil
 }
 
-// parseSummaryValues parses a line with dynamic headers
-// Headers like: ["OWNER", "WALLCLOCK", "UTIME", "STIME", "CPU", "MEMORY", "IO", "IOW"]
-// Values like:  ["root", "133", "1.422", "1.081", "2.503", "0.236", "0.000", "0.000"]
 func parseSummaryValues(line string, headers []string) (Usage, error) {
 	fields := strings.Fields(line)
-	
+
 	usage := Usage{}
 	var err error
-	
-	// Find actual positions of usage columns in the data
-	// Usage data appears as the last 7 fields consistently
+
 	usageStart := len(fields) - 7
 	if usageStart < 0 {
 		return Usage{}, fmt.Errorf("insufficient fields for usage data: got %d, need at least 7", len(fields))
 	}
-	
-	// Parse usage fields from the last 7 positions
-	// Fields are: WALLCLOCK, UTIME, STIME, CPU, MEMORY, IO, IOW
+
 	if usage.WallClock, err = strconv.ParseFloat(fields[usageStart], 64); err != nil {
 		return Usage{}, fmt.Errorf("error parsing wallclock: %w", err)
 	}
@@ -292,6 +272,6 @@ func parseSummaryValues(line string, headers []string) (Usage, error) {
 	if usage.IOWait, err = strconv.ParseFloat(fields[usageStart+6], 64); err != nil {
 		return Usage{}, fmt.Errorf("error parsing iow: %w", err)
 	}
-	
+
 	return usage, nil
 }

@@ -68,6 +68,7 @@ jobs, err := qacct.Jobs().
 ## Output Formats
 
 ### Summary Output (Usage struct)
+
 ```go
 type Usage struct {
     WallClock  float64 `json:"wallclock"`
@@ -83,7 +84,9 @@ type Usage struct {
 ```
 
 ### Job Detail Output ([]JobDetail)
+
 Detailed job information including:
+
 - Job metadata (owner, queue, project, etc.)
 - Resource usage statistics
 - Start/end times
