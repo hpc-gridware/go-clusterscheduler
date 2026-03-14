@@ -197,6 +197,19 @@ func (q *QStatImpl) DisplayAllJobArrayTasks() ([]JobArrayTask, error) {
 	return jobArrayTasks, nil
 }
 
+// DisplayAllJobArrayTasksOfAllUsers is equivalent to "qstat -g d -u *"
+func (q *QStatImpl) DisplayAllJobArrayTasksOfAllUsers() ([]JobArrayTask, error) {
+	out, err := q.NativeSpecification([]string{"-g", "d", "-u", "*"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get output of qstat: %w", err)
+	}
+	jobArrayTasks, err := ParseJobArrayTask(out)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse job array tasks: %w", err)
+	}
+	return jobArrayTasks, nil
+}
+
 func (q *QStatImpl) DisplayAllParallelJobTasks() ([]ParallelJobTask, error) {
 	return nil, fmt.Errorf("not implemented")
 }
