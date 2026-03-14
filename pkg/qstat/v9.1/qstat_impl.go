@@ -1,6 +1,6 @@
 /*___INFO__MARK_BEGIN__*/
 /*************************************************************************
-*  Copyright 2026 HPC-Gridware GmbH
+*  Copyright 2025 HPC-Gridware GmbH
 *
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
@@ -17,11 +17,13 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package qhost
+package qstat
 
-import "github.com/hpc-gridware/go-clusterscheduler/pkg/qhost/core"
+import v90 "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
 
-var ParseHosts = core.ParseHosts
-var ParseHostFullMetrics = core.ParseHostFullMetrics
-var ParseIntOrUnknown = core.ParseIntOrUnknown
-var ParseFloatOrUnknown = core.ParseFloatOrUnknown
+type CommandLineQStatConfig = v90.CommandLineQStatConfig
+type QStatImpl = v90.QStatImpl
+
+func NewCommandLineQstat(config CommandLineQStatConfig) (*QStatImpl, error) {
+	return v90.NewCommandLineQstat(config)
+}
