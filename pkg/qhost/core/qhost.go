@@ -17,11 +17,12 @@
 ************************************************************************/
 /*___INFO__MARK_END__*/
 
-package qhost
+package core
 
-import "github.com/hpc-gridware/go-clusterscheduler/pkg/qhost/core"
-
-var ParseHosts = core.ParseHosts
-var ParseHostFullMetrics = core.ParseHostFullMetrics
-var ParseIntOrUnknown = core.ParseIntOrUnknown
-var ParseFloatOrUnknown = core.ParseFloatOrUnknown
+// QHost is the interface for the qhost command.
+type QHost interface {
+	// GetHosts returns standard qhost output
+	GetHosts() ([]Host, error)
+	// GetHostsFullMetrics returns qhost -F output
+	GetHostsFullMetrics() ([]HostFullMetrics, error)
+}
