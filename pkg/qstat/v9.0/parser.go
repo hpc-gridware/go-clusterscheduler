@@ -782,9 +782,13 @@ func ParseClusterQueueSummary(out string) ([]ClusterQueueSummary, error) {
 			continue // Skip lines that don't have the expected number of fields
 		}
 
-		cqLoad, err := strconv.ParseFloat(fields[1], 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse CQLoad: %v", err)
+		var cqLoad float64
+		if fields[1] != "-NA-" {
+			var err error
+			cqLoad, err = strconv.ParseFloat(fields[1], 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse CQLoad: %v", err)
+			}
 		}
 
 		used, err := strconv.Atoi(fields[2])

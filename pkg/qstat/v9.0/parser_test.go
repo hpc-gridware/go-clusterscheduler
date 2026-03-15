@@ -450,6 +450,35 @@ test.q                            0.08      0      0      2      2      0      0
 			Expect(summary[1].CdsuE).To(Equal(0))
 		})
 
+		It("should handle -NA- load values", func() {
+			input := `CLUSTER QUEUE                   CQLOAD   USED    RES  AVAIL  TOTAL aoACDS  cdsuE
+--------------------------------------------------------------------------------
+all.q                             0.02      1      0      3      4      0      0
+analog.q                          0.02      0      0      4      4      0      0
+custom_layout.q                   -NA-      0      0      0      0      0      0
+density.q                         -NA-      0      0      0      0      0      0`
+			summary, err := qstat.ParseClusterQueueSummary(input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(summary).To(HaveLen(4))
+
+			Expect(summary[0].ClusterQueue).To(Equal("all.q"))
+			Expect(summary[0].CQLoad).To(Equal(0.02))
+			Expect(summary[0].Used).To(Equal(1))
+			Expect(summary[0].Available).To(Equal(3))
+			Expect(summary[0].Total).To(Equal(4))
+
+			Expect(summary[1].ClusterQueue).To(Equal("analog.q"))
+			Expect(summary[1].CQLoad).To(Equal(0.02))
+
+			Expect(summary[2].ClusterQueue).To(Equal("custom_layout.q"))
+			Expect(summary[2].CQLoad).To(Equal(0.0))
+			Expect(summary[2].Available).To(Equal(0))
+			Expect(summary[2].Total).To(Equal(0))
+
+			Expect(summary[3].ClusterQueue).To(Equal("density.q"))
+			Expect(summary[3].CQLoad).To(Equal(0.0))
+		})
+
 	})
 
 	Describe("FullQueueInfo", func() {
