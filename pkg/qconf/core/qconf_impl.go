@@ -586,7 +586,7 @@ func SetDefaultComplexEntryValues(c *ComplexEntryConfig) {
 		}
 	}
 	if c.Relop == "" {
-		c.Relop = "=="
+		c.Relop = "<="
 	}
 }
 
@@ -2817,6 +2817,14 @@ func (c *CommandLineQConf) ModifyAllComplexes(centries []ComplexEntryConfig) err
 
 // ModifyComplexEntry modifies a complex entry.
 func (c *CommandLineQConf) ModifyComplexEntry(complexName string, cfg ComplexEntryConfig) error {
+	if cfg.Name == "" {
+		cfg.Name = complexName
+	}
+	if cfg.Type == "" {
+		return fmt.Errorf("complex does not have a type")
+	}
+	SetDefaultComplexEntryValues(&cfg)
+
 	file, err := CreateTempDirWithFileName(complexName)
 	if err != nil {
 		return err

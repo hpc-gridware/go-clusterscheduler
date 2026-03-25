@@ -400,7 +400,80 @@ usage: qhost [options]`
 			Expect(ce.Shortcut).To(Equal("test"))
 			Expect(ce.Requestable).To(Equal("YES"))
 			Expect(ce.Default).To(Equal("0"))
-			Expect(ce.Relop).To(Equal("=="))
+			Expect(ce.Relop).To(Equal("<="))
+		})
+
+		It("should set all defaults matching CLI behavior", func() {
+			ce := qconf.ComplexEntryConfig{
+				Name: "mycomplex",
+				Type: qconf.ResourceTypeInt,
+			}
+
+			qconf.SetDefaultComplexEntryValues(&ce)
+
+			Expect(ce.Shortcut).To(Equal("mycomplex"))
+			Expect(ce.Relop).To(Equal("<="))
+			Expect(ce.Requestable).To(Equal(qconf.ConsumableNO))
+			Expect(ce.Consumable).To(Equal(qconf.ConsumableNO))
+			Expect(ce.Default).To(Equal("0"))
+		})
+
+		It("should default string type complex to NONE", func() {
+			ce := qconf.ComplexEntryConfig{
+				Name: "strcomplex",
+				Type: qconf.ResourceTypeString,
+			}
+
+			qconf.SetDefaultComplexEntryValues(&ce)
+
+			Expect(ce.Default).To(Equal("NONE"))
+		})
+
+		It("should not overwrite explicitly set values", func() {
+			ce := qconf.ComplexEntryConfig{
+				Name:        "custom",
+				Shortcut:    "cu",
+				Type:        qconf.ResourceTypeInt,
+				Relop:       ">=",
+				Requestable: qconf.ConsumableYES,
+				Consumable:  qconf.ConsumableJOB,
+				Default:     "42",
+			}
+
+			qconf.SetDefaultComplexEntryValues(&ce)
+
+			Expect(ce.Shortcut).To(Equal("cu"))
+			Expect(ce.Relop).To(Equal(">="))
+			Expect(ce.Requestable).To(Equal(qconf.ConsumableYES))
+			Expect(ce.Consumable).To(Equal(qconf.ConsumableJOB))
+			Expect(ce.Default).To(Equal("42"))
+		})
+
+		It("should reject ModifyComplexEntry when Type is empty", func() {
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
+				Executable: "qconf",
+				DryRun:     true,
+			})
+			Expect(err).To(BeNil())
+
+			err = qc.ModifyComplexEntry("myattr", qconf.ComplexEntryConfig{
+				Name: "myattr",
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("complex does not have a type"))
+		})
+
+		It("should apply defaults when ModifyComplexEntry is called with minimal config", func() {
+			qc, err := qconf.NewCommandLineQConf(qconf.CommandLineQConfConfig{
+				Executable: "qconf",
+				DryRun:     true,
+			})
+			Expect(err).To(BeNil())
+
+			err = qc.ModifyComplexEntry("myattr", qconf.ComplexEntryConfig{
+				Type: qconf.ResourceTypeInt,
+			})
+			Expect(err).To(BeNil())
 		})
 
 		It("should reject invalid default value with leading zeros", func() {
