@@ -1423,6 +1423,9 @@ func splitWithoutEmptyLines(content, sep string) []string {
 
 // AddAdminHost adds a new administrative host.
 func (c *CommandLineQConf) AddAdminHost(hosts []string) error {
+	if len(hosts) == 0 {
+		return nil
+	}
 	hostList := strings.Join(hosts, ",")
 	_, err := c.RunCommand("-ah", hostList)
 	if err != nil {
@@ -1625,6 +1628,9 @@ func (c *CommandLineQConf) ShowResourceQuotaSets() ([]string, error) {
 
 // AddUserToManagerList adds a list of users to the manager list.
 func (c *CommandLineQConf) AddUserToManagerList(users []string) error {
+	if len(users) == 0 {
+		return nil
+	}
 	_, err := c.RunCommand("-am", strings.Join(users, ","))
 	return err
 }
