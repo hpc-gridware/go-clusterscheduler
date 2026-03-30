@@ -1,13 +1,13 @@
 {
   "cluster_environment": {
     "sge_name": "p6444",
-    "sge_root": "/opt/cs-install",
+    "sge_root": "/opt/ocs",
     "sge_cell": "default",
     "sge_qmaster_port": 6444,
     "sge_execd_port": 6445
   },
   "global_config": {
-    "execd_spool_dir": "/opt/cs-install/default/spool/execd",
+    "execd_spool_dir": "/opt/ocs/default/spool/execd",
     "mailer": "/bin/mail",
     "xterm": "/usr/bin/X11/xterm",
     "load_sensor": null,

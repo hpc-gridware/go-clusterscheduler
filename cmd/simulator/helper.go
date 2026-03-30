@@ -87,6 +87,11 @@ func prepareHostConfiguration(config *qconf.ClusterConfig) {
 		allhosts.Name = "@allhosts"
 	}
 
+	existingHosts := make(map[string]bool, len(allhosts.Hosts))
+	for _, h := range allhosts.Hosts {
+		existingHosts[h] = true
+	}
+
 	// Configure each host with load_report_host
 	for k, v := range config.ExecHosts {
 		if v.ComplexValues == nil {
@@ -94,8 +99,10 @@ func prepareHostConfiguration(config *qconf.ClusterConfig) {
 		}
 		v.ComplexValues["load_report_host"] = "master"
 		config.ExecHosts[k] = v
-		// Add to @allhosts
-		allhosts.Hosts = append(allhosts.Hosts, v.Name)
+		if !existingHosts[v.Name] {
+			allhosts.Hosts = append(allhosts.Hosts, v.Name)
+			existingHosts[v.Name] = true
+		}
 	}
 
 	config.HostGroups["@allhosts"] = allhosts

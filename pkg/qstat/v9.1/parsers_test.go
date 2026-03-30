@@ -128,21 +128,25 @@ scheduling info:                 (Collecting of scheduler job information is tur
 			Expect(jobs[0].JobArrayTasks).To(Equal("i              1-1000:1"))
 		})
 
-		It("parses per-task details", func() {
+		It("parses per-task details with structured exec_host_list", func() {
 			jobs, err := qstat.ParseSchedulerJobInfo(qstatJ)
 			Expect(err).NotTo(HaveOccurred())
 
 			j := jobs[0]
 			Expect(j.Tasks).To(HaveLen(4))
 
-			Expect(j.Tasks[0].TaskID).To(Equal(49))
-			Expect(j.Tasks[0].State).To(Equal("r"))
-			Expect(j.Tasks[0].QueueList).To(Equal("all.q@gcs-demo=1"))
-			Expect(j.Tasks[0].HostList).To(Equal("gcs-demo=1"))
-			Expect(j.Tasks[0].StartTime).To(Equal("2026-03-14 13:45:31.248077"))
-			Expect(j.Tasks[0].BindingList).To(Equal("NONE"))
-			Expect(j.Tasks[0].ResourceMap).To(Equal("NONE"))
-			Expect(j.Tasks[0].Usage).To(ContainSubstring("wallclock="))
+			t0 := j.Tasks[0]
+			Expect(t0.TaskID).To(Equal(49))
+			Expect(t0.State).To(Equal("r"))
+			Expect(t0.QueueList).To(Equal("all.q@gcs-demo=1"))
+			Expect(t0.StartTime).To(Equal("2026-03-14 13:45:31.248077"))
+			Expect(t0.BindingList).To(Equal("NONE"))
+			Expect(t0.ResourceMap).To(Equal("NONE"))
+
+			// exec_host_list is now a structured slice
+			Expect(t0.ExecHostList).To(HaveLen(1))
+			Expect(t0.ExecHostList[0].Hostname).To(Equal("gcs-demo"))
+			Expect(t0.ExecHostList[0].Slots).To(Equal(1))
 
 			Expect(j.Tasks[1].TaskID).To(Equal(50))
 			Expect(j.Tasks[1].State).To(Equal("r"))
@@ -151,10 +155,140 @@ scheduling info:                 (Collecting of scheduler job information is tur
 			Expect(j.Tasks[3].TaskID).To(Equal(52))
 		})
 
+		It("parses per-task usage into structured TaskUsageDetail", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJ)
+			Expect(err).NotTo(HaveOccurred())
+
+			u := jobs[0].Tasks[0].Usage
+			Expect(u.WallClock).To(Equal("00:00:25.174140"))
+			Expect(u.CPU).To(Equal("00:00:00.335190"))
+			Expect(u.Mem).To(Equal("0.00000 GBs"))
+			Expect(u.IO).To(Equal("0.00000"))
+			Expect(u.IOOps).To(Equal("0"))
+			Expect(u.IOW).To(Equal("00:00:00.000000"))
+			Expect(u.VMem).To(Equal("N/A"))
+			Expect(u.MaxVMem).To(Equal("N/A"))
+			Expect(u.RSS).To(Equal("460.000K"))
+			Expect(u.MaxRSS).To(Equal("3.168M"))
+		})
+
+		It("initialises granted_requests, granted_licenses, gpu_usage, cgroups_usage as empty slices", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJ)
+			Expect(err).NotTo(HaveOccurred())
+
+			t0 := jobs[0].Tasks[0]
+			Expect(t0.GrantedRequests).NotTo(BeNil())
+			Expect(t0.GrantedRequests).To(BeEmpty())
+			Expect(t0.GrantedLicenses).NotTo(BeNil())
+			Expect(t0.GrantedLicenses).To(BeEmpty())
+			Expect(t0.GPUUsage).NotTo(BeNil())
+			Expect(t0.GPUUsage).To(BeEmpty())
+			Expect(t0.CgroupsUsage).NotTo(BeNil())
+			Expect(t0.CgroupsUsage).To(BeEmpty())
+		})
+
 		It("parses scheduling info", func() {
 			jobs, err := qstat.ParseSchedulerJobInfo(qstatJ)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(jobs[0].SchedulingInfo).To(ContainSubstring("Collecting of scheduler job information"))
+		})
+
+	})
+
+	Context("ParseSchedulerJobInfo with task_concurrency and granted_request", func() {
+
+		qstatJArray := `==============================================================
+job_number:                      1911580
+owner:                           jdoe
+job_name:                        my_array
+job-array tasks:                 1-1000:1
+task_concurrency:                300
+job_state                  135:  r
+exec_host_list             135:  someserver=8
+usage                      135:  wallclock=00:36:41,cpu=03:16:20,mem=117504.22093 GBs,io=12.86688 GB,iow=55.310,ioops=2497350,vmem=20.134G,maxvmem=20.134G,rss=13.945G,maxrss=13.945G,pss=13.462G,smem=617.145M,pmem=13.343G,maxpss=13.462G
+granted_request            135:  jobs_counter=1, m_mem_free=6.000G
+granted_request            135:  m_mem_free=6.000G
+granted_request            135:  m_mem_free=6.000G`
+
+		It("parses task_concurrency at job level", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJArray)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs[0].TaskConcurrency).To(Equal("300"))
+		})
+
+		It("parses exec_host_list with multiple slots on one host", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJArray)
+			Expect(err).NotTo(HaveOccurred())
+
+			hosts := jobs[0].Tasks[0].ExecHostList
+			Expect(hosts).To(HaveLen(1))
+			Expect(hosts[0].Hostname).To(Equal("someserver"))
+			Expect(hosts[0].Slots).To(Equal(8))
+		})
+
+		It("parses extended usage fields including pss, smem, pmem, maxpss", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJArray)
+			Expect(err).NotTo(HaveOccurred())
+
+			u := jobs[0].Tasks[0].Usage
+			Expect(u.WallClock).To(Equal("00:36:41"))
+			Expect(u.CPU).To(Equal("03:16:20"))
+			Expect(u.Mem).To(Equal("117504.22093 GBs"))
+			Expect(u.IO).To(Equal("12.86688 GB"))
+			Expect(u.IOW).To(Equal("55.310"))
+			Expect(u.IOOps).To(Equal("2497350"))
+			Expect(u.VMem).To(Equal("20.134G"))
+			Expect(u.MaxVMem).To(Equal("20.134G"))
+			Expect(u.RSS).To(Equal("13.945G"))
+			Expect(u.MaxRSS).To(Equal("13.945G"))
+			Expect(u.PSS).To(Equal("13.462G"))
+			Expect(u.SMem).To(Equal("617.145M"))
+			Expect(u.PMem).To(Equal("13.343G"))
+			Expect(u.MaxPSS).To(Equal("13.462G"))
+		})
+
+		It("parses granted_request lines as auto-incrementing ptg_id entries", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJArray)
+			Expect(err).NotTo(HaveOccurred())
+
+			reqs := jobs[0].Tasks[0].GrantedRequests
+			Expect(reqs).To(HaveLen(3))
+
+			Expect(reqs[0].PTGID).To(Equal(0))
+			Expect(reqs[0].GrantedReq).To(Equal("jobs_counter=1, m_mem_free=6.000G"))
+
+			Expect(reqs[1].PTGID).To(Equal(1))
+			Expect(reqs[1].GrantedReq).To(Equal("m_mem_free=6.000G"))
+
+			Expect(reqs[2].PTGID).To(Equal(2))
+		})
+
+	})
+
+	Context("parseExecHostList (via ParseSchedulerJobInfo)", func() {
+
+		It("parses multiple hosts", func() {
+			input := `==============================================================
+job_number:                      9
+exec_host_list             1:    host1=4,host2=8`
+			jobs, err := qstat.ParseSchedulerJobInfo(input)
+			Expect(err).NotTo(HaveOccurred())
+
+			hosts := jobs[0].Tasks[0].ExecHostList
+			Expect(hosts).To(HaveLen(2))
+			Expect(hosts[0].Hostname).To(Equal("host1"))
+			Expect(hosts[0].Slots).To(Equal(4))
+			Expect(hosts[1].Hostname).To(Equal("host2"))
+			Expect(hosts[1].Slots).To(Equal(8))
+		})
+
+		It("returns empty slice for NONE", func() {
+			input := `==============================================================
+job_number:                      9
+exec_host_list             1:    NONE`
+			jobs, err := qstat.ParseSchedulerJobInfo(input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs[0].Tasks[0].ExecHostList).To(BeEmpty())
 		})
 
 	})
@@ -388,6 +522,102 @@ test.q                            0.01      0      0     16     16      0      0
 
 	})
 
+	Context("ParseExtendedJobInfo with array jobs and task ranges", func() {
+
+		qstatExtArray := `job-ID     prior   ntckts  name       user         project          department state cpu        mem     io      tckts ovrts otckt ftckt stckt share queue                          slots ja-task-ID
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+         4 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim7                         1 23
+         4 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim1                         1 25
+         4 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim6                         1 27
+         4 0.55500 0.50000 sleep      root         NA               defaultdep qw                                   0     0     0     0     0 0.00                                     1 67-99:2
+         5 0.55500 0.50000 sleep      root         NA               defaultdep qw                                   0     0     0     0     0 0.00                                     1 1-99:2`
+
+		It("parses running array tasks with NA cpu/mem/io", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtArray)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(5))
+
+			Expect(jobs[0].JobID).To(Equal(4))
+			Expect(jobs[0].Priority).To(Equal(0.555))
+			Expect(jobs[0].Ntckts).To(Equal(0.5))
+			Expect(jobs[0].Name).To(Equal("sleep"))
+			Expect(jobs[0].User).To(Equal("root"))
+			Expect(jobs[0].Project).To(Equal("NA"))
+			Expect(jobs[0].Department).To(Equal("defaultdep"))
+			Expect(jobs[0].State).To(Equal("r"))
+			Expect(jobs[0].CPU).To(Equal("NA"))
+			Expect(jobs[0].Memory).To(Equal(0.0))
+			Expect(jobs[0].IO).To(Equal(0.0))
+			Expect(jobs[0].Queue).To(Equal("all.q@sim7"))
+			Expect(jobs[0].Slots).To(Equal(1))
+			Expect(jobs[0].JATaskID).To(Equal("23"))
+		})
+
+		It("parses running tasks on different hosts", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtArray)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(jobs[1].Queue).To(Equal("all.q@sim1"))
+			Expect(jobs[1].JATaskID).To(Equal("25"))
+
+			Expect(jobs[2].Queue).To(Equal("all.q@sim6"))
+			Expect(jobs[2].JATaskID).To(Equal("27"))
+		})
+
+		It("parses waiting array tasks with step ranges", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtArray)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(jobs[3].JobID).To(Equal(4))
+			Expect(jobs[3].State).To(Equal("qw"))
+			Expect(jobs[3].CPU).To(Equal(""))
+			Expect(jobs[3].Queue).To(Equal(""))
+			Expect(jobs[3].Slots).To(Equal(1))
+			Expect(jobs[3].JATaskID).To(Equal("67-99:2"))
+
+			Expect(jobs[4].JobID).To(Equal(5))
+			Expect(jobs[4].State).To(Equal("qw"))
+			Expect(jobs[4].JATaskID).To(Equal("1-99:2"))
+		})
+
+	})
+
+	Context("ParseExtendedJobInfo with PE array jobs", func() {
+
+		qstatExtPE := `job-ID     prior   ntckts  name       user         project          department state cpu        mem     io      tckts ovrts otckt ftckt stckt share queue                          slots ja-task-ID
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+         6 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim8                         1 97
+         6 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim3                         1 99
+         7 0.60500 0.50000 sleep      root         NA               defaultdep qw                                   0     0     0     0     0 0.00                                    10 1,51`
+
+		It("parses running PE array tasks", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtPE)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(3))
+
+			Expect(jobs[0].JobID).To(Equal(6))
+			Expect(jobs[0].Priority).To(Equal(0.505))
+			Expect(jobs[0].Queue).To(Equal("all.q@sim8"))
+			Expect(jobs[0].Slots).To(Equal(1))
+			Expect(jobs[0].JATaskID).To(Equal("97"))
+
+			Expect(jobs[1].Queue).To(Equal("all.q@sim3"))
+			Expect(jobs[1].JATaskID).To(Equal("99"))
+		})
+
+		It("parses waiting PE job with multi-slot and comma-separated task IDs", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtPE)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(jobs[2].JobID).To(Equal(7))
+			Expect(jobs[2].Priority).To(Equal(0.605))
+			Expect(jobs[2].State).To(Equal("qw"))
+			Expect(jobs[2].Slots).To(Equal(10))
+			Expect(jobs[2].JATaskID).To(Equal("1,51"))
+		})
+
+	})
+
 	Context("ParseJobArrayTask (qstat -g d)", func() {
 
 		qstatGD := `job-ID     prior   name       user         state submit/start at     queue                          slots ja-task-ID
@@ -423,6 +653,186 @@ test.q                            0.01      0      0     16     16      0      0
 			Expect(tasks[6].SubmitTime.Year()).To(Equal(2026))
 
 			Expect(tasks[7].JobID).To(Equal(28))
+		})
+
+	})
+
+	Context("ParseJobArrayTask with PE array jobs", func() {
+
+		qstatGDPE := `job-ID     prior   name       user         state submit/start at     queue                          slots ja-task-ID
+-----------------------------------------------------------------------------------------------------------------
+         7 0.55500 sleep      root         r     2026-03-30 15:10:08 all.q@sim3                        10 1
+         7 0.55500 sleep      root         r     2026-03-30 15:10:08 all.q@sim6                        10 51`
+
+		It("parses running PE array tasks with multi-slot", func() {
+			tasks, err := qstat.ParseJobArrayTask(qstatGDPE)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(2))
+
+			Expect(tasks[0].JobID).To(Equal(7))
+			Expect(tasks[0].Priority).To(Equal(0.555))
+			Expect(tasks[0].Name).To(Equal("sleep"))
+			Expect(tasks[0].User).To(Equal("root"))
+			Expect(tasks[0].State).To(Equal("r"))
+			Expect(tasks[0].Queue).To(Equal("all.q@sim3"))
+			Expect(tasks[0].Slots).To(Equal(10))
+			Expect(tasks[0].JaTaskIDs).To(Equal([]int64{1}))
+			Expect(tasks[0].StartTime).To(Equal(
+				time.Date(2026, 3, 30, 15, 10, 8, 0, time.UTC)))
+
+			Expect(tasks[1].Queue).To(Equal("all.q@sim6"))
+			Expect(tasks[1].Slots).To(Equal(10))
+			Expect(tasks[1].JaTaskIDs).To(Equal([]int64{51}))
+		})
+
+	})
+
+	Context("parseJaTaskIDs", func() {
+
+		qstatGDComma := `job-ID     prior   name       user         state submit/start at     queue                          slots ja-task-ID
+-----------------------------------------------------------------------------------------------------------------
+         7 0.60500 sleep      root         qw    2026-03-30 15:09:00                                   10 1,51`
+
+		It("handles comma-separated task IDs via ParseJobArrayTask", func() {
+			tasks, err := qstat.ParseJobArrayTask(qstatGDComma)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+
+			Expect(tasks[0].JobID).To(Equal(7))
+			Expect(tasks[0].Slots).To(Equal(10))
+			Expect(tasks[0].JaTaskIDs).To(Equal([]int64{1, 51}))
+		})
+
+	})
+
+	Context("ParseExtendedJobInfo with task concurrency", func() {
+
+		qstatExtTC := `job-ID     prior   ntckts  name       user         project          department state cpu        mem     io      tckts ovrts otckt ftckt stckt share queue                          slots ja-task-ID
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+         8 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim9                         1 1
+         8 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim7                         1 2
+         8 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim1                         1 3
+         8 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim2                         1 10
+         8 0.00000 0.00000 sleep      root         NA               defaultdep qw                                   0     0     0     0     0 0.00                                     1 11-100:1`
+
+		It("parses running tasks at scheduled priority", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtTC)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(5))
+
+			Expect(jobs[0].JobID).To(Equal(8))
+			Expect(jobs[0].Priority).To(Equal(0.555))
+			Expect(jobs[0].Ntckts).To(Equal(0.5))
+			Expect(jobs[0].State).To(Equal("r"))
+			Expect(jobs[0].Queue).To(Equal("all.q@sim9"))
+			Expect(jobs[0].JATaskID).To(Equal("1"))
+
+			Expect(jobs[3].Queue).To(Equal("all.q@sim2"))
+			Expect(jobs[3].JATaskID).To(Equal("10"))
+		})
+
+		It("parses waiting tasks at zero priority with task range", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtTC)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(jobs[4].JobID).To(Equal(8))
+			Expect(jobs[4].Priority).To(Equal(0.0))
+			Expect(jobs[4].Ntckts).To(Equal(0.0))
+			Expect(jobs[4].State).To(Equal("qw"))
+			Expect(jobs[4].Slots).To(Equal(1))
+			Expect(jobs[4].JATaskID).To(Equal("11-100:1"))
+		})
+
+	})
+
+	Context("ParseExtendedJobInfo with mixed PE and regular jobs", func() {
+
+		qstatExtMixed := `job-ID     prior   ntckts  name       user         project          department state cpu        mem     io      tckts ovrts otckt ftckt stckt share queue                          slots ja-task-ID
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        10 0.60500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@master                      10 1
+        10 0.60500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim4                        10 51
+         8 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim9                         1 1
+         8 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@sim7                         1 2
+         8 0.00000 0.00000 sleep      root         NA               defaultdep qw                                   0     0     0     0     0 0.00                                     1 11-100:`
+
+		It("parses PE jobs with higher priority first", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtMixed)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(5))
+
+			Expect(jobs[0].JobID).To(Equal(10))
+			Expect(jobs[0].Priority).To(Equal(0.605))
+			Expect(jobs[0].Queue).To(Equal("all.q@master"))
+			Expect(jobs[0].Slots).To(Equal(10))
+			Expect(jobs[0].JATaskID).To(Equal("1"))
+
+			Expect(jobs[1].JobID).To(Equal(10))
+			Expect(jobs[1].Queue).To(Equal("all.q@sim4"))
+			Expect(jobs[1].Slots).To(Equal(10))
+			Expect(jobs[1].JATaskID).To(Equal("51"))
+		})
+
+		It("parses interleaved regular jobs after PE jobs", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtMixed)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(jobs[2].JobID).To(Equal(8))
+			Expect(jobs[2].Priority).To(Equal(0.505))
+			Expect(jobs[2].Slots).To(Equal(1))
+			Expect(jobs[2].JATaskID).To(Equal("1"))
+
+			Expect(jobs[3].JobID).To(Equal(8))
+			Expect(jobs[3].JATaskID).To(Equal("2"))
+		})
+
+		It("parses task range with trailing colon and no step", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(qstatExtMixed)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(jobs[4].JobID).To(Equal(8))
+			Expect(jobs[4].State).To(Equal("qw"))
+			Expect(jobs[4].JATaskID).To(Equal("11-100:"))
+		})
+
+	})
+
+	Context("ParseJobArrayTask with task concurrency", func() {
+
+		qstatGDTC := `job-ID     prior   name       user         state submit/start at     queue                          slots ja-task-ID
+-----------------------------------------------------------------------------------------------------------------
+         8 0.55500 sleep      root         r     2026-03-30 15:17:43 all.q@sim1                         1 3
+         8 0.55500 sleep      root         r     2026-03-30 15:17:43 all.q@sim9                         1 1
+         8 0.55500 sleep      root         r     2026-03-30 15:17:43 all.q@sim2                         1 10
+         8 0.00000 sleep      root         qw    2026-03-30 15:17:43                                    1 11
+         8 0.00000 sleep      root         qw    2026-03-30 15:17:43                                    1 12
+         8 0.00000 sleep      root         qw    2026-03-30 15:17:43                                    1 13`
+
+		It("parses running tasks on different hosts", func() {
+			tasks, err := qstat.ParseJobArrayTask(qstatGDTC)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(6))
+
+			Expect(tasks[0].JobID).To(Equal(8))
+			Expect(tasks[0].State).To(Equal("r"))
+			Expect(tasks[0].Queue).To(Equal("all.q@sim1"))
+			Expect(tasks[0].Slots).To(Equal(1))
+			Expect(tasks[0].JaTaskIDs).To(Equal([]int64{3}))
+			Expect(tasks[0].StartTime).To(Equal(
+				time.Date(2026, 3, 30, 15, 17, 43, 0, time.UTC)))
+		})
+
+		It("parses individual waiting tasks with zero priority", func() {
+			tasks, err := qstat.ParseJobArrayTask(qstatGDTC)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(tasks[3].JobID).To(Equal(8))
+			Expect(tasks[3].Priority).To(Equal(0.0))
+			Expect(tasks[3].State).To(Equal("qw"))
+			Expect(tasks[3].Queue).To(Equal(""))
+			Expect(tasks[3].JaTaskIDs).To(Equal([]int64{11}))
+
+			Expect(tasks[4].JaTaskIDs).To(Equal([]int64{12}))
+			Expect(tasks[5].JaTaskIDs).To(Equal([]int64{13}))
 		})
 
 	})

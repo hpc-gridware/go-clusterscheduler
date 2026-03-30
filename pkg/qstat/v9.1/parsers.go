@@ -83,17 +83,23 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			case "job_state":
 				task.State = value
 			case "usage":
-				task.Usage = value
+				task.Usage = parseTaskUsage(value)
 			case "exec_binding_list":
 				task.BindingList = value
 			case "exec_queue_list":
 				task.QueueList = value
 			case "exec_host_list":
-				task.HostList = value
+				task.ExecHostList = parseExecHostList(value)
 			case "start_time":
 				task.StartTime = value
 			case "resource_map":
 				task.ResourceMap = value
+			case "granted_request":
+				task.GrantedRequests = append(task.GrantedRequests,
+					GrantedRequest{
+						PTGID:      len(task.GrantedRequests),
+						GrantedReq: value,
+					})
 			}
 			continue
 		}
@@ -159,6 +165,10 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			info.ParallelEnvironment = value
 		case "job-array tasks":
 			info.JobArrayTasks = strings.TrimSpace(value)
+		case "task_concurrency":
+			info.TaskConcurrency = value
+		case "pending_tasks":
+			info.PendingTasks, _ = strconv.Atoi(value)
 		case "binding":
 			info.Binding = value
 		case "scheduling info":
@@ -181,14 +191,97 @@ func extractTaskID(rawKey string) (int, string) {
 	return 0, rawKey
 }
 
+// findOrCreateTask looks up the TaskDetail for taskID in info.Tasks,
+// creating a new entry with empty slices if not found.
 func findOrCreateTask(info *SchedulerJobInfo, taskID int) *TaskDetail {
 	for i := range info.Tasks {
 		if info.Tasks[i].TaskID == taskID {
 			return &info.Tasks[i]
 		}
 	}
-	info.Tasks = append(info.Tasks, TaskDetail{TaskID: taskID})
+	info.Tasks = append(info.Tasks, TaskDetail{
+		TaskID:          taskID,
+		ExecHostList:    []ExecHostEntry{},
+		GrantedRequests: []GrantedRequest{},
+		GrantedLicenses: []interface{}{},
+		GPUUsage:        []interface{}{},
+		CgroupsUsage:    []interface{}{},
+	})
 	return &info.Tasks[len(info.Tasks)-1]
+}
+
+// parseExecHostList parses a comma-separated "hostname=slots" string
+// into a slice of ExecHostEntry values. "NONE" and empty entries are ignored.
+//
+// Example input: "compute01=8,compute02=4"
+func parseExecHostList(s string) []ExecHostEntry {
+	var entries []ExecHostEntry
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" || strings.EqualFold(part, "NONE") {
+			continue
+		}
+		// Find the last '=' to split hostname from slot count.
+		eqIdx := strings.LastIndex(part, "=")
+		if eqIdx < 0 {
+			continue
+		}
+		hostname := part[:eqIdx]
+		slots, _ := strconv.Atoi(part[eqIdx+1:])
+		entries = append(entries, ExecHostEntry{
+			Hostname: hostname,
+			Slots:    slots,
+		})
+	}
+	return entries
+}
+
+// parseTaskUsage parses a comma-separated "key=value" usage string into a
+// TaskUsageDetail. Values may contain spaces (e.g. "117504.22 GB") and are
+// extracted by scanning for the next ",lowercaseletter" delimiter.
+//
+// Example input:
+//
+//	"wallclock=00:36:41,cpu=03:16:20,mem=117504.22 GB,io=12.87 GB,..."
+func parseTaskUsage(s string) TaskUsageDetail {
+	get := func(key string) string { return extractUsageField(s, key) }
+	return TaskUsageDetail{
+		WallClock: get("wallclock"),
+		CPU:       get("cpu"),
+		Mem:       get("mem"),
+		IO:        get("io"),
+		IOW:       get("iow"),
+		IOOps:     get("ioops"),
+		VMem:      get("vmem"),
+		MaxVMem:   get("maxvmem"),
+		RSS:       get("rss"),
+		MaxRSS:    get("maxrss"),
+		PSS:       get("pss"),
+		SMem:      get("smem"),
+		PMem:      get("pmem"),
+		MaxPSS:    get("maxpss"),
+	}
+}
+
+// extractUsageField extracts the value for a named key from a
+// comma-separated "key=value" string where values may contain spaces.
+// The value ends at the next ",<lowercase-letter>" sequence or end-of-string.
+func extractUsageField(s, key string) string {
+	prefix := key + "="
+	idx := strings.Index(s, prefix)
+	if idx == -1 {
+		return ""
+	}
+	rest := s[idx+len(prefix):]
+	for i := 0; i < len(rest)-1; i++ {
+		if rest[i] == ',' {
+			next := rest[i+1]
+			if next >= 'a' && next <= 'z' {
+				return rest[:i]
+			}
+		}
+	}
+	return rest
 }
 
 // ParseExtendedJobInfo parses the v9.1 qstat -ext output.
@@ -445,10 +538,26 @@ func looksLikeTaskRange(s string) bool {
 	return s[0] >= '0' && s[0] <= '9'
 }
 
-// parseJaTaskIDs parses "7-99:2" or "1" into expanded task IDs.
+// parseJaTaskIDs parses task ID specifications into expanded task IDs.
+// Supported formats:
+//   - single ID: "42"
+//   - range with step: "7-99:2"
+//   - comma-separated IDs: "1,51,101"
 func parseJaTaskIDs(s string) []int64 {
 	if s == "" {
 		return nil
+	}
+
+	if strings.Contains(s, ",") {
+		var ids []int64
+		for _, part := range strings.Split(s, ",") {
+			id, err := strconv.Atoi(strings.TrimSpace(part))
+			if err != nil {
+				return nil
+			}
+			ids = append(ids, int64(id))
+		}
+		return ids
 	}
 
 	parts := strings.SplitN(s, ":", 2)

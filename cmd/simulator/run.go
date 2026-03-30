@@ -88,9 +88,30 @@ func readClusterConfig(configFile string) (qconf.ClusterConfig, error) {
 	return config, err
 }
 
+// reconcileExecHosts moves exec hosts from DiffAdded to DiffModified when they
+// already exist in the cluster. This handles the race between reading the cluster
+// state and applying changes (e.g. the execd registering after GetClusterConfiguration).
+func reconcileExecHosts(cs *qconf.CommandLineQConf, comparison *qconf.ClusterConfigComparison) {
+	if comparison.DiffAdded == nil || len(comparison.DiffAdded.ExecHosts) == 0 {
+		return
+	}
+	for name, eh := range comparison.DiffAdded.ExecHosts {
+		if _, err := cs.ShowExecHost(name); err == nil {
+			if comparison.DiffModified.ExecHosts == nil {
+				comparison.DiffModified.ExecHosts = make(map[string]qconf.HostExecConfig)
+			}
+			comparison.DiffModified.ExecHosts[name] = eh
+			delete(comparison.DiffAdded.ExecHosts, name)
+			fmt.Printf("Reconciled exec host %s: already exists, will modify instead of add\n", name)
+		}
+	}
+}
+
 // applyConfigurationChanges applies the configuration differences to the cluster
 func applyConfigurationChanges(cs *qconf.CommandLineQConf,
 	currentConfig qconf.ClusterConfig, comparison *qconf.ClusterConfigComparison) {
+
+	reconcileExecHosts(cs, comparison)
 
 	// Add new entries
 	if comparison.DiffAdded != nil {

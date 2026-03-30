@@ -38,29 +38,68 @@ type JobUrgency = v90.JobUrgency
 type JobPriority = v90.JobPriority
 type UsageDetail = v90.UsageDetail
 
+// ExecHostEntry is a single slot-assignment entry from the exec_host_list
+// field of qstat -j output.
+type ExecHostEntry struct {
+	Hostname string `json:"JG_qhostname"`
+	Slots    int    `json:"JG_slots"`
+}
+
+// GrantedRequest is a single parallel-task-group resource grant from
+// the granted_request field of qstat -j output.
+type GrantedRequest struct {
+	PTGID      int    `json:"ptg_id"`
+	GrantedReq string `json:"granted_req"`
+}
+
+// TaskUsageDetail holds per-task resource usage statistics parsed from
+// the usage field of qstat -j output.
+type TaskUsageDetail struct {
+	WallClock string `json:"wallclock"`
+	CPU       string `json:"cpu"`
+	Mem       string `json:"mem"`
+	IO        string `json:"io"`
+	IOW       string `json:"iow"`
+	IOOps     string `json:"ioops"`
+	VMem      string `json:"vmem"`
+	MaxVMem   string `json:"maxvmem"`
+	RSS       string `json:"rss"`
+	MaxRSS    string `json:"maxrss"`
+	PSS       string `json:"pss"`
+	SMem      string `json:"smem"`
+	PMem      string `json:"pmem"`
+	MaxPSS    string `json:"maxpss"`
+}
+
 // TaskDetail holds per-task runtime information from qstat -j output.
 type TaskDetail struct {
-	TaskID        int    `json:"task_id"`
-	State         string `json:"job_state"`
-	Usage         string `json:"usage"`
-	BindingList   string `json:"exec_binding_list"`
-	QueueList     string `json:"exec_queue_list"`
-	HostList      string `json:"exec_host_list"`
-	StartTime     string `json:"start_time"`
-	ResourceMap   string `json:"resource_map"`
+	TaskID          int              `json:"task_id"`
+	State           string           `json:"job_state"`
+	ExecHostList    []ExecHostEntry  `json:"exec_host_list"`
+	GrantedRequests []GrantedRequest `json:"granted_requests"`
+	GrantedLicenses []interface{}    `json:"granted_licenses"`
+	Usage           TaskUsageDetail  `json:"usage"`
+	GPUUsage        []interface{}    `json:"gpu_usage"`
+	CgroupsUsage    []interface{}    `json:"cgroups_usage"`
+	BindingList     string           `json:"exec_binding_list,omitempty"`
+	QueueList       string           `json:"exec_queue_list,omitempty"`
+	StartTime       string           `json:"start_time,omitempty"`
+	ResourceMap     string           `json:"resource_map,omitempty"`
 }
 
 // SchedulerJobInfo extends the v9.0 SchedulerJobInfo with v9.1 fields.
 type SchedulerJobInfo struct {
 	v90.SchedulerJobInfo
 
-	CategoryID    int          `json:"category_id"`
-	Groups        string       `json:"groups"`
-	SgeOLogName   string       `json:"sge_o_log_name"`
-	SgeOShell     string       `json:"sge_o_shell"`
-	Priority      int          `json:"priority"`
-	Department    string       `json:"department"`
-	SyncOptions   string       `json:"sync_options"`
-	JobArrayTasks string       `json:"job_array_tasks"`
-	Tasks         []TaskDetail `json:"tasks"`
+	CategoryID      int          `json:"category_id"`
+	Groups          string       `json:"groups"`
+	SgeOLogName     string       `json:"sge_o_log_name"`
+	SgeOShell       string       `json:"sge_o_shell"`
+	Priority        int          `json:"priority"`
+	Department      string       `json:"department"`
+	SyncOptions     string       `json:"sync_options"`
+	JobArrayTasks   string       `json:"job_array_tasks"`
+	TaskConcurrency string       `json:"task_concurrency,omitempty"`
+	PendingTasks    int          `json:"pending_tasks,omitempty"`
+	Tasks           []TaskDetail `json:"tasks"`
 }
