@@ -590,6 +590,135 @@ func parseJaTaskIDs(s string) []int64 {
 	return ids
 }
 
+// ParseQstatFullExtendedOutput parses qstat -f -ext output.
+// The queue section headers are identical to qstat -f, but each job line
+// carries the extended column set (ntckts, project, dept, cpu, mem, io,
+// ticket columns, share, slots) without a queue column, since the queue is
+// already known from the section header.
+func ParseQstatFullExtendedOutput(out string) ([]FullQueueExtendedInfo, error) {
+	lines := strings.Split(out, "\n")
+	var results []FullQueueExtendedInfo
+	var currentQueue *FullQueueExtendedInfo
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "####") {
+			break
+		}
+
+		lower := strings.ToLower(trimmed)
+		if strings.HasPrefix(lower, "queuename") {
+			continue
+		}
+
+		if isSeparatorLine(trimmed) {
+			if currentQueue != nil {
+				results = append(results, *currentQueue)
+				currentQueue = nil
+			}
+			continue
+		}
+
+		if !startsWithWhitespace(line) {
+			if currentQueue != nil {
+				results = append(results, *currentQueue)
+			}
+			fields := strings.Fields(line)
+			if len(fields) < 5 {
+				return nil, fmt.Errorf("invalid queue header format: %q", line)
+			}
+			parts := strings.Split(fields[2], "/")
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("invalid resv/used/tot format: %q", line)
+			}
+			reserved, _ := strconv.Atoi(parts[0])
+			used, _ := strconv.Atoi(parts[1])
+			total, _ := strconv.Atoi(parts[2])
+			loadAvg, _ := strconv.ParseFloat(fields[3], 64)
+			currentQueue = &FullQueueExtendedInfo{
+				QueueName: fields[0],
+				QueueType: fields[1],
+				Reserved:  reserved,
+				Used:      used,
+				Total:     total,
+				LoadAvg:   loadAvg,
+				Arch:      fields[4],
+				Jobs:      []ExtendedJobInfo{},
+			}
+			if len(fields) > 5 {
+				currentQueue.States = fields[5]
+			}
+		} else {
+			if currentQueue == nil {
+				return nil, fmt.Errorf("job info found without preceding queue header: %q", line)
+			}
+			job, err := parseFullExtendedJobLine(line, currentQueue.QueueName)
+			if err != nil {
+				return nil, err
+			}
+			currentQueue.Jobs = append(currentQueue.Jobs, job)
+		}
+	}
+
+	if currentQueue != nil {
+		results = append(results, *currentQueue)
+	}
+	return results, nil
+}
+
+// parseFullExtendedJobLine parses one indented job line from qstat -f -ext
+// output. The format is the same as the flat qstat -ext job line but without
+// the queue column, because the queue is provided by the enclosing section
+// header.
+//
+// Format:
+//
+//	job_id prior ntckts name user project dept state cpu mem io tckts ovrts otckt ftckt stckt share slots [ja-task-id]
+func parseFullExtendedJobLine(line, queueName string) (ExtendedJobInfo, error) {
+	fields := strings.Fields(line)
+	if len(fields) < 18 {
+		return ExtendedJobInfo{}, fmt.Errorf("extended job line too short (%d fields): %q", len(fields), line)
+	}
+	info := ExtendedJobInfo{}
+	var err error
+
+	info.JobID, err = strconv.Atoi(fields[0])
+	if err != nil {
+		return info, fmt.Errorf("failed to parse job_id in extended job line %q: %v", line, err)
+	}
+	info.Priority, err = strconv.ParseFloat(fields[1], 64)
+	if err != nil {
+		return info, fmt.Errorf("failed to parse prior in extended job line %q: %v", line, err)
+	}
+	info.Ntckts, err = strconv.ParseFloat(fields[2], 64)
+	if err != nil {
+		return info, fmt.Errorf("failed to parse ntckts in extended job line %q: %v", line, err)
+	}
+	info.Name = fields[3]
+	info.User = fields[4]
+	info.Project = fields[5]
+	info.Department = fields[6]
+	info.State = fields[7]
+	info.CPU = fields[8]
+	info.Memory = parseFloat64OrZero(fields[9])
+	info.IO = parseFloat64OrZero(fields[10])
+	info.Tckts, _ = strconv.Atoi(fields[11])
+	info.Ovrts, _ = strconv.Atoi(fields[12])
+	info.Otckt, _ = strconv.Atoi(fields[13])
+	info.Ftckt, _ = strconv.Atoi(fields[14])
+	info.Stckt, _ = strconv.Atoi(fields[15])
+	info.Share, _ = strconv.ParseFloat(fields[16], 64)
+	info.Queue = queueName
+	info.Slots, _ = strconv.Atoi(fields[17])
+	if len(fields) >= 19 {
+		info.JATaskID = fields[18]
+	}
+	return info, nil
+}
+
 // ParseQstatFullOutput parses the v9.1 qstat -f output.
 func ParseQstatFullOutput(out string) ([]FullQueueInfo, error) {
 	lines := strings.Split(out, "\n")
