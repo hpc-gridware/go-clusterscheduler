@@ -87,6 +87,22 @@ type TaskDetail struct {
 	ResourceMap     string           `json:"resource_map,omitempty"`
 }
 
+// FullQueueExtendedInfo is a queue section from qstat -f -ext output.
+// It is like FullQueueInfo but job entries carry the extended column set
+// (ntckts, project, department, cpu, mem, io, tickets, share) instead of
+// the plain job-ID / datetime columns.
+type FullQueueExtendedInfo struct {
+	QueueName string            `json:"queuename"`
+	QueueType string            `json:"qtype"`
+	Reserved  int               `json:"reserved"`
+	Used      int               `json:"used"`
+	Total     int               `json:"total"`
+	LoadAvg   float64           `json:"load_avg"`
+	Arch      string            `json:"arch"`
+	States    string            `json:"states,omitempty"`
+	Jobs      []ExtendedJobInfo `json:"jobs"`
+}
+
 // SchedulerJobInfo extends the v9.0 SchedulerJobInfo with v9.1 fields.
 type SchedulerJobInfo struct {
 	v90.SchedulerJobInfo

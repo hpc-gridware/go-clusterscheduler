@@ -837,4 +837,138 @@ test.q                            0.01      0      0     16     16      0      0
 
 	})
 
+	Context("ParseQstatFullExtendedOutput (qstat -f -ext)", func() {
+
+		qstatFExt := `queuename                      qtype resv/used/tot. load_avg arch          states
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@master                   BIP   0/2/14         0.22     lx-amd64
+         3 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 7
+         5 0.60500 0.50000 pe_2_5     root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim1                     BIP   0/1/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim10                    BIP   0/2/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 1
+         5 0.60500 0.50000 pe_2_5     root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim11                    BIP   0/2/10         0.22     lx-amd64
+         3 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 9
+         5 0.60500 0.50000 pe_2_5     root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim12                    BIP   0/1/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 2
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim2                     BIP   0/2/10         0.22     lx-amd64
+         3 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 5
+         5 0.60500 0.50000 pe_2_5     root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim3                     BIP   0/2/10         0.22     lx-amd64
+         2 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 2
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim4                     BIP   0/2/10         0.22     lx-amd64
+         3 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 1
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 2
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim5                     BIP   0/2/10         0.22     lx-amd64
+         3 0.50500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 3
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 2
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim6                     BIP   0/1/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim7                     BIP   0/1/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 1
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim8                     BIP   0/1/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 2
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+all.q@sim9                     BIP   0/2/10         0.22     lx-amd64
+         4 0.60500 0.50000 array_pe_2 root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1 1
+         5 0.60500 0.50000 pe_2_5     root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00      1`
+
+		It("parses all 13 queue sections", func() {
+			full, err := qstat.ParseQstatFullExtendedOutput(qstatFExt)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(full).To(HaveLen(13))
+		})
+
+		It("parses queue header fields", func() {
+			full, err := qstat.ParseQstatFullExtendedOutput(qstatFExt)
+			Expect(err).NotTo(HaveOccurred())
+
+			q := full[0]
+			Expect(q.QueueName).To(Equal("all.q@master"))
+			Expect(q.QueueType).To(Equal("BIP"))
+			Expect(q.Reserved).To(Equal(0))
+			Expect(q.Used).To(Equal(2))
+			Expect(q.Total).To(Equal(14))
+			Expect(q.LoadAvg).To(BeNumerically("~", 0.22, 0.001))
+			Expect(q.Arch).To(Equal("lx-amd64"))
+		})
+
+		It("parses two jobs in all.q@master", func() {
+			full, err := qstat.ParseQstatFullExtendedOutput(qstatFExt)
+			Expect(err).NotTo(HaveOccurred())
+
+			jobs := full[0].Jobs
+			Expect(jobs).To(HaveLen(2))
+
+			Expect(jobs[0].JobID).To(Equal(3))
+			Expect(jobs[0].Priority).To(BeNumerically("~", 0.505, 0.0001))
+			Expect(jobs[0].Ntckts).To(BeNumerically("~", 0.5, 0.0001))
+			Expect(jobs[0].Name).To(Equal("sleep"))
+			Expect(jobs[0].User).To(Equal("root"))
+			Expect(jobs[0].Project).To(Equal("NA"))
+			Expect(jobs[0].Department).To(Equal("defaultdep"))
+			Expect(jobs[0].State).To(Equal("r"))
+			Expect(jobs[0].CPU).To(Equal("NA"))
+			Expect(jobs[0].Queue).To(Equal("all.q@master"))
+			Expect(jobs[0].Slots).To(Equal(1))
+			Expect(jobs[0].JATaskID).To(Equal("7"))
+
+			Expect(jobs[1].JobID).To(Equal(5))
+			Expect(jobs[1].Name).To(Equal("pe_2_5"))
+			Expect(jobs[1].JATaskID).To(Equal(""))
+		})
+
+		It("parses single job in all.q@sim1 with array task ID 1", func() {
+			full, err := qstat.ParseQstatFullExtendedOutput(qstatFExt)
+			Expect(err).NotTo(HaveOccurred())
+
+			jobs := full[1].Jobs
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].JobID).To(Equal(4))
+			Expect(jobs[0].Name).To(Equal("array_pe_2"))
+			Expect(jobs[0].JATaskID).To(Equal("1"))
+			Expect(jobs[0].Queue).To(Equal("all.q@sim1"))
+		})
+
+		It("parses plain running job with no task ID in all.q@sim3", func() {
+			full, err := qstat.ParseQstatFullExtendedOutput(qstatFExt)
+			Expect(err).NotTo(HaveOccurred())
+
+			// all.q@sim3 is index 6
+			sim3 := full[6]
+			Expect(sim3.QueueName).To(Equal("all.q@sim3"))
+			Expect(sim3.Jobs).To(HaveLen(2))
+			Expect(sim3.Jobs[0].JobID).To(Equal(2))
+			Expect(sim3.Jobs[0].JATaskID).To(Equal(""))
+			Expect(sim3.Jobs[1].JATaskID).To(Equal("2"))
+		})
+
+		It("parses the last queue section without a trailing separator", func() {
+			full, err := qstat.ParseQstatFullExtendedOutput(qstatFExt)
+			Expect(err).NotTo(HaveOccurred())
+
+			last := full[len(full)-1]
+			Expect(last.QueueName).To(Equal("all.q@sim9"))
+			Expect(last.Jobs).To(HaveLen(2))
+			Expect(last.Jobs[0].JATaskID).To(Equal("1"))
+			Expect(last.Jobs[1].JATaskID).To(Equal(""))
+		})
+
+	})
+
 })
