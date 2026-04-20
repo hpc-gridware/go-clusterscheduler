@@ -119,6 +119,42 @@ type QConf interface {
 	DeleteShareTree() error
 	ClearShareTreeUsage() error
 
+	// ShowShareTreeStructured returns a parsed, structured view of the share
+	// tree. Returns ErrNoShareTree when no tree is configured.
+	ShowShareTreeStructured() (*StructuredShareTree, error)
+	// ModifyShareTreeStructured replaces the entire share tree atomically
+	// via qconf -Mstree, serializing the structured input to the native
+	// text format.
+	ModifyShareTreeStructured(t *StructuredShareTree) error
+	// ShowShareTreeMonitoring returns a single snapshot of runtime share
+	// tree statistics by invoking sge_share_mon. Returns
+	// ErrShareTreeMonNotAvail when the binary is not available.
+	ShowShareTreeMonitoring() (*ShareTreeMonitoring, error)
+
+	// ShowShareTreeSubtree returns a deep copy of the subtree rooted at
+	// path. Returns ErrNoShareTree when no tree is configured and a
+	// *ShareTreeValidationErrors with SHARE_PATH_NOT_FOUND when path does
+	// not resolve.
+	ShowShareTreeSubtree(path string) (*StructuredShareTreeNode, error)
+	// ModifyShareTreeSubtree replaces the subtree rooted at path with sub.
+	// The surrounding tree is preserved. Runs full-tree validation
+	// post-swap and returns a *ShareTreeValidationErrors on failure.
+	ModifyShareTreeSubtree(path string, sub *StructuredShareTreeNode) error
+	// AddShareTreeSubtree inserts sub as a new child of parentPath.
+	AddShareTreeSubtree(parentPath string, sub *StructuredShareTreeNode) error
+	// DeleteShareTreeSubtree deletes the node at path and all descendants.
+	// Root deletion is rejected here; callers should use DeleteShareTree
+	// to drop the whole tree.
+	DeleteShareTreeSubtree(path string) error
+	// MoveShareTreeSubtree relocates the subtree at srcPath to be a child
+	// of destParentPath. Rejects with SHARE_CYCLE when destParentPath is
+	// srcPath itself or a descendant of srcPath.
+	MoveShareTreeSubtree(srcPath, destParentPath string) error
+	// ApplyShareTreeBatch applies a sequence of subtree operations
+	// atomically with a single qconf read/write round-trip pair.
+	// Use when a UI (or any caller) produces multiple edits at once.
+	ApplyShareTreeBatch(ops []SubtreeOp) error
+
 	AddUserSetList(listnameList string, u UserSetListConfig) error
 	AddUserToUserSetList(userList, listnameList string) error
 	DeleteUserFromUserSetList(userList, listnameList string) error
