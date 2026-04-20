@@ -44,6 +44,14 @@ type UserConfig = core.UserConfig
 type ComplexAttributeConfig = core.ComplexAttributeConfig
 type SchedulerConfig = core.SchedulerConfig
 type ShareTreeNode = core.ShareTreeNode
+type StructuredShareTree = core.StructuredShareTree
+type StructuredShareTreeNode = core.StructuredShareTreeNode
+type ShareTreeNodeType = core.ShareTreeNodeType
+type ShareTreeMonitoring = core.ShareTreeMonitoring
+type ShareTreeNodeStats = core.ShareTreeNodeStats
+type ShareTreeValidationError = core.ShareTreeValidationError
+type ShareTreeValidationErrors = core.ShareTreeValidationErrors
+type ShareTreeValidationOptions = core.ShareTreeValidationOptions
 type ClusterSchedulerProduct = core.ClusterSchedulerProduct
 type ClusterSchedulerVersion = core.ClusterSchedulerVersion
 
@@ -58,6 +66,53 @@ const ResourceTypeTime = core.ResourceTypeTime
 const ResourceTypeString = core.ResourceTypeString
 const ResourceTypeBool = core.ResourceTypeBool
 const ResourceTypeRSMAP = core.ResourceTypeRSMAP
+
+const ShareTreeNodeUser = core.ShareTreeNodeUser
+const ShareTreeNodeProject = core.ShareTreeNodeProject
+
+// Function re-exports for the share-tree parser and formatter so consumers
+// can import only v9.0 and still use the structured helpers.
+var ParseShareTreeText = core.ParseShareTreeText
+var FormatShareTreeText = core.FormatShareTreeText
+var ParseShareMonOutput = core.ParseShareMonOutput
+
+// Subtree helper re-exports.
+var NormalizeSharePath = core.NormalizeSharePath
+var SplitSharePath = core.SplitSharePath
+var FindNodeByPath = core.FindNodeByPath
+var CloneShareTreeSubtree = core.CloneShareTreeSubtree
+var IsDescendant = core.IsDescendant
+var ValidateShareTree = core.ValidateShareTree
+var ApplySubtreeReplace = core.ApplySubtreeReplace
+var ApplySubtreeAdd = core.ApplySubtreeAdd
+var ApplySubtreeDelete = core.ApplySubtreeDelete
+var ApplySubtreeMove = core.ApplySubtreeMove
+
+// Sentinel error re-exports.
+var ErrNoShareTree = core.ErrNoShareTree
+var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
+var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
+
+// ShareCode* re-exports so qontrol handlers can branch on validation
+// errors without typing the raw string literals. Keep in lock-step with
+// go-clusterscheduler/pkg/qconf/core/share_tree_validate.go.
+const (
+	ShareCodeDuplicatePath          = core.ShareCodeDuplicatePath
+	ShareCodeProjectDuplicate       = core.ShareCodeProjectDuplicate
+	ShareCodeUserDuplicateInProject = core.ShareCodeUserDuplicateInProject
+	ShareCodeUserDuplicateOutside   = core.ShareCodeUserDuplicateOutside
+	ShareCodeUserAsInterior         = core.ShareCodeUserAsInterior
+	ShareCodeLeafUnknownName        = core.ShareCodeLeafUnknownName
+	ShareCodeProjectNested          = core.ShareCodeProjectNested
+	ShareCodeUserNoProjectAccess    = core.ShareCodeUserNoProjectAccess
+	ShareCodeNegativeShares         = core.ShareCodeNegativeShares
+	ShareCodeDefaultReserved        = core.ShareCodeDefaultReserved
+	ShareCodeCycle                  = core.ShareCodeCycle
+	ShareCodePathNotFound           = core.ShareCodePathNotFound
+	ShareCodeRootDelete             = core.ShareCodeRootDelete
+	ShareCodeEmptyName              = core.ShareCodeEmptyName
+	ShareCodeNilNode                = core.ShareCodeNilNode
+)
 
 const ConsumableYES = core.ConsumableYES
 const ConsumableNO = core.ConsumableNO

@@ -122,6 +122,18 @@ type QConf interface {
 	DeleteShareTree() error
 	ClearShareTreeUsage() error
 
+	// Structured and monitoring share-tree methods; see core.QConf docs.
+	ShowShareTreeStructured() (*StructuredShareTree, error)
+	ModifyShareTreeStructured(t *StructuredShareTree) error
+	ShowShareTreeMonitoring() (*ShareTreeMonitoring, error)
+
+	// Subtree share-tree methods; see core.QConf docs.
+	ShowShareTreeSubtree(path string) (*StructuredShareTreeNode, error)
+	ModifyShareTreeSubtree(path string, sub *StructuredShareTreeNode) error
+	AddShareTreeSubtree(parentPath string, sub *StructuredShareTreeNode) error
+	DeleteShareTreeSubtree(path string) error
+	MoveShareTreeSubtree(srcPath, destParentPath string) error
+
 	AddUserSetList(listnameList string, u UserSetListConfig) error
 	AddUserToUserSetList(userList, listnameList string) error
 	DeleteUserFromUserSetList(userList, listnameList string) error
