@@ -44,9 +44,6 @@ func ParseHosts(out string) ([]Host, error) {
 		if strings.HasPrefix(line, "HOSTNAME") {
 			continue
 		}
-		if strings.HasPrefix(line, "global") {
-			continue
-		}
 		if strings.HasPrefix(line, "---------------") {
 			continue
 		}
@@ -63,7 +60,7 @@ func ParseHosts(out string) ([]Host, error) {
 		host := Host{}
 		host.Name = fields[0]
 		host.Arch = fields[1]
-		host.NCPU, err = strconv.Atoi(fields[2])
+		host.NCPU, err = ParseIntOrUnknown(fields[2])
 		if err != nil {
 			return nil, fmt.Errorf("invalid NCPU: %s", fields[2])
 		}
@@ -87,19 +84,19 @@ func ParseHosts(out string) ([]Host, error) {
 		}
 		host.MEMTOT, err = helper.ParseMemoryFromString(fields[7])
 		if err != nil {
-			return nil, fmt.Errorf("invalid MEMTOT: %s: %v", fields[7], err)
+			return nil, fmt.Errorf("invalid MEMTOT: %s: %w", fields[7], err)
 		}
 		host.MEMUSE, err = helper.ParseMemoryFromString(fields[8])
 		if err != nil {
-			return nil, fmt.Errorf("invalid MEMUSE: %s: %v", fields[8], err)
+			return nil, fmt.Errorf("invalid MEMUSE: %s: %w", fields[8], err)
 		}
 		host.SWAPTO, err = helper.ParseMemoryFromString(fields[9])
 		if err != nil {
-			return nil, fmt.Errorf("invalid SWAPTO: %s: %v", fields[9], err)
+			return nil, fmt.Errorf("invalid SWAPTO: %s: %w", fields[9], err)
 		}
 		host.SWAPUS, err = helper.ParseMemoryFromString(fields[10])
 		if err != nil {
-			return nil, fmt.Errorf("invalid SWAPUS: %s: %v", fields[10], err)
+			return nil, fmt.Errorf("invalid SWAPUS: %s: %w", fields[10], err)
 		}
 		hosts = append(hosts, host)
 	}
@@ -422,4 +419,41 @@ func parseAttributeLine(line string, currentHost *HostFullMetrics) error {
 		currentHost.Resources[resourceName] = ra
 	}
 	return nil
+}
+
+// ParseHostsRaw parses the same input as ParseHosts but returns the raw
+// column tokens for each host (e.g. "-", "61.6G") without conversion.
+// Callers that need to render the qhost columns verbatim (such as the
+// native GCS JSON wrapper) use this entry point. The "global" row is
+// included; header lines, separators, blank lines, and indented
+// attribute lines (from qhost -F output) are skipped — so the same
+// helper handles both bare qhost and qhost -F input.
+func ParseHostsRaw(out string) ([]HostRaw, error) {
+	hosts := []HostRaw{}
+
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "HOSTNAME") {
+			continue
+		}
+		if strings.HasPrefix(line, "---------------") {
+			continue
+		}
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		// Indented lines belong to the previous host's attribute or
+		// resource section (qhost -F). They are not host headers.
+		if line[0] == ' ' || line[0] == '\t' {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 11 {
+			return nil, fmt.Errorf("invalid line: %s", line)
+		}
+		hosts = append(hosts, HostRaw{
+			Name: fields[0],
+			Cols: append([]string(nil), fields[1:11]...),
+		})
+	}
+	return hosts, nil
 }

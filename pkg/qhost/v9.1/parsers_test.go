@@ -78,17 +78,50 @@ exec                    lx-amd64        8    1    8    8  0.50   31.2G  800.0M  
 
 	Context("ParseHosts", func() {
 
-		It("parses v9.1 plain qhost output", func() {
+		It("parses v9.1 plain qhost output (global row included)", func() {
 			hosts, err := qhost.ParseHosts(qhostPlain)
 			Expect(err).To(BeNil())
-			Expect(hosts).To(HaveLen(2))
-			Expect(hosts[0].Name).To(Equal("master"))
-			Expect(hosts[0].NCPU).To(Equal(4))
-			Expect(hosts[0].NSOC).To(Equal(1))
-			Expect(hosts[0].NCOR).To(Equal(4))
-			Expect(hosts[0].NTHR).To(Equal(4))
-			Expect(hosts[1].Name).To(Equal("exec"))
-			Expect(hosts[1].NCPU).To(Equal(8))
+			Expect(hosts).To(HaveLen(3))
+			Expect(hosts[0].Name).To(Equal("global"))
+			Expect(hosts[0].NCPU).To(Equal(0))
+			Expect(hosts[0].NSOC).To(Equal(0))
+			Expect(hosts[0].LOAD).To(Equal(float64(0)))
+			Expect(hosts[1].Name).To(Equal("master"))
+			Expect(hosts[1].NCPU).To(Equal(4))
+			Expect(hosts[1].NSOC).To(Equal(1))
+			Expect(hosts[1].NCOR).To(Equal(4))
+			Expect(hosts[1].NTHR).To(Equal(4))
+			Expect(hosts[2].Name).To(Equal("exec"))
+			Expect(hosts[2].NCPU).To(Equal(8))
+		})
+
+		It("tolerates exec rows whose values are all '-'", func() {
+			input := `HOSTNAME                ARCH         NCPU NSOC NCOR NTHR  LOAD  MEMTOT  MEMUSE  SWAPTO  SWAPUS
+----------------------------------------------------------------------------------------------
+global                  -               -    -    -    -     -       -       -       -       -
+unreachable             -               -    -    -    -     -       -       -       -       -
+master                  lx-amd64        4    1    4    4  0.31   15.6G  422.9M    1.5G     0.0
+`
+			hosts, err := qhost.ParseHosts(input)
+			Expect(err).To(BeNil())
+			Expect(hosts).To(HaveLen(3))
+			Expect(hosts[1].Name).To(Equal("unreachable"))
+			Expect(hosts[1].NCPU).To(Equal(0))
+		})
+
+	})
+
+	Context("ParseHostsRaw", func() {
+
+		It("returns column tokens verbatim including '-'", func() {
+			raw, err := qhost.ParseHostsRaw(qhostPlain)
+			Expect(err).To(BeNil())
+			Expect(raw).To(HaveLen(3))
+			Expect(raw[0].Name).To(Equal("global"))
+			Expect(raw[0].Cols).To(Equal([]string{"-", "-", "-", "-", "-", "-", "-", "-", "-", "-"}))
+			Expect(raw[1].Name).To(Equal("master"))
+			Expect(raw[1].Cols[0]).To(Equal("lx-amd64"))
+			Expect(raw[1].Cols[6]).To(Equal("15.6G"))
 		})
 
 	})

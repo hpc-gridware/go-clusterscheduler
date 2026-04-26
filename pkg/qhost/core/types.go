@@ -19,6 +19,14 @@
 
 package core
 
+// HostRaw holds one qhost row as the raw string tokens of each column,
+// preserving placeholders such as "-" and unit suffixes such as "61.6G".
+// Used by callers (e.g. JSON wrappers) that need the column text verbatim.
+type HostRaw struct {
+	Name string
+	Cols []string
+}
+
 // Host is a struct that contains all values displayed by qhost output.
 type Host struct {
 	Name   string  `json:"name"`
