@@ -22,6 +22,7 @@ package qhost
 import "github.com/hpc-gridware/go-clusterscheduler/pkg/qhost/core"
 
 var ParseHosts = core.ParseHosts
+var ParseHostsRaw = core.ParseHostsRaw
 var ParseHostFullMetrics = core.ParseHostFullMetrics
 var ParseIntOrUnknown = core.ParseIntOrUnknown
 var ParseFloatOrUnknown = core.ParseFloatOrUnknown

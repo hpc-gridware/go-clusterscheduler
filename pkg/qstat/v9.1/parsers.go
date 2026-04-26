@@ -34,6 +34,31 @@ var ParseClusterQueueSummary = v90.ParseClusterQueueSummary
 
 const QstatDateFormat = "2006-01-02 15:04:05"
 
+// QstatDateFormatUS is the alternate qstat date layout emitted by some
+// 9.x builds (US-style MM/DD/YYYY).
+const QstatDateFormatUS = "01/02/2006 15:04:05"
+
+// clusterDateLayouts lists the layouts parseClusterDate accepts. Hoisted
+// to a package var so the slice is allocated once rather than per call.
+var clusterDateLayouts = []string{
+	QstatDateFormat,
+	QstatDateFormat + ".000",
+	QstatDateFormatUS,
+	QstatDateFormatUS + ".000",
+}
+
+// parseClusterDate parses a qstat date/time field accepting either the
+// ISO-style "YYYY-MM-DD HH:MM:SS" layout or the US-style
+// "MM/DD/YYYY HH:MM:SS" layout, with an optional ".NNN" sub-second part.
+func parseClusterDate(s string) (time.Time, error) {
+	for _, l := range clusterDateLayouts {
+		if t, err := time.Parse(l, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unrecognised qstat date layout: %q", s)
+}
+
 // ParseSchedulerJobInfo parses the v9.1 qstat -j output into
 // SchedulerJobInfo instances with per-task details.
 func ParseSchedulerJobInfo(input string) ([]SchedulerJobInfo, error) {
@@ -335,15 +360,15 @@ func parseExtRunning(fields []string) (ExtendedJobInfo, error) {
 
 	info.JobID, err = strconv.Atoi(fields[0])
 	if err != nil {
-		return info, fmt.Errorf("failed to parse jobID: %v", err)
+		return info, fmt.Errorf("failed to parse jobID: %w", err)
 	}
 	info.Priority, err = strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return info, fmt.Errorf("failed to parse prior: %v", err)
+		return info, fmt.Errorf("failed to parse prior: %w", err)
 	}
 	info.Ntckts, err = strconv.ParseFloat(fields[2], 64)
 	if err != nil {
-		return info, fmt.Errorf("failed to parse ntckts: %v", err)
+		return info, fmt.Errorf("failed to parse ntckts: %w", err)
 	}
 	info.Name = fields[3]
 	info.User = fields[4]
@@ -376,15 +401,15 @@ func parseExtWaiting(fields []string) (ExtendedJobInfo, error) {
 
 	info.JobID, err = strconv.Atoi(fields[0])
 	if err != nil {
-		return info, fmt.Errorf("failed to parse jobID: %v", err)
+		return info, fmt.Errorf("failed to parse jobID: %w", err)
 	}
 	info.Priority, err = strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return info, fmt.Errorf("failed to parse prior: %v", err)
+		return info, fmt.Errorf("failed to parse prior: %w", err)
 	}
 	info.Ntckts, err = strconv.ParseFloat(fields[2], 64)
 	if err != nil {
-		return info, fmt.Errorf("failed to parse ntckts: %v", err)
+		return info, fmt.Errorf("failed to parse ntckts: %w", err)
 	}
 	info.Name = fields[3]
 	info.User = fields[4]
@@ -477,7 +502,7 @@ func ParseGroupByTask(input string) ([]ParallelJobTask, error) {
 		user := fields[3]
 		state := fields[4]
 		timeStr := fields[5] + " " + fields[6]
-		jobTime, err := time.Parse(QstatDateFormat, timeStr)
+		jobTime, err := parseClusterDate(timeStr)
 		if err != nil {
 			continue
 		}
@@ -687,15 +712,15 @@ func parseFullExtendedJobLine(line, queueName string) (ExtendedJobInfo, error) {
 
 	info.JobID, err = strconv.Atoi(fields[0])
 	if err != nil {
-		return info, fmt.Errorf("failed to parse job_id in extended job line %q: %v", line, err)
+		return info, fmt.Errorf("failed to parse job_id in extended job line %q: %w", line, err)
 	}
 	info.Priority, err = strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return info, fmt.Errorf("failed to parse prior in extended job line %q: %v", line, err)
+		return info, fmt.Errorf("failed to parse prior in extended job line %q: %w", line, err)
 	}
 	info.Ntckts, err = strconv.ParseFloat(fields[2], 64)
 	if err != nil {
-		return info, fmt.Errorf("failed to parse ntckts in extended job line %q: %v", line, err)
+		return info, fmt.Errorf("failed to parse ntckts in extended job line %q: %w", line, err)
 	}
 	info.Name = fields[3]
 	info.User = fields[4]
@@ -804,19 +829,19 @@ func parseFullOutputJobLine(line, queueName string) (JobInfo, error) {
 	}
 	jobID, err := strconv.Atoi(fields[0])
 	if err != nil {
-		return JobInfo{}, fmt.Errorf("invalid job id in job line %q: %v", line, err)
+		return JobInfo{}, fmt.Errorf("invalid job id in job line %q: %w", line, err)
 	}
 	score, err := strconv.ParseFloat(fields[1], 64)
 	if err != nil {
-		return JobInfo{}, fmt.Errorf("invalid score in job line %q: %v", line, err)
+		return JobInfo{}, fmt.Errorf("invalid score in job line %q: %w", line, err)
 	}
 	name := fields[2]
 	owner := fields[3]
 	state := fields[4]
 	datetimeStr := fields[5] + " " + fields[6]
-	jobTime, err := time.Parse(QstatDateFormat, datetimeStr)
+	jobTime, err := parseClusterDate(datetimeStr)
 	if err != nil {
-		return JobInfo{}, fmt.Errorf("failed to parse datetime in job line %q: %v", line, err)
+		return JobInfo{}, fmt.Errorf("failed to parse datetime in job line %q: %w", line, err)
 	}
 
 	var submitTime, startTime time.Time
@@ -828,7 +853,7 @@ func parseFullOutputJobLine(line, queueName string) (JobInfo, error) {
 
 	slots, err := strconv.Atoi(fields[7])
 	if err != nil {
-		return JobInfo{}, fmt.Errorf("invalid slots in job line %q: %v", line, err)
+		return JobInfo{}, fmt.Errorf("invalid slots in job line %q: %w", line, err)
 	}
 
 	var taskIDs []int64
@@ -883,7 +908,7 @@ func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 		user := fields[3]
 		state := fields[4]
 		timeStr := fields[5] + " " + fields[6]
-		jobTime, err := time.Parse(QstatDateFormat, timeStr)
+		jobTime, err := parseClusterDate(timeStr)
 		if err != nil {
 			continue
 		}
@@ -917,10 +942,10 @@ func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 			}
 		}
 
-		if taskIDs == nil {
-			taskIDs = []int64{0}
-		}
-
+		// Note: taskIDs stays nil when no ja-task-ID column is present
+		// (bare flat-listing case). Earlier versions of this parser
+		// synthesised []int64{0} here, but that caused downstream
+		// converters to undo it and risked masking a real task ID of 0.
 		ji := JobInfo{
 			JobID:      jobID,
 			Priority:   priority,
