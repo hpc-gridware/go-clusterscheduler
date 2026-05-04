@@ -166,6 +166,14 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			info.SgeOHost = value
 		case "account":
 			info.Account = value
+		case "hard_resource_list":
+			info.HardResourceList = value
+		case "hard_queue_list":
+			info.HardQueueList = value
+		case "soft_resource_list":
+			info.SoftResourceList = value
+		case "soft_queue_list":
+			info.SoftQueueList = value
 		case "mail_list":
 			info.MailList = value
 		case "notify":

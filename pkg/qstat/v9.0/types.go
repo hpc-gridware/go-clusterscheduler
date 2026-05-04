@@ -169,6 +169,10 @@ type SchedulerJobInfo struct {
 	SgeOWorkDir            string        `json:"sge_o_workdir"`
 	SgeOHost               string        `json:"sge_o_host"`
 	Account                string        `json:"account"`
+	HardResourceList       string        `json:"hard_resource_list"`
+	HardQueueList          string        `json:"hard_queue_list"`
+	SoftResourceList       string        `json:"soft_resource_list"`
+	SoftQueueList          string        `json:"soft_queue_list"`
 	MailList               string        `json:"mail_list"`
 	Notify                 bool          `json:"notify"`
 	JobName                string        `json:"job_name"`
