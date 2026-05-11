@@ -32,8 +32,8 @@ var _ = Describe("Header format parsing", func() {
 
 		It("should parse all known header variations", func() {
 			testCases := []struct {
-				name   string
-				input  string
+				name    string
+				input   string
 				hasData bool
 			}{
 				{
@@ -44,7 +44,7 @@ root            138         2.000         1.517         3.517              0.340
 					true,
 				},
 				{
-					"Group + Owner format", 
+					"Group + Owner format",
 					`GROUP OWNER     WALLCLOCK         UTIME         STIME           CPU             MEMORY                 IO                IOW
 ============================================================================================================================
 root  root            138         2.000         1.517         3.517              0.340              0.001              0.000`,
@@ -65,7 +65,7 @@ master all.q                   138         2.000         1.517         3.517    
 					true,
 				},
 				{
-					"Owner + Queue + Host format", 
+					"Owner + Queue + Host format",
 					`HOST   CLUSTER QUEUE OWNER     WALLCLOCK         UTIME         STIME           CPU             MEMORY                 IO                IOW
 ===========================================================================================================================================
 master all.q         root            138         2.000         1.517         3.517              0.340              0.001              0.000`,
@@ -114,7 +114,7 @@ root      1          138         2.000         1.517         3.517              
 				By("Testing " + tc.name)
 				usage, err := qacct.ParseSummaryOutput(tc.input)
 				Expect(err).NotTo(HaveOccurred())
-				
+
 				if tc.hasData {
 					// Should have actual usage data
 					Expect(usage.WallClock).To(Equal(138.0))

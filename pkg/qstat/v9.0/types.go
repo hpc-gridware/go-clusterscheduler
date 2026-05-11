@@ -183,6 +183,14 @@ type SchedulerJobInfo struct {
 	ScriptFile             string        `json:"script_file"`
 	ParallelEnvironment    string        `json:"parallel_environment"`
 	Binding                string        `json:"binding"`
+	Cwd                    string        `json:"cwd"`
+	StderrPathList         string        `json:"stderr_path_list"`
+	StdoutPathList         string        `json:"stdout_path_list"`
+	StdinPathList          string        `json:"stdin_path_list"`
+	ShellList              string        `json:"shell_list"`
+	Merge                  bool          `json:"merge"`
+	Restart                bool          `json:"restart"`
+	JIDPredecessorListReq  string        `json:"jid_predecessor_list_req"`
 	Usage                  []UsageDetail `json:"usage"`
 	SchedulingInfo         string        `json:"scheduling_info"`
 }

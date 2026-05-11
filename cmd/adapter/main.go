@@ -61,10 +61,10 @@ func runAdapter(cmd *cobra.Command, args []string) {
 
 	router := mux.NewRouter()
 	adapterHandler := adapter.NewAdapter(qc)
-	
+
 	// Command endpoint (POST only)
 	router.Handle("/api/v0/command", adapterHandler).Methods("POST")
-	
+
 	// Health and methods endpoints (GET only)
 	router.Handle("/health", adapterHandler).Methods("GET")
 	router.Handle("/methods", adapterHandler).Methods("GET")

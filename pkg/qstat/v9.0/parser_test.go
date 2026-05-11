@@ -550,4 +550,81 @@ test.q@master                  BIP   0/0/10         0.55     lx-amd64
 
 	})
 
+	// Parity coverage for the qstat -j -j fields recently added to the
+	// per-line switch: context (todo 047), cwd / stderr_path_list /
+	// stdout_path_list / stdin_path_list / shell_list / merge / restart /
+	// jid_predecessor_list (req) (todo 048). Mirrors the v9.1 Gap A specs.
+	Context("ParseSchedulerJobInfo qstat -j Gap A fields parity", func() {
+
+		qstatJDecorated := `==============================================================
+job_number:                      10
+owner:                           root
+job_name:                        decorated
+priority:                        100
+jobshare:                        5
+cwd:                            /tmp
+stderr_path_list:                NONE:NONE:/tmp/e.log
+stdout_path_list:                NONE:NONE:/tmp/o.log
+stdin_path_list:                 NONE:NONE:/dev/null
+shell_list:                      NONE:/bin/bash
+merge:                           y
+restart:                         y
+job_args:                        600
+context:                         tag=alpha,priority=high
+jid_predecessor_list (req):      99999
+env_list:                        HOSTNAME=master
+binding:                         NONE`
+
+		It("captures context, cwd, the three path lists, and shell_list verbatim", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJDecorated)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			j := jobs[0]
+			Expect(j.Context).To(Equal("tag=alpha,priority=high"))
+			Expect(j.Cwd).To(Equal("/tmp"))
+			Expect(j.StderrPathList).To(Equal("NONE:NONE:/tmp/e.log"))
+			Expect(j.StdoutPathList).To(Equal("NONE:NONE:/tmp/o.log"))
+			Expect(j.StdinPathList).To(Equal("NONE:NONE:/dev/null"))
+			Expect(j.ShellList).To(Equal("NONE:/bin/bash"))
+		})
+
+		It("converts merge and restart y/n text to bool at the parser", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJDecorated)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs[0].Merge).To(BeTrue())
+			Expect(jobs[0].Restart).To(BeTrue())
+		})
+
+		It("captures job_args and jid_predecessor_list (req)", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJDecorated)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs[0].JobArgs).To(Equal("600"))
+			Expect(jobs[0].JIDPredecessorListReq).To(Equal("99999"))
+		})
+
+		It("leaves Gap A fields at zero values when their lines are absent", func() {
+			minimal := `==============================================================
+job_number:                      11
+owner:                           root
+job_name:                        minimal
+priority:                        0
+jobshare:                        0
+env_list:                        HOSTNAME=master
+binding:                         NONE`
+			jobs, err := qstat.ParseSchedulerJobInfo(minimal)
+			Expect(err).NotTo(HaveOccurred())
+			j := jobs[0]
+			Expect(j.Context).To(Equal(""))
+			Expect(j.Cwd).To(Equal(""))
+			Expect(j.StderrPathList).To(Equal(""))
+			Expect(j.StdoutPathList).To(Equal(""))
+			Expect(j.StdinPathList).To(Equal(""))
+			Expect(j.ShellList).To(Equal(""))
+			Expect(j.Merge).To(BeFalse())
+			Expect(j.Restart).To(BeFalse())
+			Expect(j.JIDPredecessorListReq).To(Equal(""))
+		})
+
+	})
+
 })

@@ -194,6 +194,22 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			info.EnvList = value
 		case "context":
 			info.Context = value
+		case "cwd":
+			info.Cwd = value
+		case "stderr_path_list":
+			info.StderrPathList = value
+		case "stdout_path_list":
+			info.StdoutPathList = value
+		case "stdin_path_list":
+			info.StdinPathList = value
+		case "shell_list":
+			info.ShellList = value
+		case "merge":
+			info.Merge = isTrueString(value)
+		case "restart":
+			info.Restart = isTrueString(value)
+		case "jid_predecessor_list (req)":
+			info.JIDPredecessorListReq = value
 		case "job_args":
 			info.JobArgs = value
 		case "script_file":
@@ -982,6 +998,18 @@ func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 func startsWithWhitespace(s string) bool {
 	for _, r := range s {
 		return unicode.IsSpace(r)
+	}
+	return false
+}
+
+// isTrueString reports whether the textual value qstat -j emits
+// for a boolean field (y, yes, TRUE, true, 1) means true.
+// Case-insensitive; anything else, including "n"/"NONE"/"FALSE"/
+// the empty string, is false.
+func isTrueString(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "y", "yes", "true", "1":
+		return true
 	}
 	return false
 }

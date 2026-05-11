@@ -221,7 +221,7 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (a *adapter) handleGetEndpoints(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	switch r.URL.Path {
 	case "/health":
 		a.handleHealth(w, r)
@@ -241,7 +241,7 @@ func (a *adapter) handleHealth(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Uptime:    uptime.String(),
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(health)
 }
@@ -249,18 +249,18 @@ func (a *adapter) handleHealth(w http.ResponseWriter, r *http.Request) {
 func (a *adapter) handleMethods(w http.ResponseWriter, r *http.Request) {
 	instanceValue := reflect.ValueOf(a.instance)
 	instanceType := instanceValue.Type()
-	
+
 	var methods []MethodInfo
 	for i := 0; i < instanceType.NumMethod(); i++ {
 		method := instanceType.Method(i)
 		methodType := method.Type
-		
+
 		// Get parameter types
 		var params []string
 		for j := 1; j < methodType.NumIn(); j++ { // Skip receiver (index 0)
 			params = append(params, methodType.In(j).String())
 		}
-		
+
 		// Get return type
 		var returnType string
 		if methodType.NumOut() > 0 {
@@ -272,10 +272,10 @@ func (a *adapter) handleMethods(w http.ResponseWriter, r *http.Request) {
 		} else {
 			returnType = "void"
 		}
-		
+
 		// Generate description based on method name
 		description := a.generateMethodDescription(method.Name)
-		
+
 		methods = append(methods, MethodInfo{
 			Name:        method.Name,
 			Description: description,
@@ -283,12 +283,12 @@ func (a *adapter) handleMethods(w http.ResponseWriter, r *http.Request) {
 			ReturnType:  returnType,
 		})
 	}
-	
+
 	response := MethodsResponse{
 		Methods: methods,
 		Count:   len(methods),
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }

@@ -99,20 +99,20 @@ var _ = Describe("Comprehensive qacct parsing", func() {
 				name    string
 				builder func() *qacct.SummaryBuilder
 			}{
-				{"owner + queue + host", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").Queue("all.q").Host("master") 
+				{"owner + queue + host", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").Queue("all.q").Host("master")
 				}},
-				{"owner + queue + project", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").Queue("all.q").Project("default") 
+				{"owner + queue + project", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").Queue("all.q").Project("default")
 				}},
-				{"owner + group + department", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").Group("root").Department("defaultdepartment") 
+				{"owner + group + department", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").Group("root").Department("defaultdepartment")
 				}},
-				{"queue + host + project", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Queue("all.q").Host("master").Project("default") 
+				{"queue + host + project", func() *qacct.SummaryBuilder {
+					return qa.Summary().Queue("all.q").Host("master").Project("default")
 				}},
-				{"owner + days + slots", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").LastDays(1).Slots(1) 
+				{"owner + days + slots", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").LastDays(1).Slots(1)
 				}},
 			}
 
@@ -132,14 +132,14 @@ var _ = Describe("Comprehensive qacct parsing", func() {
 				name    string
 				builder func() *qacct.SummaryBuilder
 			}{
-				{"owner + queue + host + project", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").Queue("all.q").Host("master").Project("default") 
+				{"owner + queue + host + project", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").Queue("all.q").Host("master").Project("default")
 				}},
-				{"owner + group + department + days", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").Group("root").Department("defaultdepartment").LastDays(1) 
+				{"owner + group + department + days", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").Group("root").Department("defaultdepartment").LastDays(1)
 				}},
-				{"all common filters", func() *qacct.SummaryBuilder { 
-					return qa.Summary().Owner("root").Queue("all.q").Host("master").LastDays(1).Slots(1) 
+				{"all common filters", func() *qacct.SummaryBuilder {
+					return qa.Summary().Owner("root").Queue("all.q").Host("master").LastDays(1).Slots(1)
 				}},
 			}
 
@@ -201,8 +201,8 @@ var _ = Describe("Comprehensive qacct parsing", func() {
 				{"owner + queue", func() *qacct.JobsBuilder { return qa.Jobs().Owner("root").Queue("all.q") }},
 				{"owner + days", func() *qacct.JobsBuilder { return qa.Jobs().Owner("root").LastDays(1) }},
 				{"queue + host", func() *qacct.JobsBuilder { return qa.Jobs().Queue("all.q").Host("master") }},
-				{"complex combination", func() *qacct.JobsBuilder { 
-					return qa.Jobs().Owner("root").Queue("all.q").Host("master").LastDays(1) 
+				{"complex combination", func() *qacct.JobsBuilder {
+					return qa.Jobs().Owner("root").Queue("all.q").Host("master").LastDays(1)
 				}},
 			}
 
