@@ -192,6 +192,8 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			info.JobShare, _ = strconv.Atoi(value)
 		case "env_list":
 			info.EnvList = value
+		case "context":
+			info.Context = value
 		case "job_args":
 			info.JobArgs = value
 		case "script_file":

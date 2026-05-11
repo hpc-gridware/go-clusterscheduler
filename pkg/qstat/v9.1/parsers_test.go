@@ -195,6 +195,49 @@ scheduling info:                 (Collecting of scheduler job information is tur
 
 	})
 
+	Context("ParseSchedulerJobInfo with -ac context vars", func() {
+
+		qstatJWithContext := `==============================================================
+job_number:                      2
+owner:                           root
+job_name:                        ctxtest
+priority:                        0
+jobshare:                        0
+env_list:                        HOSTNAME=master
+context:                         tag=alpha,priority=high
+binding:                         NONE
+job_state                   1:   r
+exec_host_list              1:   sim117=1
+start_time                  1:   2026-05-11 09:33:55.404696`
+
+		qstatJWithoutContext := `==============================================================
+job_number:                      3
+owner:                           root
+job_name:                        noctx
+priority:                        0
+jobshare:                        0
+env_list:                        HOSTNAME=master
+binding:                         NONE
+job_state                   1:   r
+exec_host_list              1:   sim117=1
+start_time                  1:   2026-05-11 09:34:00.000000`
+
+		It("captures the context line verbatim as a comma-separated K=V string", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJWithContext)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].Context).To(Equal("tag=alpha,priority=high"))
+		})
+
+		It("leaves Context empty when the context line is absent (no NONE sentinel)", func() {
+			jobs, err := qstat.ParseSchedulerJobInfo(qstatJWithoutContext)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].Context).To(Equal(""))
+		})
+
+	})
+
 	Context("ParseSchedulerJobInfo with task_concurrency and granted_request", func() {
 
 		qstatJArray := `==============================================================
