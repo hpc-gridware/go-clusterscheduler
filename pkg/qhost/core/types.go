@@ -73,6 +73,12 @@ type HostFullMetrics struct {
 	NPLoadLong    float64 `json:"np_load_long"`
 	// Cluster defined metrics
 	Resources map[string]ResourceAvailability `json:"resources"`
+	// ResourceOrder is the order in which Resources entries appeared
+	// in the qhost -F text output. Consumers that need to preserve
+	// source order (e.g. JSON envelopes that mirror the cluster's
+	// native -json shape) walk this slice and look up Resources by
+	// name. Empty for hosts with no cluster-defined resources.
+	ResourceOrder []string `json:"resource_order,omitempty"`
 }
 
 // ResourceAvailability is a struct that contains the availability of a resource
@@ -90,6 +96,13 @@ type ResourceAvailability struct {
 	// - "c" availabililty derived from the consumable calculation
 	// - "F" Non-consumable resource; Fixed value
 	Source string `json:"source"`
+	// Dominance is the literal two-byte prefix from the source text
+	// (e.g. "hl", "hc", "gc", "hL"). Preserves the original case so
+	// downstream consumers can emit it byte-for-byte without
+	// reconstructing it from ResourceAvailabilityLimitedBy + Source
+	// (which normalize uppercase L for scaled load and would lose
+	// fidelity).
+	Dominance string `json:"dominance"`
 	// The full output string "hl:np_load_medium=0.127500"
 	FullString string `json:"full_string"`
 }

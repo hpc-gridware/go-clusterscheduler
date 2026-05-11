@@ -408,6 +408,7 @@ func parseAttributeLine(line string, currentHost *HostFullMetrics) error {
 			StringValue:                   value,
 			ResourceAvailabilityLimitedBy: resourceAvailabilityLimitedBy,
 			Source:                        source,
+			Dominance:                     prefix,
 			FullString:                    line,
 		}
 
@@ -416,6 +417,9 @@ func parseAttributeLine(line string, currentHost *HostFullMetrics) error {
 			ra.FloatValue = floatValue
 		}
 
+		if _, seen := currentHost.Resources[resourceName]; !seen {
+			currentHost.ResourceOrder = append(currentHost.ResourceOrder, resourceName)
+		}
 		currentHost.Resources[resourceName] = ra
 	}
 	return nil
