@@ -178,6 +178,7 @@ type SchedulerJobInfo struct {
 	JobName                string        `json:"job_name"`
 	JobShare               int           `json:"jobshare"`
 	EnvList                string        `json:"env_list"`
+	Context                string        `json:"context"`
 	JobArgs                string        `json:"job_args"`
 	ScriptFile             string        `json:"script_file"`
 	ParallelEnvironment    string        `json:"parallel_environment"`
