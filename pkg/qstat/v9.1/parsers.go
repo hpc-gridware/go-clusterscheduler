@@ -60,7 +60,10 @@ func parseClusterDate(s string) (time.Time, error) {
 }
 
 // ParseSchedulerJobInfo parses the v9.1 qstat -j output into
-// SchedulerJobInfo instances with per-task details.
+// SchedulerJobInfo instances with per-task details. Blocks that do
+// not contain a job_number line (e.g. the cluster's "Found no
+// matching jobs" sentinel emitted when -j matches nothing) are
+// skipped rather than appended as zero-value records.
 func ParseSchedulerJobInfo(input string) ([]SchedulerJobInfo, error) {
 	var jobs []SchedulerJobInfo
 	blocks := strings.Split(input,
@@ -74,6 +77,9 @@ func ParseSchedulerJobInfo(input string) ([]SchedulerJobInfo, error) {
 		info, err := parseJob(block)
 		if err != nil {
 			return nil, err
+		}
+		if info.JobNumber == 0 {
+			continue
 		}
 		jobs = append(jobs, info)
 	}
@@ -976,6 +982,87 @@ func startsWithWhitespace(s string) bool {
 		return unicode.IsSpace(r)
 	}
 	return false
+}
+
+// ParseJobArrayTaskWithT parses qstat -t output, where each text
+// row represents one task: the master row carries the full column
+// set (job-ID prior name user state submit/start at queue master),
+// and continuation rows carry only queue and role ("SLAVE" or
+// "N/A"). Returns one JobArrayTask per row; continuation rows
+// inherit JobID, Priority, Name, User, State, SubmitTime, and
+// StartTime from the most recent master row. Slots is set to 1 on
+// every row because the -t text layout has no slots column.
+func ParseJobArrayTaskWithT(out string) ([]JobArrayTask, error) {
+	lines := strings.Split(out, "\n")
+	var tasks []JobArrayTask
+	if len(lines) < 2 {
+		return tasks, nil
+	}
+
+	var lastMasterInfo JobInfo
+	var haveMaster bool
+	headerDone := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "job-ID") || strings.HasPrefix(trimmed, "---") {
+			headerDone = true
+			continue
+		}
+		if !headerDone || trimmed == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+
+		if jobID, err := strconv.Atoi(fields[0]); err == nil && len(fields) >= 9 {
+			priority, _ := strconv.ParseFloat(fields[1], 64)
+			name := fields[2]
+			user := fields[3]
+			state := fields[4]
+			timeStr := fields[5] + " " + fields[6]
+			jobTime, perr := parseClusterDate(timeStr)
+			if perr != nil {
+				continue
+			}
+			queue := fields[7]
+			master := fields[8]
+
+			var submitTime, startTime time.Time
+			if strings.Contains(state, "qw") {
+				submitTime = jobTime
+			} else {
+				startTime = jobTime
+			}
+
+			ji := JobInfo{
+				JobID:      jobID,
+				Priority:   priority,
+				Name:       name,
+				User:       user,
+				State:      state,
+				SubmitTime: submitTime,
+				StartTime:  startTime,
+				Queue:      queue,
+				Slots:      1,
+			}
+			lastMasterInfo = ji
+			haveMaster = true
+			tasks = append(tasks, JobArrayTask{JobInfo: ji, Master: master})
+			continue
+		}
+
+		// Continuation (slave) row: queue + role only.
+		if !haveMaster || len(fields) < 2 {
+			continue
+		}
+		slave := JobArrayTask{JobInfo: lastMasterInfo, Master: fields[1]}
+		slave.Queue = fields[0]
+		tasks = append(tasks, slave)
+	}
+	return tasks, nil
 }
 
 func isSeparatorLine(s string) bool {
