@@ -1090,4 +1090,143 @@ all.q@sim9                     BIP   0/2/10         0.22     lx-amd64
 
 	})
 
+	Context("ParseJobArrayTaskWithT (qstat -t)", func() {
+
+		header := "job-ID     prior   name       user         state submit/start at     queue                          master ja-task-ID task-ID state cpu        mem     io      stat failed\n" +
+			"-----------------------------------------------------------------------------------------------------------------------------------------------------------------------\n"
+
+		It("returns empty for empty input", func() {
+			tasks, err := qstat.ParseJobArrayTaskWithT("")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(BeEmpty())
+		})
+
+		It("parses a running master row with queue and master role", func() {
+			out := header +
+				"         3 0.55500 sleep      root         r     2026-05-05 08:32:42 all.q@sim128                   MASTER\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+
+			Expect(tasks[0].JobID).To(Equal(3))
+			Expect(tasks[0].Name).To(Equal("sleep"))
+			Expect(tasks[0].User).To(Equal("root"))
+			Expect(tasks[0].State).To(Equal("r"))
+			Expect(tasks[0].Queue).To(Equal("all.q@sim128"))
+			Expect(tasks[0].Master).To(Equal("MASTER"))
+			Expect(tasks[0].Slots).To(Equal(1))
+			Expect(tasks[0].StartTime.IsZero()).To(BeFalse())
+			Expect(tasks[0].SubmitTime.IsZero()).To(BeTrue())
+		})
+
+		It("inherits master metadata across SLAVE continuation rows", func() {
+			out := header +
+				"         3 0.55500 sleep      root         r     2026-05-05 08:32:42 all.q@sim128                   MASTER\n" +
+				"                                                                     all.q@sim129                   SLAVE\n" +
+				"                                                                     all.q@sim130                   SLAVE\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(3))
+
+			Expect(tasks[1].JobID).To(Equal(3))
+			Expect(tasks[1].Master).To(Equal("SLAVE"))
+			Expect(tasks[1].Queue).To(Equal("all.q@sim129"))
+			Expect(tasks[1].Slots).To(Equal(1))
+			Expect(tasks[1].StartTime).To(Equal(tasks[0].StartTime))
+
+			Expect(tasks[2].Queue).To(Equal("all.q@sim130"))
+		})
+
+		It("parses a pending qw row with no queue and no master role", func() {
+			out := header +
+				"       183 0.55500 TestPendin tsgeadmin    qw    2026-05-20 11:32:05\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+
+			Expect(tasks[0].JobID).To(Equal(183))
+			Expect(tasks[0].Name).To(Equal("TestPendin"))
+			Expect(tasks[0].User).To(Equal("tsgeadmin"))
+			Expect(tasks[0].State).To(Equal("qw"))
+			Expect(tasks[0].Queue).To(BeEmpty())
+			Expect(tasks[0].Master).To(BeEmpty())
+			Expect(tasks[0].Slots).To(Equal(0))
+			Expect(tasks[0].SubmitTime.IsZero()).To(BeFalse())
+			Expect(tasks[0].StartTime.IsZero()).To(BeTrue())
+			Expect(tasks[0].SubmitTime.Year()).To(Equal(2026))
+		})
+
+		It("keeps a running master and a pending row both visible in one listing", func() {
+			out := header +
+				"         3 0.55500 sleep      root         r     2026-05-05 08:32:42 all.q@sim128                   MASTER\n" +
+				"                                                                     all.q@sim129                   SLAVE\n" +
+				"       183 0.55500 TestPendin tsgeadmin    qw    2026-05-20 11:32:05\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(3))
+
+			Expect(tasks[0].JobID).To(Equal(3))
+			Expect(tasks[0].Master).To(Equal("MASTER"))
+			Expect(tasks[1].JobID).To(Equal(3))
+			Expect(tasks[1].Master).To(Equal("SLAVE"))
+			Expect(tasks[2].JobID).To(Equal(183))
+			Expect(tasks[2].State).To(Equal("qw"))
+			Expect(tasks[2].Master).To(BeEmpty())
+			Expect(tasks[2].Slots).To(Equal(0))
+		})
+
+		It("does not let a pending row become a master for following SLAVE rows", func() {
+			out := header +
+				"       183 0.55500 TestPendin tsgeadmin    qw    2026-05-20 11:32:05\n" +
+				"                                                                     all.q@sim128                   SLAVE\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1), "the stray SLAVE row has no running master to attach to")
+			Expect(tasks[0].JobID).To(Equal(183))
+			Expect(tasks[0].State).To(Equal("qw"))
+		})
+
+		It("ignores a SLAVE continuation row that has no preceding master", func() {
+			out := header +
+				"                                                                     all.q@sim128                   SLAVE\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(BeEmpty())
+		})
+
+		It("skips a job row whose date is unparseable rather than aborting the listing", func() {
+			out := header +
+				"       183 0.55500 TestPendin tsgeadmin    qw    not-a-date 11:32:05\n" +
+				"       184 0.55500 NextOne    tsgeadmin    qw    2026-05-20 11:32:06\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+			Expect(tasks[0].JobID).To(Equal(184))
+		})
+
+		It("groups slaves with the most recent master across two running jobs", func() {
+			out := header +
+				"         3 0.55500 sleep      root         r     2026-05-05 08:32:42 all.q@sim128                   MASTER\n" +
+				"                                                                     all.q@sim129                   SLAVE\n" +
+				"         4 0.55500 burn       root         r     2026-05-05 08:56:52 all.q@sim117                   MASTER\n" +
+				"                                                                     all.q@sim118                   SLAVE\n"
+
+			tasks, err := qstat.ParseJobArrayTaskWithT(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(4))
+			Expect(tasks[0].JobID).To(Equal(3))
+			Expect(tasks[1].JobID).To(Equal(3))
+			Expect(tasks[2].JobID).To(Equal(4))
+			Expect(tasks[3].JobID).To(Equal(4))
+		})
+
+	})
+
 })

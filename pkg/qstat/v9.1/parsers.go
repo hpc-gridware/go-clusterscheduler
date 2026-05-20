@@ -1014,14 +1014,19 @@ func isTrueString(s string) bool {
 	return false
 }
 
-// ParseJobArrayTaskWithT parses qstat -t output, where each text
-// row represents one task: the master row carries the full column
-// set (job-ID prior name user state submit/start at queue master),
-// and continuation rows carry only queue and role ("SLAVE" or
-// "N/A"). Returns one JobArrayTask per row; continuation rows
-// inherit JobID, Priority, Name, User, State, SubmitTime, and
-// StartTime from the most recent master row. Slots is set to 1 on
-// every row because the -t text layout has no slots column.
+// ParseJobArrayTaskWithT parses qstat -t output. Each text row is one
+// of three shapes:
+//
+//   - Running master row: 9 fields — job-ID prior name user state
+//     submit/start (date + time) queue master. Becomes a JobArrayTask
+//     with Slots=1 and Master set.
+//   - Pending row (qw): 7 fields — same as above but no queue and no
+//     master role (qstat leaves those columns blank for pending jobs).
+//     Becomes a standalone JobArrayTask with Slots=0 and empty Master;
+//     does not become a "master" for subsequent slave inheritance.
+//   - Continuation (slave) row: 2 fields — queue + role ("SLAVE" or
+//     "N/A"). Inherits JobID, Priority, Name, User, State, SubmitTime,
+//     and StartTime from the most recent running-master row.
 func ParseJobArrayTaskWithT(out string) ([]JobArrayTask, error) {
 	lines := strings.Split(out, "\n")
 	var tasks []JobArrayTask
@@ -1047,7 +1052,7 @@ func ParseJobArrayTaskWithT(out string) ([]JobArrayTask, error) {
 			continue
 		}
 
-		if jobID, err := strconv.Atoi(fields[0]); err == nil && len(fields) >= 9 {
+		if jobID, err := strconv.Atoi(fields[0]); err == nil && len(fields) >= 7 {
 			priority, _ := strconv.ParseFloat(fields[1], 64)
 			name := fields[2]
 			user := fields[3]
@@ -1057,8 +1062,14 @@ func ParseJobArrayTaskWithT(out string) ([]JobArrayTask, error) {
 			if perr != nil {
 				continue
 			}
-			queue := fields[7]
-			master := fields[8]
+
+			var queue, master string
+			slots := 0
+			if len(fields) >= 9 {
+				queue = fields[7]
+				master = fields[8]
+				slots = 1
+			}
 
 			var submitTime, startTime time.Time
 			if strings.Contains(state, "qw") {
@@ -1076,15 +1087,16 @@ func ParseJobArrayTaskWithT(out string) ([]JobArrayTask, error) {
 				SubmitTime: submitTime,
 				StartTime:  startTime,
 				Queue:      queue,
-				Slots:      1,
+				Slots:      slots,
 			}
-			lastMasterInfo = ji
-			haveMaster = true
+			if master != "" {
+				lastMasterInfo = ji
+				haveMaster = true
+			}
 			tasks = append(tasks, JobArrayTask{JobInfo: ji, Master: master})
 			continue
 		}
 
-		// Continuation (slave) row: queue + role only.
 		if !haveMaster || len(fields) < 2 {
 			continue
 		}
