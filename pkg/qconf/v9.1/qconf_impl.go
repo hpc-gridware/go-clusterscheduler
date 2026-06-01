@@ -46,8 +46,10 @@ func NewCommandLineQConf(config CommandLineQConfConfig) (*CommandLineQConf, erro
 }
 
 // ShowGlobalConfiguration returns the global configuration with v9.1-specific
-// fields parsed. It reuses the core parser for base fields and adds a second
-// pass for v9.1-only fields.
+// fields parsed. It reuses the core parser for base fields and then promotes
+// v9.1-only keys out of ExtraFields into their typed slots so the residual
+// ExtraFields contains only truly unrecognised parameters (e.g. a future
+// v9.2 field set via qconf -mconf before this client knows about it).
 func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	out, err := c.RunCommand("-sconf", "global")
 	if err != nil {
@@ -55,31 +57,37 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	}
 	lines := strings.Split(out, "\n")
 
-	// Parse base (v9.0/core) fields.
+	// Parse base (v9.0/core) fields. Anything outside the v9.0 schema
+	// lands in baseCfg.ExtraFields, including the v9.1-specific keys
+	// promoted just below.
 	baseCfg := core.ParseGlobalConfigFromLines(lines)
 
 	cfg := &GlobalConfig{
 		GlobalConfig: baseCfg,
 	}
 
-	// Parse v9.1-specific fields.
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			continue
-		}
-		switch fields[0] {
-		case "jsv_params":
-			cfg.JsvParams = fields[1]
-		case "topology_file":
-			cfg.TopologyFile = fields[1]
-		case "mail_tag":
-			cfg.MailTag = fields[1]
-		case "gdi_request_limits":
-			cfg.GDIRequestLimits = fields[1]
-		case "binding_params":
-			cfg.BindingParams = core.ParseIntoStringStringMap(fields[1], ",")
-		}
+	// Promote v9.1-specific keys from ExtraFields into typed fields.
+	// Delete each promoted entry so the map ends up containing only
+	// truly unrecognised parameters.
+	if v, ok := cfg.ExtraFields["jsv_params"]; ok {
+		cfg.JsvParams = v
+		delete(cfg.ExtraFields, "jsv_params")
+	}
+	if v, ok := cfg.ExtraFields["topology_file"]; ok {
+		cfg.TopologyFile = v
+		delete(cfg.ExtraFields, "topology_file")
+	}
+	if v, ok := cfg.ExtraFields["mail_tag"]; ok {
+		cfg.MailTag = v
+		delete(cfg.ExtraFields, "mail_tag")
+	}
+	if v, ok := cfg.ExtraFields["gdi_request_limits"]; ok {
+		cfg.GDIRequestLimits = v
+		delete(cfg.ExtraFields, "gdi_request_limits")
+	}
+	if v, ok := cfg.ExtraFields["binding_params"]; ok {
+		cfg.BindingParams = core.ParseIntoStringStringMap(v, ",")
+		delete(cfg.ExtraFields, "binding_params")
 	}
 
 	return cfg, nil
@@ -100,6 +108,12 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 	typeOfS := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		fieldName := typeOfS.Field(i).Tag.Get("json")
+		// Skip fields that are not part of the qconf wire format
+		// (e.g. ExtraFields is tagged `json:"-"` and is emitted
+		// separately below via WriteExtraFields).
+		if fieldName == "" || fieldName == "-" {
+			continue
+		}
 		fieldValue := v.Field(i).Interface()
 
 		if reflect.TypeOf(fieldValue).Kind() == reflect.Slice {
@@ -153,6 +167,13 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 	// Write binding_params as comma-separated key=value pairs.
 	bindingStr := core.JoinStringStringMap(cfg.BindingParams, ",")
 	if err := writeField("binding_params", bindingStr); err != nil {
+		return err
+	}
+
+	// Emit unknown keys preserved through the round trip. Typed keys
+	// of cfg include both the core v9.0 fields (via embedding) and the
+	// v9.1 fields written above, so a collision drops the extras entry.
+	if err := core.WriteExtraFields(file, cfg.ExtraFields, core.TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 

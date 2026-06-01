@@ -568,13 +568,20 @@ func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, er
 	}
 	lines := strings.Split(out, "\n")
 	cfg := CalendarConfig{Name: calendarName}
-	for _, line := range lines {
-		if strings.HasPrefix(line, "year") {
-			cfg.Year = strings.TrimSpace(strings.Fields(line)[1])
-		} else if strings.HasPrefix(line, "week") {
-			cfg.Week = strings.TrimSpace(strings.Fields(line)[1])
-		} else if strings.HasPrefix(line, "calendar_name") {
-			cfg.Name = strings.TrimSpace(strings.Fields(line)[1])
+	for i, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		switch fields[0] {
+		case "calendar_name":
+			cfg.Name = strings.TrimSpace(fields[1])
+		case "year":
+			cfg.Year = strings.TrimSpace(fields[1])
+		case "week":
+			cfg.Week = strings.TrimSpace(fields[1])
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -693,7 +700,7 @@ func (c *CommandLineQConf) ShowComplexEntry(entryName string) (ComplexEntryConfi
 	}
 	lines := strings.Split(out, "\n")
 	cfg := ComplexEntryConfig{Name: entryName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -724,6 +731,8 @@ func (c *CommandLineQConf) ShowComplexEntry(entryName string) (ComplexEntryConfi
 					fmt.Errorf("invalid urgency value: %v", err)
 			}
 			cfg.Urgency = urgency
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -852,7 +861,7 @@ func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfac
 	}
 	lines := strings.Split(out, "\n")
 	cfg := CkptInterfaceConfig{Name: interfaceName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -876,6 +885,8 @@ func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfac
 			cfg.Signal = fields[1]
 		case "when":
 			cfg.When = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -1073,7 +1084,7 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 	cfg := HostConfiguration{
 		Name: hostName,
 	}
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -1138,6 +1149,8 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 			cfg.LibJvmPath = &value
 		case "additional_jvm_args":
 			cfg.AdditionalJvmArgs = &value
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -1251,6 +1264,8 @@ func ParseGlobalConfigFromLines(lines []string) GlobalConfig {
 			cfg.JsvURL = fields[1]
 		case "jsv_allowed_mod":
 			cfg.JsvAllowedMod = ParseCommaSeparatedMultiLineValues(lines, i)
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg
@@ -1413,6 +1428,8 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 			cfg.UsageScaling = ParseIntoStringFloatMap(line, ",")
 		case "report_variables":
 			cfg.ReportVariables = ParseCommaSeparatedMultiLineValues(lines, i)
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -1525,7 +1542,7 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 	}
 	lines := strings.Split(out, "\n")
 	cfg := HostGroupConfig{Name: groupName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -1536,6 +1553,8 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 		case "hostlist":
 			cfg.Hosts = strings.Split(strings.TrimSpace(
 				strings.TrimPrefix(line, fields[0])), " ")
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -1617,7 +1636,7 @@ func (c *CommandLineQConf) ShowResourceQuotaSet(rqsList string) (ResourceQuotaSe
 	}
 	lines := strings.Split(out, "\n")
 	cfg := ResourceQuotaSetConfig{Name: rqsList}
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -1634,6 +1653,8 @@ func (c *CommandLineQConf) ShowResourceQuotaSet(rqsList string) (ResourceQuotaSe
 		case "limit":
 			cfg.Limits = append(cfg.Limits,
 				strings.TrimSpace(strings.TrimPrefix(line, fields[0])))
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -1863,6 +1884,8 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 			cfg.MasterForksSlaves, _ = strconv.ParseBool(fields[1])
 		case "daemon_forks_slaves":
 			cfg.DaemonForksSlaves, _ = strconv.ParseBool(fields[1])
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -1953,6 +1976,8 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 			cfg.ACL = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "xacl":
 			cfg.XACL = ParseSpaceSeparatedMultiLineValues(lines, i)
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -2519,6 +2544,8 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 			cfg.SVmem = ParseCommaSeparatedValuesWithOverrides(lines, i)
 		case "h_vmem":
 			cfg.HVmem = ParseCommaSeparatedValuesWithOverrides(lines, i)
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 
@@ -2615,6 +2642,8 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 			cfg.OTicket, _ = strconv.Atoi(fields[1])
 		case "entries":
 			cfg.Entries = ParseCommaSeparatedMultiLineValues(lines, i)
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -2722,7 +2751,7 @@ func (c *CommandLineQConf) ShowUser(userName string) (UserConfig, error) {
 
 	lines := strings.Split(out, "\n")
 	cfg := UserConfig{Name: userName}
-	for _, line := range lines {
+	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -2738,6 +2767,8 @@ func (c *CommandLineQConf) ShowUser(userName string) (UserConfig, error) {
 			cfg.DeleteTime, _ = strconv.Atoi(fields[1])
 		case "default_project":
 			cfg.DefaultProject = strings.TrimSpace(strings.TrimPrefix(line, fields[0]))
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return cfg, nil
@@ -2889,6 +2920,9 @@ func (c *CommandLineQConf) ModifyComplexEntry(complexName string, cfg ComplexEnt
 	if err != nil {
 		return err
 	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
+	}
 	file.Close()
 
 	_, err = c.RunCommand("-Mce", file.Name())
@@ -2920,6 +2954,9 @@ func (c *CommandLineQConf) ModifyCalendar(calendarName string, cfg CalendarConfi
 	}
 	_, err = file.WriteString(fmt.Sprintf("week             %s\n", cfg.Week))
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -2969,6 +3006,9 @@ func (c *CommandLineQConf) ModifyCkptInterface(ckptName string, cfg CkptInterfac
 	}
 	_, err = file.WriteString(fmt.Sprintf("when   %s\n", cfg.When))
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -3121,6 +3161,10 @@ func (c *CommandLineQConf) ModifyHostConfiguration(configName string, cfg HostCo
 		}
 	}
 
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
+	}
+
 	file.Close()
 
 	_, err = c.RunCommand("-Mconf", file.Name())
@@ -3153,6 +3197,12 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 	typeOfS := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		fieldName := typeOfS.Field(i).Tag.Get("json")
+		// Skip fields that are not part of the qconf wire format
+		// (e.g. ExtraFields is tagged `json:"-"` and gets emitted
+		// separately below via WriteExtraFields).
+		if fieldName == "" || fieldName == "-" {
+			continue
+		}
 		fieldValue := v.Field(i).Interface()
 		// if type is []string, join the values either
 		// comma separated or space separated depending on fieldName
@@ -3181,6 +3231,9 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 		if err != nil {
 			return err
 		}
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
 	}
 	file.Close()
 
@@ -3240,6 +3293,9 @@ func (c *CommandLineQConf) ModifyExecHost(execHostName string, cfg HostExecConfi
 	if err != nil {
 		return err
 	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
+	}
 	file.Close()
 
 	_, err = c.RunCommand("-Me", file.Name())
@@ -3260,6 +3316,9 @@ func (c *CommandLineQConf) ModifyHostGroup(hostGroupName string, cfg HostGroupCo
 	}
 	_, err = file.WriteString(fmt.Sprintf("hostlist %s\n", JoinList(cfg.Hosts, " ")))
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -3306,6 +3365,9 @@ func (c *CommandLineQConf) ModifyResourceQuotaSet(rqsName string, cfg ResourceQu
 			return err
 		}
 	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
+	}
 	_, err = file.WriteString("}\n")
 	if err != nil {
 		return err
@@ -3327,6 +3389,9 @@ func (c *CommandLineQConf) ModifyParallelEnvironment(peName string, cfg Parallel
 
 	err = writePE(file, cfg)
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -3362,6 +3427,9 @@ func (c *CommandLineQConf) ModifyProject(projectName string, cfg ProjectConfig) 
 	}
 	_, err = file.WriteString(fmt.Sprintf("xacl    %s\n", JoinList(cfg.XACL, " ")))
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -3607,6 +3675,10 @@ func (c *CommandLineQConf) ModifyClusterQueue(queueName string, cfg ClusterQueue
 		return err
 	}
 
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
+	}
+
 	file.Close()
 
 	_, err = c.RunCommand("-Mq", file.Name())
@@ -3641,6 +3713,9 @@ func (c *CommandLineQConf) ModifyUserset(listnameList string, cfg UserSetListCon
 	_, err = file.WriteString(fmt.Sprintf("entries %s\n",
 		JoinList(cfg.Entries, ",")))
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -3682,6 +3757,9 @@ func (c *CommandLineQConf) ModifyUser(userName string, cfg UserConfig) error {
 	}
 	_, err = file.WriteString(fmt.Sprintf("default_project %s\n", cfg.DefaultProject))
 	if err != nil {
+		return err
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
@@ -3782,6 +3860,8 @@ func (c *CommandLineQConf) ShowSchedulerConfiguration() (*SchedulerConfig, error
 			cfg.MaxReservation, _ = strconv.Atoi(value)
 		case "default_duration":
 			cfg.DefaultDuration = value
+		default:
+			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
 	return &cfg, nil
@@ -3834,6 +3914,12 @@ func (c *CommandLineQConf) ModifySchedulerConfig(cfg SchedulerConfig) error {
 	typeOfS := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		fieldName := typeOfS.Field(i).Tag.Get("json")
+		// Skip fields that are not part of the qconf wire format
+		// (e.g. ExtraFields is tagged `json:"-"` and is emitted
+		// separately below via WriteExtraFields).
+		if fieldName == "" || fieldName == "-" {
+			continue
+		}
 		fieldValue := v.Field(i).Interface()
 		// if type is []string, join the values either
 		// comma separated or space separated depending on fieldName
@@ -3874,6 +3960,9 @@ func (c *CommandLineQConf) ModifySchedulerConfig(cfg SchedulerConfig) error {
 		if err != nil {
 			return err
 		}
+	}
+	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		return err
 	}
 	file.Close()
 
