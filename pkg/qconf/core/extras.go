@@ -109,12 +109,17 @@ func CaptureExtraField(extras *map[string]string, lines []string, i int) {
 
 // SanitizeExtraValue rejects values containing characters that would
 // corrupt the line-oriented qconf temp file format on the way out.
-// CR or LF embedded in a value would split one key into two lines on
-// re-emit. Returns (cleanValue, true) on accept, ("", false) on
-// reject.
+// All C0 control characters (0x00-0x1F) and DEL (0x7F) are rejected:
+// CR/LF would split one key into two lines on re-emit, NUL would
+// truncate the line as it passes through libc, tab would break the
+// strings.Fields tokenisation in the parser, and other control chars
+// signal either a buggy qmaster output or a corrupted persistence
+// path. Returns (cleanValue, true) on accept, ("", false) on reject.
 func SanitizeExtraValue(v string) (string, bool) {
-	if strings.ContainsAny(v, "\r\n") {
-		return "", false
+	for _, r := range v {
+		if r < 0x20 || r == 0x7f {
+			return "", false
+		}
 	}
 	return v, true
 }
@@ -142,6 +147,28 @@ func WriteExtraFields(w io.Writer, extras map[string]string, typedKeys map[strin
 		}
 	}
 	return nil
+}
+
+// PromoteFromExtras moves a single string-valued entry from extras
+// into the typed destination pointer and deletes the source entry, if
+// present. No-op when the key is absent.
+//
+// Intended for v-package ShowGlobalConfiguration (and similar)
+// callers that wrap the core parser: the core parser captures every
+// non-v9.0 key into ExtraFields, and the v-package then promotes the
+// keys it knows about into typed fields. Without the delete the key
+// would round-trip twice -- once as a typed field, once as an extras
+// entry -- which today is masked by the WriteExtraFields collision
+// check but is a footgun to leave open.
+//
+// Non-string fields (maps, parsed shapes) keep their explicit
+// promotion blocks; only the trivial string -> string case collapses
+// to this helper.
+func PromoteFromExtras(extras map[string]string, key string, dst *string) {
+	if v, ok := extras[key]; ok {
+		*dst = v
+		delete(extras, key)
+	}
 }
 
 // TypedKeysOf returns the set of json tag names that reflection-based

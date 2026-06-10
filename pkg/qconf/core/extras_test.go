@@ -116,21 +116,32 @@ var _ = Describe("ExtraFields helpers", func() {
 			Expect(out).To(Equal("50100-50200"))
 		})
 
-		It("accepts values with tabs and printable special chars", func() {
-			out, ok := core.SanitizeExtraValue("foo\tbar=baz,quux")
+		It("accepts printable special chars (=, comma, dash, slash)", func() {
+			out, ok := core.SanitizeExtraValue("foo=bar,baz/quux-1")
 			Expect(ok).To(BeTrue())
-			Expect(out).To(Equal("foo\tbar=baz,quux"))
+			Expect(out).To(Equal("foo=bar,baz/quux-1"))
 		})
 
-		It("rejects values containing newline", func() {
-			_, ok := core.SanitizeExtraValue("foo\nbar")
-			Expect(ok).To(BeFalse())
+		It("accepts UTF-8 multi-byte characters", func() {
+			out, ok := core.SanitizeExtraValue("héllo")
+			Expect(ok).To(BeTrue())
+			Expect(out).To(Equal("héllo"))
 		})
 
-		It("rejects values containing carriage return", func() {
-			_, ok := core.SanitizeExtraValue("foo\rbar")
-			Expect(ok).To(BeFalse())
-		})
+		DescribeTable("rejects control characters",
+			func(v string) {
+				_, ok := core.SanitizeExtraValue(v)
+				Expect(ok).To(BeFalse())
+			},
+			Entry("LF", "foo\nbar"),
+			Entry("CR", "foo\rbar"),
+			Entry("TAB", "foo\tbar"),
+			Entry("NUL", "foo\x00bar"),
+			Entry("vertical tab", "foo\vbar"),
+			Entry("form feed", "foo\fbar"),
+			Entry("escape", "foo\x1bbar"),
+			Entry("DEL", "foo\x7fbar"),
+		)
 	})
 
 	Describe("WriteExtraFields", func() {
@@ -204,6 +215,36 @@ var _ = Describe("ExtraFields helpers", func() {
 			byVal := core.TypedKeysOf(core.CalendarConfig{})
 			byPtr := core.TypedKeysOf(&core.CalendarConfig{})
 			Expect(byPtr).To(Equal(byVal))
+		})
+	})
+
+	Describe("PromoteFromExtras", func() {
+		It("moves the value to dst and deletes the source", func() {
+			extras := map[string]string{
+				"jsv_params":     "limit_threads=4",
+				"another":        "untouched",
+			}
+			var dst string
+			core.PromoteFromExtras(extras, "jsv_params", &dst)
+			Expect(dst).To(Equal("limit_threads=4"))
+			Expect(extras).NotTo(HaveKey("jsv_params"))
+			Expect(extras).To(HaveKeyWithValue("another", "untouched"))
+		})
+
+		It("is a no-op when the key is absent", func() {
+			extras := map[string]string{"keep": "yes"}
+			dst := "original"
+			core.PromoteFromExtras(extras, "missing", &dst)
+			Expect(dst).To(Equal("original"))
+			Expect(extras).To(HaveKeyWithValue("keep", "yes"))
+		})
+
+		It("safely no-ops on a nil extras map", func() {
+			var extras map[string]string
+			var dst string
+			Expect(func() { core.PromoteFromExtras(extras, "x", &dst) }).
+				NotTo(Panic())
+			Expect(dst).To(BeEmpty())
 		})
 	})
 })

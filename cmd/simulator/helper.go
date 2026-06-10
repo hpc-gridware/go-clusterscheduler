@@ -232,23 +232,35 @@ func addLoadReportHostComplexToConfig(config *qconf.ClusterConfig) {
 	}
 }
 
-// addSimulationParams adds simulation parameters to the global configuration
+// addSimulationParams adds simulation parameters to the global
+// configuration. Idempotent: re-running the simulator against a
+// persistent spool must not accumulate duplicate entries.
 func addSimulationParams(cs *qconf.CommandLineQConf) error {
 	global, err := cs.ShowGlobalConfiguration()
 	if err != nil {
 		return err
 	}
-	global.QmasterParams = append(global.QmasterParams, "SIMULATE_EXECDS=TRUE")
-	global.ExecdParams = append(global.ExecdParams, "SIMULATE_JOBS=TRUE")
+	global.QmasterParams = appendIfMissing(global.QmasterParams, "SIMULATE_EXECDS=TRUE")
+	global.ExecdParams = appendIfMissing(global.ExecdParams, "SIMULATE_JOBS=TRUE")
 	return cs.ModifyGlobalConfig(*global)
 }
 
 // addSimulationParamsToConfig adds simulation parameters to the config
 func addSimulationParamsToConfig(config *qconf.ClusterConfig) {
-	config.GlobalConfig.QmasterParams = append(config.GlobalConfig.QmasterParams,
+	config.GlobalConfig.QmasterParams = appendIfMissing(config.GlobalConfig.QmasterParams,
 		"SIMULATE_EXECDS=TRUE")
-	config.GlobalConfig.ExecdParams = append(config.GlobalConfig.ExecdParams,
+	config.GlobalConfig.ExecdParams = appendIfMissing(config.GlobalConfig.ExecdParams,
 		"SIMULATE_JOBS=TRUE")
+}
+
+// appendIfMissing appends value unless it is already present.
+func appendIfMissing(list []string, value string) []string {
+	for _, v := range list {
+		if v == value {
+			return list
+		}
+	}
+	return append(list, value)
 }
 
 // restartQmaster restarts the qmaster daemon

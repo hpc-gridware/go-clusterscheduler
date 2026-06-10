@@ -67,24 +67,14 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	}
 
 	// Promote v9.1-specific keys from ExtraFields into typed fields.
-	// Delete each promoted entry so the map ends up containing only
-	// truly unrecognised parameters.
-	if v, ok := cfg.ExtraFields["jsv_params"]; ok {
-		cfg.JsvParams = v
-		delete(cfg.ExtraFields, "jsv_params")
-	}
-	if v, ok := cfg.ExtraFields["topology_file"]; ok {
-		cfg.TopologyFile = v
-		delete(cfg.ExtraFields, "topology_file")
-	}
-	if v, ok := cfg.ExtraFields["mail_tag"]; ok {
-		cfg.MailTag = v
-		delete(cfg.ExtraFields, "mail_tag")
-	}
-	if v, ok := cfg.ExtraFields["gdi_request_limits"]; ok {
-		cfg.GDIRequestLimits = v
-		delete(cfg.ExtraFields, "gdi_request_limits")
-	}
+	// Each promote also deletes the source entry so the map ends up
+	// containing only truly unrecognised parameters. String-valued
+	// fields go through the helper; binding_params stays inline
+	// because it parses into a map.
+	core.PromoteFromExtras(cfg.ExtraFields, "jsv_params", &cfg.JsvParams)
+	core.PromoteFromExtras(cfg.ExtraFields, "topology_file", &cfg.TopologyFile)
+	core.PromoteFromExtras(cfg.ExtraFields, "mail_tag", &cfg.MailTag)
+	core.PromoteFromExtras(cfg.ExtraFields, "gdi_request_limits", &cfg.GDIRequestLimits)
 	if v, ok := cfg.ExtraFields["binding_params"]; ok {
 		cfg.BindingParams = core.ParseIntoStringStringMap(v, ",")
 		delete(cfg.ExtraFields, "binding_params")
