@@ -532,9 +532,23 @@ func (c *CommandLineQConf) AddCalendar(cfg CalendarConfig) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove("calendar")
+	defer os.Remove(file.Name())
 
-	_, err = file.WriteString(fmt.Sprintf("calendar_name    %s\n", cfg.Name))
+	err = writeCalendar(file, cfg)
+	if err != nil {
+		file.Close()
+		return err
+	}
+	file.Close()
+	_, err = c.RunCommand("-Acal", file.Name())
+	if err != nil {
+		return fmt.Errorf("failed to add calendar: %v", err)
+	}
+	return nil
+}
+
+func writeCalendar(file *os.File, cfg CalendarConfig) error {
+	_, err := file.WriteString(fmt.Sprintf("calendar_name    %s\n", cfg.Name))
 	if err != nil {
 		return err
 	}
@@ -546,12 +560,10 @@ func (c *CommandLineQConf) AddCalendar(cfg CalendarConfig) error {
 	if err != nil {
 		return err
 	}
-	file.Close()
-	_, err = c.RunCommand("-Acal", file.Name())
-	if err != nil {
-		return fmt.Errorf("failed to add calendar: %v", err)
-	}
-	return err
+	// Same ExtraFields contract as ModifyCalendar: unknown keys carried
+	// by the struct are emitted so -Acal sees them (template
+	// instantiation and forward compatibility depend on this).
+	return WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(&cfg))
 }
 
 // DeleteCalendar deletes a calendar.
@@ -560,15 +572,39 @@ func (c *CommandLineQConf) DeleteCalendar(calendarName string) error {
 	return err
 }
 
-// ShowCalendar shows the specified calendar.
-func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, error) {
-	out, err := c.RunCommand("-scal", calendarName)
-	if err != nil {
-		return CalendarConfig{}, err
+// normalizeConfigLines returns a copy of lines with trailing carriage
+// returns stripped. Config template files may be edited on Windows; a
+// copy is made so the index-based multi-line helpers keep seeing
+// consistent data without mutating the caller's slice.
+func normalizeConfigLines(lines []string) []string {
+	out := make([]string, len(lines))
+	for i, l := range lines {
+		out[i] = strings.TrimRight(l, "\r")
 	}
-	lines := strings.Split(out, "\n")
-	cfg := CalendarConfig{Name: calendarName}
+	return out
+}
+
+// isFullLineComment reports whether line is a full-line qconf comment.
+// Only full-line comments are safe to skip: the qconf flatfile scanner
+// swallows trailing '#' text into free-text values, so end-of-line
+// comments must be left untouched.
+func isFullLineComment(line string) bool {
+	return strings.HasPrefix(strings.TrimSpace(line), "#")
+}
+
+// ParseCalendarConfigFromLines parses calendar configuration text in
+// qconf -scal format, which is also the format of on-disk calendar
+// template files. Full-line # comments are skipped and CRLF line
+// endings are tolerated; unrecognised keys are captured into
+// cfg.ExtraFields. recognizedKeys counts lines whose key matched a
+// typed field; a zero count means the input does not look like a
+// calendar definition at all.
+func ParseCalendarConfigFromLines(lines []string) (cfg CalendarConfig, recognizedKeys int) {
+	lines = normalizeConfigLines(lines)
 	for i, line := range lines {
+		if isFullLineComment(line) {
+			continue
+		}
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -576,13 +612,33 @@ func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, er
 		switch fields[0] {
 		case "calendar_name":
 			cfg.Name = strings.TrimSpace(fields[1])
+			recognizedKeys++
 		case "year":
-			cfg.Year = strings.TrimSpace(fields[1])
+			// calendar_conf allows multiple space-separated ranges;
+			// keeping only fields[1] would silently drop the rest.
+			cfg.Year = strings.Join(fields[1:], " ")
+			recognizedKeys++
 		case "week":
-			cfg.Week = strings.TrimSpace(fields[1])
+			cfg.Week = strings.Join(fields[1:], " ")
+			recognizedKeys++
 		default:
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
+	}
+	return cfg, recognizedKeys
+}
+
+// ShowCalendar shows the specified calendar.
+func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, error) {
+	out, err := c.RunCommand("-scal", calendarName)
+	if err != nil {
+		return CalendarConfig{}, err
+	}
+	cfg, _ := ParseCalendarConfigFromLines(strings.Split(out, "\n"))
+	// The argument stays authoritative when the output carries no
+	// calendar_name line (historical behaviour of the inline parser).
+	if cfg.Name == "" {
+		cfg.Name = calendarName
 	}
 	return cfg, nil
 }
@@ -1832,8 +1888,12 @@ func writePE(file *os.File, pe ParallelEnvironmentConfig) error {
 	if err != nil {
 		return err
 	}
-	file.Close()
-	return nil
+	// ExtraFields contract: unknown keys carried by the struct are
+	// emitted so -Ap/-Mp see them (template instantiation and forward
+	// compatibility depend on this). The caller owns the file handle;
+	// writePE must NOT close it (ModifyParallelEnvironment writes
+	// through the same handle).
+	return WriteExtraFields(file, pe.ExtraFields, TypedKeysOf(&pe))
 }
 
 // DeleteParallelEnvironment deletes a parallel environment.
@@ -1842,15 +1902,19 @@ func (c *CommandLineQConf) DeleteParallelEnvironment(peName string) error {
 	return err
 }
 
-// ShowParallelEnvironment shows the specified parallel environment.
-func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvironmentConfig, error) {
-	out, err := c.RunCommand("-sp", peName)
-	if err != nil {
-		return ParallelEnvironmentConfig{}, err
-	}
-	lines := strings.Split(out, "\n")
-	cfg := ParallelEnvironmentConfig{Name: peName}
+// ParseParallelEnvironmentConfigFromLines parses parallel environment
+// configuration text in qconf -sp format, which is also the format of
+// on-disk .pe template files. Full-line # comments are skipped and
+// CRLF line endings are tolerated; unrecognised keys are captured into
+// cfg.ExtraFields. recognizedKeys counts lines whose key matched a
+// typed field; a zero count means the input does not look like a PE
+// definition at all.
+func ParseParallelEnvironmentConfigFromLines(lines []string) (cfg ParallelEnvironmentConfig, recognizedKeys int) {
+	lines = normalizeConfigLines(lines)
 	for i, line := range lines {
+		if isFullLineComment(line) {
+			continue
+		}
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
 			continue
@@ -1858,35 +1922,64 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 		switch fields[0] {
 		case "pe_name":
 			cfg.Name = fields[1]
+			recognizedKeys++
 		case "slots":
 			cfg.Slots, _ = strconv.Atoi(fields[1])
+			recognizedKeys++
 		case "user_lists":
 			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
+			recognizedKeys++
 		case "xuser_lists":
 			cfg.XUserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
+			recognizedKeys++
 		case "start_proc_args":
 			cfg.StartProcArgs, _ = ParseMultiLineValue(lines, i)
+			recognizedKeys++
 		case "stop_proc_args":
 			cfg.StopProcArgs, _ = ParseMultiLineValue(lines, i)
+			recognizedKeys++
 		case "allocation_rule":
 			cfg.AllocationRule = fields[1]
+			recognizedKeys++
 		case "control_slaves":
 			cfg.ControlSlaves = fields[1]
+			recognizedKeys++
 		case "job_is_first_task":
 			cfg.JobIsFirstTask, _ = strconv.ParseBool(fields[1])
+			recognizedKeys++
 		case "urgency_slots":
 			cfg.UrgencySlots = fields[1]
+			recognizedKeys++
 		case "accounting_summary":
 			cfg.AccountingSummary, _ = strconv.ParseBool(fields[1])
+			recognizedKeys++
 		case "ign_sreq_on_mhost":
 			cfg.IgnoreSlaveReqestsOnMasterhost, _ = strconv.ParseBool(fields[1])
+			recognizedKeys++
 		case "master_forks_slaves":
 			cfg.MasterForksSlaves, _ = strconv.ParseBool(fields[1])
+			recognizedKeys++
 		case "daemon_forks_slaves":
 			cfg.DaemonForksSlaves, _ = strconv.ParseBool(fields[1])
+			recognizedKeys++
 		default:
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
+	}
+	return cfg, recognizedKeys
+}
+
+// ShowParallelEnvironment shows the specified parallel environment.
+func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvironmentConfig, error) {
+	out, err := c.RunCommand("-sp", peName)
+	if err != nil {
+		return ParallelEnvironmentConfig{}, err
+	}
+	cfg, _ := ParseParallelEnvironmentConfigFromLines(strings.Split(out, "\n"))
+	// The argument stays authoritative when the output carries no
+	// pe_name line (historical behaviour of the inline parser).
+	if cfg.Name == "" {
+		cfg.Name = peName
 	}
 	return cfg, nil
 }
@@ -3387,11 +3480,11 @@ func (c *CommandLineQConf) ModifyParallelEnvironment(peName string, cfg Parallel
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
+	// writePE emits the typed fields AND ExtraFields; a second
+	// WriteExtraFields here would double-emit (and historically wrote
+	// to an already-closed file, failing every Modify carrying extras).
 	err = writePE(file, cfg)
 	if err != nil {
-		return err
-	}
-	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
 		return err
 	}
 	file.Close()
