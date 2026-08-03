@@ -521,12 +521,6 @@ func (c *CommandLineQConf) AddCalendar(cfg CalendarConfig) error {
 	if cfg.Name == "" {
 		return fmt.Errorf("calendar name is required")
 	}
-	if cfg.Year == "" {
-		cfg.Year = "NONE"
-	}
-	if cfg.Week == "" {
-		cfg.Week = "NONE"
-	}
 
 	file, err := os.CreateTemp("", "calendar")
 	if err != nil {
@@ -548,6 +542,14 @@ func (c *CommandLineQConf) AddCalendar(cfg CalendarConfig) error {
 }
 
 func writeCalendar(file *os.File, cfg CalendarConfig) error {
+	// Defaulting lives in the writer so every caller emits the same
+	// file shape: empty Year/Week means NONE, never a blank value.
+	if cfg.Year == "" {
+		cfg.Year = "NONE"
+	}
+	if cfg.Week == "" {
+		cfg.Week = "NONE"
+	}
 	_, err := file.WriteString(fmt.Sprintf("calendar_name    %s\n", cfg.Name))
 	if err != nil {
 		return err
@@ -1622,7 +1624,10 @@ func (c *CommandLineQConf) ShowHostGroupResolved(groupName string) ([]string, er
 	if err != nil {
 		return nil, err
 	}
-	return splitWithoutEmptyLines(out, "\n"), nil
+	// qconf -shgrp_resolved prints the whole membership space-separated
+	// on a single line; strings.Fields splits on any whitespace so the
+	// members are parsed correctly even if reported one per line.
+	return strings.Fields(out), nil
 }
 
 // ShowHostGroups shows all host groups.
@@ -1823,6 +1828,7 @@ func (c *CommandLineQConf) AddParallelEnvironment(pe ParallelEnvironmentConfig) 
 
 	err = writePE(file, pe)
 	if err != nil {
+		file.Close()
 		return err
 	}
 	file.Close()
@@ -3024,32 +3030,18 @@ func (c *CommandLineQConf) ModifyComplexEntry(complexName string, cfg ComplexEnt
 
 // ModifyCalendar modifies a calendar.
 func (c *CommandLineQConf) ModifyCalendar(calendarName string, cfg CalendarConfig) error {
-	if cfg.Year == "" {
-		cfg.Year = "NONE"
-	}
-	if cfg.Week == "" {
-		cfg.Week = "NONE"
-	}
-
 	file, err := CreateTempDirWithFileName(calendarName)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	_, err = file.WriteString(fmt.Sprintf("calendar_name    %s\n", calendarName))
+	// One writer per object type: writeCalendar emits the typed fields,
+	// the NONE defaults and ExtraFields identically for -Acal and -Mcal.
+	cfg.Name = calendarName
+	err = writeCalendar(file, cfg)
 	if err != nil {
-		return err
-	}
-	_, err = file.WriteString(fmt.Sprintf("year             %s\n", cfg.Year))
-	if err != nil {
-		return err
-	}
-	_, err = file.WriteString(fmt.Sprintf("week             %s\n", cfg.Week))
-	if err != nil {
-		return err
-	}
-	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+		file.Close()
 		return err
 	}
 	file.Close()
@@ -3485,6 +3477,7 @@ func (c *CommandLineQConf) ModifyParallelEnvironment(peName string, cfg Parallel
 	// to an already-closed file, failing every Modify carrying extras).
 	err = writePE(file, cfg)
 	if err != nil {
+		file.Close()
 		return err
 	}
 	file.Close()
