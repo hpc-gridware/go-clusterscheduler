@@ -30,9 +30,9 @@ if [ -f "${SGE_ROOT}/default/common/settings.sh" ]; then
     "${SGE_ROOT}/default/common/sgemaster" || true
     "${SGE_ROOT}/default/common/sgeexecd" || true
 else
-    echo "Installing OCS ${OCS_VERSION:-9.1.0}..."
+    echo "Installing OCS ${OCS_VERSION:-9.1.4}..."
     cd /tmp
-    OCS_VERSION="${OCS_VERSION:-9.1.0}" /opt/helpers/ocs.sh
+    OCS_VERSION="${OCS_VERSION:-9.1.4}" /opt/helpers/ocs.sh
     if [ -f "${SGE_ROOT}/default/common/settings.sh" ]; then
         source "${SGE_ROOT}/default/common/settings.sh"
     fi

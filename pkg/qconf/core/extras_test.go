@@ -221,8 +221,8 @@ var _ = Describe("ExtraFields helpers", func() {
 	Describe("PromoteFromExtras", func() {
 		It("moves the value to dst and deletes the source", func() {
 			extras := map[string]string{
-				"jsv_params":     "limit_threads=4",
-				"another":        "untouched",
+				"jsv_params": "limit_threads=4",
+				"another":    "untouched",
 			}
 			var dst string
 			core.PromoteFromExtras(extras, "jsv_params", &dst)

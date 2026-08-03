@@ -1450,14 +1450,10 @@ func ParseIntoStringStringMap(val string, sep string) map[string]string {
 	return out
 }
 
-// ShowExecHost shows the specified execution host.
-func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error) {
-	out, err := c.RunCommand("-se", hostName)
-	if err != nil {
-		return HostExecConfig{}, err
-	}
-	lines := strings.Split(out, "\n")
-	cfg := HostExecConfig{Name: hostName}
+// ParseExecHostConfigFromLines parses qconf -se output into a
+// HostExecConfig.
+func ParseExecHostConfigFromLines(lines []string) HostExecConfig {
+	cfg := HostExecConfig{}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -1486,9 +1482,27 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 			cfg.UsageScaling = ParseIntoStringFloatMap(line, ",")
 		case "report_variables":
 			cfg.ReportVariables = ParseCommaSeparatedMultiLineValues(lines, i)
+		case "load_values", "processors":
+			// Read-only runtime attributes reported by the execd.
+			// qconf -Ae/-Me reject them ("unknown attribute name"),
+			// so they must not be captured into ExtraFields and
+			// round-tripped on the next modify.
 		default:
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
+	}
+	return cfg
+}
+
+// ShowExecHost shows the specified execution host.
+func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error) {
+	out, err := c.RunCommand("-se", hostName)
+	if err != nil {
+		return HostExecConfig{}, err
+	}
+	cfg := ParseExecHostConfigFromLines(strings.Split(out, "\n"))
+	if cfg.Name == "" {
+		cfg.Name = hostName
 	}
 	return cfg, nil
 }

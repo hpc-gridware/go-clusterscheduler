@@ -38,7 +38,13 @@ RUN mkdir -p /root/go/bin /root/go/src/github.com/dgruber && \
 
 RUN go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
+# OCS_INSTALLER_REFRESH busts the layer cache (the Makefile passes a
+# timestamp) so ocs.sh is re-fetched on every build. The installer maps
+# OCS versions to package download URLs, so a stale cached copy would
+# not know about newly released versions.
+ARG OCS_INSTALLER_REFRESH=0
 RUN mkdir -p /opt/helpers && \
+    echo "installer refresh: ${OCS_INSTALLER_REFRESH}" && \
     wget -q -O /opt/helpers/ocs.sh \
     https://raw.githubusercontent.com/hpc-gridware/quickinstall/refs/heads/main/ocs.sh && \
     chmod +x /opt/helpers/ocs.sh

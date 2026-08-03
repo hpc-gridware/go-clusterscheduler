@@ -18,9 +18,13 @@
 ###########################################################################
 #___INFO__MARK_END_NEW__
 
-# OCS version to install inside the container (override: make run OCS_VERSION=9.0.8)
-# Supported: 9.0.5, 9.0.6, 9.0.7, 9.0.8, 9.0.9, 9.0.10, 9.0.11, 9.1.0
-OCS_VERSION    ?= 9.1.0
+# OCS version to install inside the container (override: make run OCS_VERSION=9.1.4)
+# Supported: 9.0.5 - 9.0.12 and 9.1.0 - 9.1.4; the authoritative list is the
+# quickinstall installer (ocs.sh), which is re-fetched on every image build so
+# new releases become available without touching this repo.
+# Note: ./installation persists an installed cluster. Remove it when switching
+# OCS_VERSION, otherwise the previously installed version is booted again.
+OCS_VERSION    ?= 9.1.4
 
 IMAGE_NAME      = go-clusterscheduler
 CONTAINER_NAME  = $(IMAGE_NAME)
@@ -30,7 +34,9 @@ PROJECT_DIR     = /root/go/src/github.com/hpc-gridware/go-clusterscheduler
 .PHONY: build run run-privileged test test-all test-integration simulate adapter run-rest clean
 
 build:
-	docker build --platform=$(PLATFORM) -t $(IMAGE_NAME) .
+	docker build --platform=$(PLATFORM) \
+		--build-arg OCS_INSTALLER_REFRESH=$(shell date +%s) \
+		-t $(IMAGE_NAME) .
 
 run: build
 	mkdir -p ./installation
