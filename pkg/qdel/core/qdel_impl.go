@@ -25,6 +25,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 // CommandLineQDel is a concrete implementation of the QDel interface
@@ -52,6 +54,11 @@ func NewCommandLineQDel(config CommandLineQDelConfig) (*CommandLineQDel, error) 
 }
 
 func (c *CommandLineQDel) runCommand(args ...string) (string, error) {
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token before spawning qdel (or printing the dry-run line).
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
+	}
 	if c.config.DryRun {
 		fmt.Printf("Executing: %s %v\n", c.config.Executable, args)
 		return "", nil
@@ -82,6 +89,11 @@ func (c *CommandLineQDel) DeleteJobs(jobTaskList []string) (string, error) {
 	if len(jobTaskList) == 0 {
 		return "", fmt.Errorf("no jobs specified")
 	}
+	// Layer 2: validate each job/task element before comma-joining so a
+	// leading '-' cannot be reinterpreted as a flag (e.g. -f, -u, -t).
+	if err := validate.Enforce(validate.List("job", jobTaskList)); err != nil {
+		return "", err
+	}
 	args := c.forceArgs()
 	args = append(args, strings.Join(jobTaskList, ","))
 	return c.runCommand(args...)
@@ -90,6 +102,9 @@ func (c *CommandLineQDel) DeleteJobs(jobTaskList []string) (string, error) {
 func (c *CommandLineQDel) DeleteUserJobs(userList []string) (string, error) {
 	if len(userList) == 0 {
 		return "", fmt.Errorf("no users specified")
+	}
+	if err := validate.Enforce(validate.List("user", userList)); err != nil {
+		return "", err
 	}
 	args := c.forceArgs()
 	args = append(args, "-u", strings.Join(userList, ","))

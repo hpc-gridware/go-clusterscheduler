@@ -244,3 +244,24 @@ var _ = Describe("QmodImpl", func() {
 		})
 	})
 })
+
+var _ = Describe("QmodImpl argument validation", func() {
+	It("rejects a leading-dash target before spawning qmod", func() {
+		q, err := qmod.NewCommandLineQMod(qmod.CommandLineQModConfig{DryRun: true})
+		Expect(err).To(BeNil())
+		_, err = q.Disable([]string{"-x"})
+		Expect(err).To(HaveOccurred())
+	})
+	It("rejects a comma-injected target", func() {
+		q, err := qmod.NewCommandLineQMod(qmod.CommandLineQModConfig{DryRun: true})
+		Expect(err).To(BeNil())
+		_, err = q.Disable([]string{"all.q,evil"})
+		Expect(err).To(HaveOccurred())
+	})
+	It("accepts a clean queue instance target", func() {
+		q, err := qmod.NewCommandLineQMod(qmod.CommandLineQModConfig{DryRun: true})
+		Expect(err).To(BeNil())
+		_, err = q.Disable([]string{"all.q@master"})
+		Expect(err).To(BeNil())
+	})
+})

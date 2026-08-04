@@ -25,6 +25,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 // CommandLineQMod is a concrete implementation of the QMod interface
@@ -53,6 +55,11 @@ func NewCommandLineQMod(config CommandLineQModConfig) (*CommandLineQMod, error) 
 
 // RunCommand executes the qmod command with the specified arguments.
 func (c *CommandLineQMod) RunCommand(args ...string) (string, error) {
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token before spawning qmod (or printing the dry-run line).
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
+	}
 	if c.config.DryRun {
 		fmt.Printf("Executing: %s %v\n", c.config.Executable, args)
 		return "", nil
@@ -75,6 +82,11 @@ func (c *CommandLineQMod) RunCommand(args ...string) (string, error) {
 func (c *CommandLineQMod) runAction(flag string, targets []string) (string, error) {
 	if len(targets) == 0 {
 		return "", fmt.Errorf("no targets specified")
+	}
+	// Layer 2: validate each job/queue target before it is comma-joined, so a
+	// leading '-' or embedded separator cannot forge an extra flag or target.
+	if err := validate.Enforce(validate.List("target", targets)); err != nil {
+		return "", err
 	}
 	args := []string{}
 	if c.config.Force {

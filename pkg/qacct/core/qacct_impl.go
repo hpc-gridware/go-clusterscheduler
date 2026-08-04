@@ -22,6 +22,8 @@ package core
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 type QAcctImpl struct {
@@ -61,6 +63,13 @@ func (q *QAcctImpl) WithDefaultAccountingFile() {
 func (q *QAcctImpl) NativeSpecification(args []string) (string, error) {
 	if q.config.AccountingFile != "" {
 		args = append(args, "-f", q.config.AccountingFile)
+	}
+
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token (including the appended accounting file path) before spawning
+	// qacct. Native passthrough, so only the universal check applies.
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
 	}
 
 	if q.config.DryRun {

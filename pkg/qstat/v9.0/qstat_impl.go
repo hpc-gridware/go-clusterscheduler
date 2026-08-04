@@ -25,6 +25,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 type QStatImpl struct {
@@ -122,6 +124,12 @@ func (q *QStatImpl) WatchJobs(ctx context.Context, jobIds []int64) (chan Schedul
 // arguments. The arguments are passed to the qstat command as is.
 // The output is returned as a string.
 func (q *QStatImpl) NativeSpecification(args []string) (string, error) {
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token before spawning qstat. Native passthrough, so only the universal
+	// control-char check applies.
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
+	}
 	if q.config.DryRun {
 		return fmt.Sprintf("Dry run: qstat %v", args), nil
 	}

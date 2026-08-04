@@ -22,6 +22,7 @@ package qalter
 import (
 	"strconv"
 
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/qalter/core"
 )
 
@@ -45,56 +46,51 @@ func NewCommandLineQAlter(config CommandLineQAlterConfig) (*CommandLineQAlter, e
 
 // --- Binding ---
 
-func (c *CommandLineQAlter) SetBindingAmount(jobTaskList string, amount int) (string, error) {
+// runBinding validates the job/task list (matching the core qalter methods,
+// which the v9.1 binding methods otherwise bypass) then runs qalter with the
+// binding flag and value followed by the job/task list.
+func (c *CommandLineQAlter) runBinding(jobTaskList string, flagAndValue ...string) (string, error) {
+	if err := validate.Enforce(validate.JobTaskList(jobTaskList)); err != nil {
+		return "", err
+	}
 	args := c.GlobalArgs()
-	args = append(args, "-bamount", strconv.Itoa(amount), jobTaskList)
+	args = append(args, flagAndValue...)
+	args = append(args, jobTaskList)
 	return c.RunCommand(args...)
+}
+
+func (c *CommandLineQAlter) SetBindingAmount(jobTaskList string, amount int) (string, error) {
+	return c.runBinding(jobTaskList, "-bamount", strconv.Itoa(amount))
 }
 
 func (c *CommandLineQAlter) SetBindingFilter(jobTaskList, topology string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-bfilter", topology, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-bfilter", topology)
 }
 
 func (c *CommandLineQAlter) SetBindingInstance(jobTaskList, instance string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-binstance", instance, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-binstance", instance)
 }
 
 func (c *CommandLineQAlter) SetBindingSortOrder(jobTaskList, order string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-bsort", order, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-bsort", order)
 }
 
 func (c *CommandLineQAlter) SetBindingStart(jobTaskList, position string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-bstart", position, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-bstart", position)
 }
 
 func (c *CommandLineQAlter) SetBindingStop(jobTaskList, position string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-bstop", position, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-bstop", position)
 }
 
 func (c *CommandLineQAlter) SetBindingStrategy(jobTaskList, strategy string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-bstrategy", strategy, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-bstrategy", strategy)
 }
 
 func (c *CommandLineQAlter) SetBindingType(jobTaskList, bindingType string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-btype", bindingType, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-btype", bindingType)
 }
 
 func (c *CommandLineQAlter) SetBindingUnit(jobTaskList, unit string) (string, error) {
-	args := c.GlobalArgs()
-	args = append(args, "-bunit", unit, jobTaskList)
-	return c.RunCommand(args...)
+	return c.runBinding(jobTaskList, "-bunit", unit)
 }

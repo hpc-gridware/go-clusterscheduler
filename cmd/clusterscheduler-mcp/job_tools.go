@@ -25,6 +25,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 	qalter "github.com/hpc-gridware/go-clusterscheduler/pkg/qalter/v9.0"
 	qstat "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
 	qsub "github.com/hpc-gridware/go-clusterscheduler/pkg/qsub/v9.0"
@@ -282,6 +283,13 @@ func getQSubHelp(ctx context.Context) (string, error) {
 
 // getJobStatus retrieves the status of a job using qstat
 func getJobStatus(ctx context.Context, args []string) (string, error) {
+	// Always enforce at the network boundary, independent of GCS_VALIDATION
+	// (which only relaxes the in-library wrapper checks): a trust boundary must
+	// not be disableable by a process env var. Args rejects only control
+	// characters, so it never rejects legitimate input.
+	if err := validate.Args(args...); err != nil {
+		return "", fmt.Errorf("invalid qstat argument: %w", err)
+	}
 	q, err := qstat.NewCommandLineQstat(qstat.CommandLineQStatConfig{})
 	if err != nil {
 		return "", fmt.Errorf("internal error: failed to initialize qstat command line tool: %v", err)
@@ -313,6 +321,12 @@ func submitJob(ctx context.Context, args []string) (string, error) {
 // diagnosePendingJob collects all information about a pending job which
 // might help to diagnose why it is pending.
 func diagnosePendingJob(ctx context.Context, jobID string) (string, error) {
+	// jobID is forwarded to qstat and to qalter (a state-changing binary), so
+	// validate it at the boundary the same way the read-only tools do, always
+	// enforcing regardless of GCS_VALIDATION.
+	if err := validate.JobTaskList(jobID); err != nil {
+		return "", fmt.Errorf("invalid job id: %w", err)
+	}
 	q, err := qstat.NewCommandLineQstat(qstat.CommandLineQStatConfig{})
 	if err != nil {
 		return "", fmt.Errorf("internal error: failed to initialize qstat command line tool: %v", err)

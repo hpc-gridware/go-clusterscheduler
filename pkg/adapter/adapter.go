@@ -119,11 +119,86 @@ func NewAdapter(instance interface{}) http.Handler {
 
 	return &adapter{
 		instance: instance,
+		allowed:  nil,
 	}
+}
+
+// NewAdapterWithAllowedMethods is like NewAdapter but restricts the callable
+// surface to the named methods (an explicit allow-list). Any method not in the
+// list is rejected with 404, regardless of whether it exists on the instance.
+// Use this on network-reachable, unauthenticated deployments to expose only the
+// operations a client legitimately needs.
+func NewAdapterWithAllowedMethods(instance interface{}, allowed []string) http.Handler {
+	h := NewAdapter(instance).(*adapter)
+	set := make(map[string]bool, len(allowed))
+	for _, m := range allowed {
+		set[m] = true
+	}
+	h.allowed = set
+	return h
+}
+
+// NewAdapterWithDeniedMethods is like NewAdapter but additionally blocks the
+// named methods on top of the always-denied set. Use this to expose the general
+// surface while keeping specific destructive operations off the network
+// boundary (e.g. adapter.DestructiveQConfMethods). A denied method can never be
+// re-enabled, so this is the safe way to keep an operation permanently off a
+// generic, unauthenticated endpoint.
+func NewAdapterWithDeniedMethods(instance interface{}, denied []string) http.Handler {
+	h := NewAdapter(instance).(*adapter)
+	set := make(map[string]bool, len(denied))
+	for _, m := range denied {
+		set[m] = true
+	}
+	h.denied = set
+	return h
+}
+
+// DestructiveQConfMethods lists the qconf wrapper operations that shut down or
+// kill cluster daemons, or clear cluster state. They must not be reachable from
+// an unauthenticated REST endpoint. Pass this to NewAdapterWithDeniedMethods on
+// any network-facing deployment that does not put authentication in front of
+// the adapter.
+var DestructiveQConfMethods = []string{
+	"ShutdownMasterDaemon",
+	"ShutdownExecDaemons",
+	"ShutdownSchedulingDaemon",
+	"KillQmasterThread",
+	"KillEventClient",
+	"CleanQueue",
+	"ClearShareTreeUsage",
+}
+
+// deniedMethods are exported methods that must never be reachable over the
+// REST boundary even when no explicit allow-list is configured. RunCommand is
+// the raw argv passthrough on the qconf wrapper; exposing it would let a caller
+// run an arbitrary qconf command line, bypassing every per-method guard.
+var deniedMethods = map[string]bool{
+	"RunCommand": true,
 }
 
 type adapter struct {
 	instance interface{}
+	// allowed, when non-nil, is the explicit set of callable method names.
+	// When nil, every exported method except those in deniedMethods (and the
+	// per-instance denied set) is callable (backwards-compatible default).
+	allowed map[string]bool
+	// denied is a per-instance set of additionally-blocked method names, on
+	// top of the package-level deniedMethods.
+	denied map[string]bool
+}
+
+// methodAllowed reports whether name may be dispatched: never if denied
+// (globally or per-instance), and only if present in the allow-list when one is
+// configured.
+func (a *adapter) methodAllowed(name string) bool {
+	if deniedMethods[name] || a.denied[name] {
+		return false
+	}
+	if a.allowed != nil {
+		return a.allowed[name]
+	}
+	return true
 }
 
 func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +228,15 @@ func (a *adapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.InfoContext(ctx, "request", "method", req.MethodName)
+
+	// Gate dispatch on the allow-list before any reflective lookup, so a
+	// denied method (e.g. the raw RunCommand passthrough) or a method outside
+	// an explicit allow-list can never be invoked over the network boundary.
+	if !a.methodAllowed(req.MethodName) {
+		logErr := fmt.Errorf("method not allowed: %s", req.MethodName)
+		a.fail(ctx, w, r, http.StatusNotFound, logErr.Error(), nil)
+		return
+	}
 
 	method := reflect.ValueOf(a.instance).MethodByName(req.MethodName)
 	if !method.IsValid() {
@@ -253,6 +337,11 @@ func (a *adapter) handleMethods(w http.ResponseWriter, r *http.Request) {
 	var methods []MethodInfo
 	for i := 0; i < instanceType.NumMethod(); i++ {
 		method := instanceType.Method(i)
+		// Do not advertise methods that cannot actually be called; otherwise
+		// the enumeration endpoint hands a caller a map of the denied surface.
+		if !a.methodAllowed(method.Name) {
+			continue
+		}
 		methodType := method.Type
 
 		// Get parameter types

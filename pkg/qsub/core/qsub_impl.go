@@ -27,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 // QSubClient is a concrete implementation of the Qsub interface.
@@ -59,6 +61,14 @@ func NewCommandLineQSub(config CommandLineQSubConfig) (Qsub, error) {
 func (c *QSubClient) SubmitWithNativeSpecification(ctx context.Context, args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("no arguments provided")
+	}
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token. This is a native-passthrough method (arbitrary flags are the whole
+	// point), so it deliberately applies only the universal control-char check,
+	// not the per-context operand/flag rules. Callers must not forward
+	// untrusted network input here.
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
 	}
 	if c.config.DryRun {
 		return fmt.Sprintf("Dry run: qsub %s", strings.Join(args, " ")), nil
@@ -144,8 +154,73 @@ func ParseSubmitOutput(output string, terse, synchronize, dryRun bool) (int64, s
 	return 0, outputStr, nil
 }
 
+// validateJobOptions applies the Layer 2 argument-injection checks to the
+// structured job options that become comma-joined list or name=value argv
+// tokens. Single-value flags (-N, -A, -P, -pe, ...) are consumed verbatim by
+// the qsub submit parser, so a leading '-' there is not reinterpreted as a
+// flag; those rely on the universal control-character guard applied later in
+// SubmitWithNativeSpecification. Only the list and map fields, where an
+// embedded comma or equals would forge extra entries, are checked here.
+func validateJobOptions(opts JobOptions) error {
+	lists := []struct {
+		what string
+		xs   []string
+	}{
+		{"queue", opts.Queue},
+		{"master queue", opts.MasterQueue},
+		{"mail address", opts.MailList},
+		{"hold job id", opts.HoldJobIDs},
+		{"hold array job id", opts.HoldArrayJobIDs},
+		{"add context variable", opts.AddContextVariables},
+		{"delete context variable", opts.DeleteContextVariables},
+	}
+	for _, l := range lists {
+		if err := validate.List(l.what, l.xs); err != nil {
+			return err
+		}
+	}
+	if opts.JobName != nil {
+		if err := validate.StrictJobName(*opts.JobName); err != nil {
+			return fmt.Errorf("job name %q: %w", *opts.JobName, err)
+		}
+	}
+	pairs := []struct {
+		what string
+		m    map[string]string
+	}{
+		{"environment variable", opts.EnvVariables},
+		{"job context", opts.SetJobContext},
+	}
+	for _, p := range pairs {
+		for k, v := range p.m {
+			if err := validate.NameValueKey(k); err != nil {
+				return fmt.Errorf("%s key %q: %w", p.what, k, err)
+			}
+			if err := validate.NameValueValue(v); err != nil {
+				return fmt.Errorf("%s value %q: %w", p.what, v, err)
+			}
+		}
+	}
+	for scope, requests := range opts.ScopedResources {
+		for reqType, rr := range requests {
+			for k, v := range rr.Resources {
+				if err := validate.NameValueKey(k); err != nil {
+					return fmt.Errorf("resource %s/%s key %q: %w", scope, reqType, k, err)
+				}
+				if err := validate.NameValueValue(v); err != nil {
+					return fmt.Errorf("resource %s/%s value %q: %w", scope, reqType, v, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // BuildQsubArgs constructs the qsub command-line arguments from JobOptions.
 func BuildQsubArgs(opts JobOptions) ([]string, error) {
+	if err := validate.Enforce(validateJobOptions(opts)); err != nil {
+		return nil, err
+	}
 	var args []string
 
 	addFlag := func(flag string, value string) {

@@ -22,6 +22,8 @@ package core
 import (
 	"fmt"
 	"os/exec"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 // QHostImpl is the implementation of the QHost interface.
@@ -53,6 +55,11 @@ func NewCommandLineQhost(config CommandLineQHostConfig) (*QHostImpl, error) {
 // NativeSpecification returns the output of the qhost command for the given
 // arguments. The arguments are passed to the qhost command as is.
 func (q *QHostImpl) NativeSpecification(args []string) (string, error) {
+	// Layer 1 guard: reject control characters and invalid UTF-8 before
+	// spawning qhost. Native passthrough, so only the universal check applies.
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
+	}
 	if q.config.DryRun {
 		return fmt.Sprintf("Dry run: qhost %v", args), nil
 	}

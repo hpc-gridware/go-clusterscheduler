@@ -26,6 +26,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 const dateTimeFormat = "200601021504.05"
@@ -72,6 +74,11 @@ func NewCommandLineQAlter(config CommandLineQAlterConfig) (*CommandLineQAlter, e
 
 // RunCommand executes the qalter command with the specified arguments.
 func (c *CommandLineQAlter) RunCommand(args ...string) (string, error) {
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token before spawning qalter (or printing the dry-run line).
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
+	}
 	if c.config.DryRun {
 		fmt.Printf("Executing: %s %v\n", c.config.Executable, args)
 		return "", nil
@@ -103,12 +110,18 @@ func (c *CommandLineQAlter) GlobalArgs() []string {
 }
 
 func (c *CommandLineQAlter) runOption(jobTaskList, flag, value string) (string, error) {
+	if err := validate.Enforce(validate.JobTaskList(jobTaskList)); err != nil {
+		return "", err
+	}
 	args := c.GlobalArgs()
 	args = append(args, flag, value, jobTaskList)
 	return c.RunCommand(args...)
 }
 
 func (c *CommandLineQAlter) runFlag(jobTaskList, flag string) (string, error) {
+	if err := validate.Enforce(validate.JobTaskList(jobTaskList)); err != nil {
+		return "", err
+	}
 	args := c.GlobalArgs()
 	args = append(args, flag, jobTaskList)
 	return c.RunCommand(args...)
@@ -122,6 +135,10 @@ func (c *CommandLineQAlter) runBoolOption(jobTaskList, flag string, value bool) 
 	return c.runOption(jobTaskList, flag, v)
 }
 
+// runListOption feeds heterogeneous flags: paths (-e/-o/-i/-S), env values
+// (-v) and context (-ac/-sc) whose values may legitimately contain spaces, so
+// it stays Layer-1-only (control-char guard in RunCommand). A uniform list
+// check here would reject valid paths and values.
 func (c *CommandLineQAlter) runListOption(jobTaskList, flag string, list []string) (string, error) {
 	return c.runOption(jobTaskList, flag, strings.Join(list, ","))
 }
@@ -135,6 +152,9 @@ func (c *CommandLineQAlter) runTimeOption(jobTaskList, flag string, t time.Time)
 }
 
 func (c *CommandLineQAlter) runCompound(jobTaskList string, flagsAndValues ...string) (string, error) {
+	if err := validate.Enforce(validate.JobTaskList(jobTaskList)); err != nil {
+		return "", err
+	}
 	args := c.GlobalArgs()
 	args = append(args, flagsAndValues...)
 	args = append(args, jobTaskList)
@@ -142,6 +162,12 @@ func (c *CommandLineQAlter) runCompound(jobTaskList string, flagsAndValues ...st
 }
 
 func (c *CommandLineQAlter) runCompoundList(jobTaskList string, list []string, flagsBeforeList ...string) (string, error) {
+	if err := validate.Enforce(validate.JobTaskList(jobTaskList)); err != nil {
+		return "", err
+	}
+	if err := validate.Enforce(validate.List("value", list)); err != nil {
+		return "", err
+	}
 	args := c.GlobalArgs()
 	args = append(args, flagsBeforeList...)
 	args = append(args, strings.Join(list, ","), jobTaskList)

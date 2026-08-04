@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 // Submitter is the minimal interface required by JobBuilder. Both v9.0
@@ -42,6 +44,33 @@ type JobBuilder struct {
 	command   string
 	cmdArgs   []string
 	sync      bool
+	// err records the first Layer 2 validation failure from a fluent setter
+	// (which cannot return an error). Submit reports it before spawning qsub.
+	err error
+}
+
+// fail records the first validation error seen while building. Later errors
+// are ignored so the earliest, most relevant one is reported by Submit.
+func (b *JobBuilder) fail(err error) {
+	if b.err == nil {
+		b.err = err
+	}
+}
+
+// checkPair validates a name=value builder argument.
+func (b *JobBuilder) checkPair(what, key, value string) {
+	if err := validate.NameValueKey(key); err != nil {
+		b.fail(fmt.Errorf("%s key %q: %w", what, key, err))
+		return
+	}
+	if err := validate.NameValueValue(value); err != nil {
+		b.fail(fmt.Errorf("%s value %q: %w", what, value, err))
+	}
+}
+
+// checkList validates each element of a comma-joined builder list argument.
+func (b *JobBuilder) checkList(what string, xs []string) {
+	b.fail(validate.List(what, xs))
 }
 
 // NewJobBuilder creates a new JobBuilder for the given command and
@@ -71,6 +100,9 @@ func (b *JobBuilder) Script() *JobBuilder {
 
 // Name sets the job name (-N).
 func (b *JobBuilder) Name(name string) *JobBuilder {
+	if err := validate.StrictJobName(name); err != nil {
+		b.fail(fmt.Errorf("job name %q: %w", name, err))
+	}
 	b.args = append(b.args, "-N", name)
 	return b
 }
@@ -145,12 +177,14 @@ func (b *JobBuilder) Priority(p int) *JobBuilder {
 
 // Queue adds one or more destination queues (-q).
 func (b *JobBuilder) Queue(queues ...string) *JobBuilder {
+	b.checkList("queue", queues)
 	b.args = append(b.args, "-q", strings.Join(queues, ","))
 	return b
 }
 
 // MasterQueue sets the master queue for parallel jobs (-masterq).
 func (b *JobBuilder) MasterQueue(queues ...string) *JobBuilder {
+	b.checkList("master queue", queues)
 	b.args = append(b.args, "-masterq", strings.Join(queues, ","))
 	return b
 }
@@ -164,6 +198,7 @@ func (b *JobBuilder) PE(spec string) *JobBuilder {
 
 // Resource adds a simple global hard resource request (-l key=value).
 func (b *JobBuilder) Resource(key, value string) *JobBuilder {
+	b.checkPair("resource", key, value)
 	b.args = append(b.args, "-l", fmt.Sprintf("%s=%s", key, value))
 	return b
 }
@@ -204,6 +239,7 @@ func (b *JobBuilder) MailOptions(options string) *JobBuilder {
 
 // MailTo sets the mail recipient(s) (-M).
 func (b *JobBuilder) MailTo(addresses ...string) *JobBuilder {
+	b.checkList("mail address", addresses)
 	b.args = append(b.args, "-M", strings.Join(addresses, ","))
 	return b
 }
@@ -218,12 +254,14 @@ func (b *JobBuilder) Notify() *JobBuilder {
 
 // HoldJobs sets job dependencies by job ID or name (-hold_jid).
 func (b *JobBuilder) HoldJobs(ids ...string) *JobBuilder {
+	b.checkList("hold job id", ids)
 	b.args = append(b.args, "-hold_jid", strings.Join(ids, ","))
 	return b
 }
 
 // HoldArrayJobs sets array job dependencies (-hold_jid_ad).
 func (b *JobBuilder) HoldArrayJobs(ids ...string) *JobBuilder {
+	b.checkList("hold array job id", ids)
 	b.args = append(b.args, "-hold_jid_ad", strings.Join(ids, ","))
 	return b
 }
@@ -246,8 +284,12 @@ func (b *JobBuilder) ExportAllEnv() *JobBuilder {
 // is empty, the variable is exported from the submitting environment.
 func (b *JobBuilder) Env(key, value string) *JobBuilder {
 	if value != "" {
+		b.checkPair("environment variable", key, value)
 		b.args = append(b.args, "-v", fmt.Sprintf("%s=%s", key, value))
 	} else {
+		if err := validate.NameValueKey(key); err != nil {
+			b.fail(fmt.Errorf("environment variable key %q: %w", key, err))
+		}
 		b.args = append(b.args, "-v", key)
 	}
 	return b
@@ -378,18 +420,21 @@ func (b *JobBuilder) Verify() *JobBuilder {
 
 // AddContext adds a context variable to the job (-ac key=value).
 func (b *JobBuilder) AddContext(key, value string) *JobBuilder {
+	b.checkPair("add context", key, value)
 	b.args = append(b.args, "-ac", fmt.Sprintf("%s=%s", key, value))
 	return b
 }
 
 // DeleteContext removes context variable(s) from the job (-dc).
 func (b *JobBuilder) DeleteContext(vars ...string) *JobBuilder {
+	b.checkList("delete context", vars)
 	b.args = append(b.args, "-dc", strings.Join(vars, ","))
 	return b
 }
 
 // SetContext sets a context variable on the job (-sc key=value).
 func (b *JobBuilder) SetContext(key, value string) *JobBuilder {
+	b.checkPair("set context", key, value)
 	b.args = append(b.args, "-sc", fmt.Sprintf("%s=%s", key, value))
 	return b
 }
@@ -425,6 +470,9 @@ func (b *JobBuilder) Args() []string {
 // and any error. The builder automatically adds -terse for reliable job
 // ID parsing.
 func (b *JobBuilder) Submit(ctx context.Context) (int64, string, error) {
+	if err := validate.Enforce(b.err); err != nil {
+		return 0, "", err
+	}
 	allArgs := make([]string, 0, len(b.args)+2+len(b.cmdArgs))
 	allArgs = append(allArgs, "-terse")
 	allArgs = append(allArgs, b.args...)

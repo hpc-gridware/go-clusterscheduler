@@ -32,6 +32,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
 type CommandLineQConf struct {
@@ -79,6 +81,14 @@ func NewCommandLineQConf(config CommandLineQConfConfig) (*CommandLineQConf, erro
 // A hung binary (NFS stall, unresponsive qmaster) is killed after
 // config.Timeout so callers never block forever on a single invocation.
 func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
+	// Layer 1 guard: reject control characters and invalid UTF-8 in any argv
+	// token before the process is spawned (or the dry-run line is printed).
+	// This is safe on already-assembled tokens because it does not reject
+	// list/name=value delimiters, only characters that cannot appear in a
+	// legitimate token. Per-context checks live at the individual call sites.
+	if err := validate.Enforce(validate.Args(args...)); err != nil {
+		return "", err
+	}
 	if c.config.DryRun {
 		fmt.Printf("Executing: %s, %v", c.config.Executable, args)
 		return "", nil
@@ -101,6 +111,51 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 			out.String(), err)
 	}
 	return out.String(), err
+}
+
+// runNamed validates a single caller-supplied operand (an object name) then
+// runs the qconf command. Used by the -s*/-d* show/delete operations so a
+// leading '-' cannot be reinterpreted by qconf as a flag or subcommand.
+func (c *CommandLineQConf) runNamed(flag, name string) (string, error) {
+	// Operand rejects a leading '-'; in strict mode StrictObjectName adds the
+	// KEY_TABLE charset. These flags operate on object names (queue, PE,
+	// calendar, ...) or host names, both of which KEY_TABLE accepts, so the
+	// strict check never rejects a legitimate operand.
+	if err := validate.Enforce(validate.Operand(name), validate.StrictObjectName(name)); err != nil {
+		return "", err
+	}
+	return c.RunCommand(flag, name)
+}
+
+// runNamedList validates a caller-supplied comma-separated object list then
+// runs the qconf command. Each element is validated individually; the comma
+// separator is preserved so a legitimate "a.q,b.q" passes while a forged
+// "-flag" element is rejected.
+func (c *CommandLineQConf) runNamedList(flag, list string) (string, error) {
+	// strictEach validates each comma element structurally (validate.List) and,
+	// in strict mode, applies the object-name charset -- matching runNamed so
+	// single-object and list operations behave consistently. StrictObjectName
+	// no-ops outside strict mode, so no mode guard is needed here.
+	if err := validate.Enforce(strictEach(flag, strings.Split(list, ","), validate.StrictObjectName)); err != nil {
+		return "", err
+	}
+	return c.RunCommand(flag, list)
+}
+
+// strictEach applies the structural validate.List check to xs and then, per
+// element, the given strict validator (StrictObjectName/StrictHostName, both of
+// which no-op outside strict mode). It is the single implementation behind the
+// list-plus-strict-charset checks used by the qconf list operations.
+func strictEach(what string, xs []string, strict func(string) error) error {
+	if err := validate.List(what, xs); err != nil {
+		return err
+	}
+	for _, x := range xs {
+		if err := strict(x); err != nil {
+			return fmt.Errorf("%s %q: %w", what, x, err)
+		}
+	}
+	return nil
 }
 
 // GetVersion returns the version information of the cluster scheduler
@@ -570,7 +625,7 @@ func writeCalendar(file *os.File, cfg CalendarConfig) error {
 
 // DeleteCalendar deletes a calendar.
 func (c *CommandLineQConf) DeleteCalendar(calendarName string) error {
-	_, err := c.RunCommand("-dcal", calendarName)
+	_, err := c.runNamed("-dcal", calendarName)
 	return err
 }
 
@@ -632,7 +687,7 @@ func ParseCalendarConfigFromLines(lines []string) (cfg CalendarConfig, recognize
 
 // ShowCalendar shows the specified calendar.
 func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, error) {
-	out, err := c.RunCommand("-scal", calendarName)
+	out, err := c.runNamed("-scal", calendarName)
 	if err != nil {
 		return CalendarConfig{}, err
 	}
@@ -746,13 +801,13 @@ func (c *CommandLineQConf) AddComplexEntry(e ComplexEntryConfig) error {
 
 // DeleteComplexEntry deletes a complex entry.
 func (c *CommandLineQConf) DeleteComplexEntry(entryName string) error {
-	_, err := c.RunCommand("-dce", entryName)
+	_, err := c.runNamed("-dce", entryName)
 	return err
 }
 
 // ShowComplexEntry shows the specified complex entry.
 func (c *CommandLineQConf) ShowComplexEntry(entryName string) (ComplexEntryConfig, error) {
-	out, err := c.RunCommand("-sce", entryName)
+	out, err := c.runNamed("-sce", entryName)
 	if err != nil {
 		return ComplexEntryConfig{}, err
 	}
@@ -907,13 +962,13 @@ func (c *CommandLineQConf) AddCkptInterface(cfg CkptInterfaceConfig) error {
 
 // DeleteCkptInterface deletes a checkpointing interface.
 func (c *CommandLineQConf) DeleteCkptInterface(interfaceName string) error {
-	_, err := c.RunCommand("-dckpt", interfaceName)
+	_, err := c.runNamed("-dckpt", interfaceName)
 	return err
 }
 
 // ShowCkptInterface shows the specified checkpointing interface.
 func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfaceConfig, error) {
-	out, err := c.RunCommand("-sckpt", interfaceName)
+	out, err := c.runNamed("-sckpt", interfaceName)
 	if err != nil {
 		return CkptInterfaceConfig{}, err
 	}
@@ -1128,13 +1183,13 @@ func (c *CommandLineQConf) AddHostConfiguration(config HostConfiguration) error 
 
 // DeleteHostConfiguration deletes a host configuration.
 func (c *CommandLineQConf) DeleteHostConfiguration(configName string) error {
-	_, err := c.RunCommand("-dconf", configName)
+	_, err := c.runNamed("-dconf", configName)
 	return err
 }
 
 // ShowHostConfiguration shows the specified host configuration.
 func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfiguration, error) {
-	out, err := c.RunCommand("-sconf", hostName)
+	out, err := c.runNamed("-sconf", hostName)
 	if err != nil {
 		return HostConfiguration{}, err
 	}
@@ -1331,7 +1386,7 @@ func ParseGlobalConfigFromLines(lines []string) GlobalConfig {
 
 // ShowGlobalConfiguration shows the global configuration.
 func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
-	out, err := c.RunCommand("-sconf", "global")
+	out, err := c.runNamed("-sconf", "global")
 	if err != nil {
 		return nil, err
 	}
@@ -1416,7 +1471,7 @@ func (c *CommandLineQConf) AddExecHost(hostExecConfig HostExecConfig) error {
 
 // DeleteExecHost deletes an execution host.
 func (c *CommandLineQConf) DeleteExecHost(hostList string) error {
-	_, err := c.RunCommand("-de", hostList)
+	_, err := c.runNamedList("-de", hostList)
 	return err
 }
 
@@ -1496,7 +1551,7 @@ func ParseExecHostConfigFromLines(lines []string) HostExecConfig {
 
 // ShowExecHost shows the specified execution host.
 func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error) {
-	out, err := c.RunCommand("-se", hostName)
+	out, err := c.runNamed("-se", hostName)
 	if err != nil {
 		return HostExecConfig{}, err
 	}
@@ -1536,10 +1591,27 @@ func splitWithoutEmptyLines(content, sep string) []string {
 	return res
 }
 
+// validateListElements checks each element of a caller-supplied object-name
+// list that will be comma-joined into one qconf argv token: the structural
+// validate.List check plus, in strict mode, the object-name charset.
+func validateListElements(what string, xs []string) error {
+	return strictEach(what, xs, validate.StrictObjectName)
+}
+
+// validateHostListElements is validateListElements for host names: same
+// structural check, but in strict mode it applies the host-name charset
+// (verify_host_name rules) rather than the object-name KEY_TABLE.
+func validateHostListElements(what string, xs []string) error {
+	return strictEach(what, xs, validate.StrictHostName)
+}
+
 // AddAdminHost adds a new administrative host.
 func (c *CommandLineQConf) AddAdminHost(hosts []string) error {
 	if len(hosts) == 0 {
 		return nil
+	}
+	if err := validate.Enforce(validateHostListElements("admin host", hosts)); err != nil {
+		return err
 	}
 	hostList := strings.Join(hosts, ",")
 	_, err := c.RunCommand("-ah", hostList)
@@ -1553,6 +1625,9 @@ func (c *CommandLineQConf) AddAdminHost(hosts []string) error {
 func (c *CommandLineQConf) DeleteAdminHost(hosts []string) error {
 	if hosts == nil {
 		return nil
+	}
+	if err := validate.Enforce(validateHostListElements("admin host", hosts)); err != nil {
+		return err
 	}
 	hostList := strings.Join(hosts, ",")
 	_, err := c.RunCommand("-dh", hostList)
@@ -1600,7 +1675,7 @@ func (c *CommandLineQConf) AddHostGroup(hostGroup HostGroupConfig) error {
 
 // DeleteHostGroup deletes a host group.
 func (c *CommandLineQConf) DeleteHostGroup(groupName string) error {
-	_, err := c.RunCommand("-dhgrp", groupName)
+	_, err := c.runNamed("-dhgrp", groupName)
 	return err
 }
 
@@ -1608,7 +1683,7 @@ func (c *CommandLineQConf) DeleteHostGroup(groupName string) error {
 // list can contain other host groups. Use ShowHowGroupResolved() for
 // getting a list of all hosts.
 func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, error) {
-	out, err := c.RunCommand("-shgrp", groupName)
+	out, err := c.runNamed("-shgrp", groupName)
 	if err != nil {
 		return HostGroupConfig{}, err
 	}
@@ -1634,7 +1709,7 @@ func (c *CommandLineQConf) ShowHostGroup(groupName string) (HostGroupConfig, err
 
 // ShowHostGroupResolved shows all hosts in a host group and all sub-groups.
 func (c *CommandLineQConf) ShowHostGroupResolved(groupName string) ([]string, error) {
-	out, err := c.RunCommand("-shgrp_resolved", groupName)
+	out, err := c.runNamed("-shgrp_resolved", groupName)
 	if err != nil {
 		return nil, err
 	}
@@ -1699,13 +1774,13 @@ func (c *CommandLineQConf) AddResourceQuotaSet(rqs ResourceQuotaSetConfig) error
 
 // DeleteResourceQuotaSet deletes a resource quota set.
 func (c *CommandLineQConf) DeleteResourceQuotaSet(rqsList string) error {
-	_, err := c.RunCommand("-drqs", rqsList)
+	_, err := c.runNamedList("-drqs", rqsList)
 	return err
 }
 
 // ShowResourceQuotaSet shows the specified resource quota set.
 func (c *CommandLineQConf) ShowResourceQuotaSet(rqsList string) (ResourceQuotaSetConfig, error) {
-	out, err := c.RunCommand("-srqs", rqsList)
+	out, err := c.runNamedList("-srqs", rqsList)
 	if err != nil {
 		return ResourceQuotaSetConfig{}, err
 	}
@@ -1753,6 +1828,9 @@ func (c *CommandLineQConf) AddUserToManagerList(users []string) error {
 	if len(users) == 0 {
 		return nil
 	}
+	if err := validate.Enforce(validateListElements("user", users)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-am", strings.Join(users, ","))
 	return err
 }
@@ -1761,6 +1839,9 @@ func (c *CommandLineQConf) AddUserToManagerList(users []string) error {
 func (c *CommandLineQConf) DeleteUserFromManagerList(users []string) error {
 	if len(users) == 0 {
 		return nil
+	}
+	if err := validate.Enforce(validateListElements("user", users)); err != nil {
+		return err
 	}
 	_, err := c.RunCommand("-dm", strings.Join(users, ","))
 	return err
@@ -1780,6 +1861,9 @@ func (c *CommandLineQConf) AddUserToOperatorList(users []string) error {
 	if users == nil {
 		return nil
 	}
+	if err := validate.Enforce(validateListElements("user", users)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-ao", strings.Join(users, ","))
 	return err
 }
@@ -1788,6 +1872,9 @@ func (c *CommandLineQConf) AddUserToOperatorList(users []string) error {
 func (c *CommandLineQConf) DeleteUserFromOperatorList(users []string) error {
 	if len(users) == 0 {
 		return nil
+	}
+	if err := validate.Enforce(validateListElements("user", users)); err != nil {
+		return err
 	}
 	_, err := c.RunCommand("-do", strings.Join(users, ","))
 	return err
@@ -1918,7 +2005,7 @@ func writePE(file *os.File, pe ParallelEnvironmentConfig) error {
 
 // DeleteParallelEnvironment deletes a parallel environment.
 func (c *CommandLineQConf) DeleteParallelEnvironment(peName string) error {
-	_, err := c.RunCommand("-dp", peName)
+	_, err := c.runNamed("-dp", peName)
 	return err
 }
 
@@ -1991,7 +2078,7 @@ func ParseParallelEnvironmentConfigFromLines(lines []string) (cfg ParallelEnviro
 
 // ShowParallelEnvironment shows the specified parallel environment.
 func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvironmentConfig, error) {
-	out, err := c.RunCommand("-sp", peName)
+	out, err := c.runNamed("-sp", peName)
 	if err != nil {
 		return ParallelEnvironmentConfig{}, err
 	}
@@ -2061,13 +2148,16 @@ func (c *CommandLineQConf) DeleteProject(projects []string) error {
 	if len(projects) == 0 {
 		return nil
 	}
+	if err := validate.Enforce(validateListElements("project", projects)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-dprj", strings.Join(projects, ","))
 	return err
 }
 
 // ShowProject shows the specified project.
 func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error) {
-	out, err := c.RunCommand("-sprj", projectName)
+	out, err := c.runNamed("-sprj", projectName)
 	if err != nil {
 		return ProjectConfig{}, err
 	}
@@ -2538,13 +2628,13 @@ func (c *CommandLineQConf) AddClusterQueue(queue ClusterQueueConfig) error {
 
 // DeleteClusterQueue deletes a cluster queue.
 func (c *CommandLineQConf) DeleteClusterQueue(queueName string) error {
-	_, err := c.RunCommand("-dq", queueName)
+	_, err := c.runNamed("-dq", queueName)
 	return err
 }
 
 // ShowClusterQueue shows the specified cluster queue.
 func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfig, error) {
-	out, err := c.RunCommand("-sq", queueName)
+	out, err := c.runNamed("-sq", queueName)
 	if err != nil {
 		return ClusterQueueConfig{}, err
 	}
@@ -2687,6 +2777,9 @@ func (c *CommandLineQConf) AddSubmitHosts(hostnames []string) error {
 	if hostnames == nil {
 		return nil
 	}
+	if err := validate.Enforce(validateHostListElements("submit host", hostnames)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-as", strings.Join(hostnames, ","))
 	return err
 }
@@ -2695,6 +2788,9 @@ func (c *CommandLineQConf) AddSubmitHosts(hostnames []string) error {
 func (c *CommandLineQConf) DeleteSubmitHost(hostnames []string) error {
 	if hostnames == nil {
 		return nil
+	}
+	if err := validate.Enforce(validateHostListElements("submit host", hostnames)); err != nil {
+		return err
 	}
 	_, err := c.RunCommand("-ds", strings.Join(hostnames, ","))
 	return err
@@ -2715,25 +2811,37 @@ func (c *CommandLineQConf) ShowSubmitHosts() ([]string, error) {
 
 // AddUserToUserSetList adds a user to a user set list.
 func (c *CommandLineQConf) AddUserToUserSetList(userList, listnameList string) error {
+	if err := validate.Enforce(validate.SplitAndValidateList(userList)); err != nil {
+		return err
+	}
+	if err := validate.Enforce(validate.SplitAndValidateList(listnameList)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-au", userList, listnameList)
 	return err
 }
 
 // DeleteUserFromUserSetList deletes a user from a user set list.
 func (c *CommandLineQConf) DeleteUserFromUserSetList(userList, listnameList string) error {
+	if err := validate.Enforce(validate.SplitAndValidateList(userList)); err != nil {
+		return err
+	}
+	if err := validate.Enforce(validate.SplitAndValidateList(listnameList)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-du", userList, listnameList)
 	return err
 }
 
 // DeleteUserSetList deletes a user set list.
 func (c *CommandLineQConf) DeleteUserSetList(userList string) error {
-	_, err := c.RunCommand("-dul", userList)
+	_, err := c.runNamedList("-dul", userList)
 	return err
 }
 
 // ShowUserSetList shows the specified user set list.
 func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConfig, error) {
-	out, err := c.RunCommand("-su", listnameList)
+	out, err := c.runNamedList("-su", listnameList)
 	if err != nil {
 		return UserSetListConfig{}, err
 	}
@@ -2846,13 +2954,16 @@ func (c *CommandLineQConf) DeleteUser(users []string) error {
 	if len(users) == 0 {
 		return nil
 	}
+	if err := validate.Enforce(validateListElements("user", users)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-duser", strings.Join(users, ","))
 	return err
 }
 
 // ShowUser shows the specified user.
 func (c *CommandLineQConf) ShowUser(userName string) (UserConfig, error) {
-	out, err := c.RunCommand("-suser", userName)
+	out, err := c.runNamed("-suser", userName)
 	if err != nil {
 		return UserConfig{}, err
 	}
@@ -2914,12 +3025,18 @@ func (c *CommandLineQConf) ShowUserSetLists() ([]string, error) {
 
 // CleanQueue cleans a queue for the specified destinations.
 func (c *CommandLineQConf) CleanQueue(destinID []string) error {
+	if err := validate.Enforce(validateListElements("queue", destinID)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-cq", strings.Join(destinID, ","))
 	return err
 }
 
 // ShutdownExecDaemons shuts down execution daemons for the specified hosts.
 func (c *CommandLineQConf) ShutdownExecDaemons(hosts []string) error {
+	if err := validate.Enforce(validateListElements("host", hosts)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-kej", strings.Join(hosts, ","))
 	return err
 }
@@ -2938,23 +3055,56 @@ func (c *CommandLineQConf) ShutdownSchedulingDaemon() error {
 
 // KillEventClient kills the event clients with the specified event IDs.
 func (c *CommandLineQConf) KillEventClient(evids []string) error {
+	if err := validate.Enforce(validateListElements("event id", evids)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-kec", strings.Join(evids, ","))
 	return err
 }
 
 // KillQmasterThread kills the specified qmaster thread.
 func (c *CommandLineQConf) KillQmasterThread(threadName string) error {
-	_, err := c.RunCommand("-kt", threadName)
+	_, err := c.runNamed("-kt", threadName)
 	return err
+}
+
+// validateAttrArgs guards the four caller-supplied tokens of the
+// -aattr/-mattr/-dattr family. objName and attrName are plain operands. val is
+// only checked for a leading '-' and control characters, because it may itself
+// be a comma-separated list of name=value pairs (e.g. complex_values
+// "slots=8,mem_free=4G"). objIDList is a comma-separated object-instance list
+// whose elements are validated individually so a forged "-ke host" element
+// (which qconf would parse as a new subcommand) is rejected while a legitimate
+// "all.q,gpu.q" passes.
+func validateAttrArgs(objName, attrName, val, objIDList string) error {
+	if err := validate.Operand(objName); err != nil {
+		return fmt.Errorf("object name: %w", err)
+	}
+	if err := validate.Operand(attrName); err != nil {
+		return fmt.Errorf("attribute name: %w", err)
+	}
+	if err := validate.Operand(val); err != nil {
+		return fmt.Errorf("attribute value: %w", err)
+	}
+	if err := validate.SplitAndValidateList(objIDList); err != nil {
+		return fmt.Errorf("object id list: %w", err)
+	}
+	return nil
 }
 
 // ModifyAttribute modifies an attribute of an object.
 func (c *CommandLineQConf) ModifyAttribute(objName, attrName, val, objIDList string) error {
+	if err := validate.Enforce(validateAttrArgs(objName, attrName, val, objIDList)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-mattr", objName, attrName, val, objIDList)
 	return err
 }
 
 func (c *CommandLineQConf) AddAttribute(objName, attrName, val, objIDList string) error {
+	if err := validate.Enforce(validateAttrArgs(objName, attrName, val, objIDList)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-aattr", objName, attrName, val, objIDList)
 	return err
 }
@@ -3272,7 +3422,17 @@ func (c *CommandLineQConf) ModifyHostConfiguration(configName string, cfg HostCo
 
 // CreateTempDirWithFileName creates a temporary directory with a file of the given name.
 // Exported for use by version-specific packages.
+//
+// name comes from a caller-supplied object name and is used both as the
+// MkdirTemp pattern and as the file basename that is later passed to
+// qconf -A*/-M*. It is validated as a single local path segment so a name such
+// as ".." or "a/b" cannot escape the temp directory; os.MkdirTemp only rejects
+// separators with an opaque error, so the explicit guard gives a clear message
+// and covers the file basename too.
 func CreateTempDirWithFileName(name string) (*os.File, error) {
+	if err := validate.Enforce(validate.LocalFileName(name)); err != nil {
+		return nil, fmt.Errorf("invalid object name for temp file: %w", err)
+	}
 	dir, err := os.MkdirTemp("", name)
 	if err != nil {
 		return nil, err
@@ -3434,6 +3594,15 @@ func SetResourceQuotaSetDefaults(cfg *ResourceQuotaSetConfig) {
 
 // ModifyResourceQuotaSet modifies a resource quota set.
 func (c *CommandLineQConf) ModifyResourceQuotaSet(rqsName string, cfg ResourceQuotaSetConfig) error {
+	// rqsName is passed to `qconf -Mrqs <file> <rqsName>` as a trailing
+	// operand. qconf consumes that operand only when it does not start with
+	// '-'; a leading-'-' value is instead re-parsed by the top-level option
+	// loop as a fresh subcommand (e.g. "-km" would shut down the qmaster).
+	// CreateTempDirWithFileName's LocalFileName check does not reject a leading
+	// '-', so validate it explicitly as an operand here.
+	if err := validate.Enforce(validate.Operand(rqsName), validate.StrictObjectName(rqsName)); err != nil {
+		return err
+	}
 	SetResourceQuotaSetDefaults(&cfg)
 	file, err := CreateTempDirWithFileName(rqsName)
 	if err != nil {
@@ -3870,6 +4039,9 @@ func (c *CommandLineQConf) ModifyUser(userName string, cfg UserConfig) error {
 
 // DeleteAttribute deletes an attribute from an object.
 func (c *CommandLineQConf) DeleteAttribute(objName, attrName, val, objIDList string) error {
+	if err := validate.Enforce(validateAttrArgs(objName, attrName, val, objIDList)); err != nil {
+		return err
+	}
 	_, err := c.RunCommand("-dattr", objName, attrName, val, objIDList)
 	return err
 }

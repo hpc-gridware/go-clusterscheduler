@@ -135,3 +135,18 @@ var _ = Describe("QdelImpl", func() {
 		})
 	})
 })
+
+var _ = Describe("QdelImpl argument validation", func() {
+	It("rejects a leading-dash job element before spawning qdel", func() {
+		q, err := qdel.NewCommandLineQDel(qdel.CommandLineQDelConfig{DryRun: true})
+		Expect(err).To(BeNil())
+		_, err = q.DeleteJobs([]string{"-f"})
+		Expect(err).To(HaveOccurred())
+	})
+	It("accepts clean numeric job ids", func() {
+		q, err := qdel.NewCommandLineQDel(qdel.CommandLineQDelConfig{DryRun: true})
+		Expect(err).To(BeNil())
+		_, err = q.DeleteJobs([]string{"42", "43.1-5:1"})
+		Expect(err).To(BeNil())
+	})
+})

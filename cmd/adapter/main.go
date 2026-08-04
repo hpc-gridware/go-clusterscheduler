@@ -60,7 +60,10 @@ func runAdapter(cmd *cobra.Command, args []string) {
 	}
 
 	router := mux.NewRouter()
-	adapterHandler := adapter.NewAdapter(qc)
+	// This endpoint is unauthenticated, so keep the destructive daemon-control
+	// and state-clearing qconf operations off the network boundary. Deployments
+	// that need them should put authentication in front of the adapter.
+	adapterHandler := adapter.NewAdapterWithDeniedMethods(qc, adapter.DestructiveQConfMethods)
 
 	// Command endpoint (POST only)
 	router.Handle("/api/v0/command", adapterHandler).Methods("POST")

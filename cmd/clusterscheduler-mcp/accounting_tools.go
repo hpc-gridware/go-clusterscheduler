@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 	qacct "github.com/hpc-gridware/go-clusterscheduler/pkg/qacct/v9.0"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -142,6 +143,11 @@ func registerAccountingTools(s *SchedulerServer, config SchedulerServerConfig) e
 
 // getAccountingInfo executes qacct with the given arguments
 func getAccountingInfo(ctx context.Context, args []string) (string, error) {
+	// Always enforce at the network boundary, independent of GCS_VALIDATION;
+	// the qacct wrapper re-checks as defense in depth.
+	if err := validate.Args(args...); err != nil {
+		return "", fmt.Errorf("invalid qacct argument: %w", err)
+	}
 	qa, err := qacct.NewCommandLineQAcct(qacct.CommandLineQAcctConfig{
 		Executable: "qacct",
 	})
