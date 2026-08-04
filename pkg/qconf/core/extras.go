@@ -36,9 +36,14 @@
 //   - Deterministic order. ExtraFields keys are emitted in sorted
 //     order so the ETag canonicalisation that the qontrol layer wraps
 //     around the typed struct + extras is stable.
-//   - Sanitisation. Values containing carriage returns or line feeds
-//     are dropped at parse time. They would split one key into two
-//     lines on re-emit and corrupt the qconf -M* file format.
+//   - Sanitisation on both sides. ExtraFields is part of the JSON wire
+//     format, so a map can arrive either from CaptureExtraField
+//     (parsed qconf output) or from an untrusted request body. Keys
+//     must be lowercase-snake-case and values free of control
+//     characters; the parse path drops violations, the emit path
+//     rejects them with an error. Without the emit-side check a value
+//     containing a line feed would split into a second directive line
+//     and inject an arbitrary attribute into the qconf -M* file.
 
 package core
 
@@ -125,10 +130,20 @@ func SanitizeExtraValue(v string) (string, bool) {
 }
 
 // WriteExtraFields emits extras to w in sorted key order as
-// "key value\n" lines. typedKeys names the json tags that the caller
-// has already emitted for the typed fields of the same object; any
-// extras entry whose key collides with a typed key is dropped (typed
+// "key value\n" lines. typedKeys names the attribute names the caller
+// has already emitted for the typed fields of the same object (plus
+// "extra_fields" itself, which is a JSON carrier key and never a qconf
+// attribute); any extras entry whose key collides is dropped (typed
 // field wins). Safe to call with empty extras.
+//
+// Keys and values are validated here rather than trusted from the
+// caller: ExtraFields is serialisable (json:"extra_fields"), so a map
+// reaching this function may have come from an untrusted request body
+// rather than from CaptureExtraField, which is the only other place
+// the shape is enforced. An unchecked value containing a line feed
+// would split into a second directive line and inject an arbitrary
+// attribute into the qconf -M* file. Violations fail loudly instead of
+// being skipped, so a client cannot have input silently ignored.
 func WriteExtraFields(w io.Writer, extras map[string]string, typedKeys map[string]struct{}) error {
 	if len(extras) == 0 {
 		return nil
@@ -142,7 +157,15 @@ func WriteExtraFields(w io.Writer, extras map[string]string, typedKeys map[strin
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		if _, err := fmt.Fprintf(w, "%s %s\n", k, extras[k]); err != nil {
+		if !validExtrasKey.MatchString(k) {
+			return fmt.Errorf("invalid extra field name %q: must match %s",
+				k, validExtrasKey.String())
+		}
+		v, ok := SanitizeExtraValue(extras[k])
+		if !ok {
+			return fmt.Errorf("invalid extra field value for %q: contains control characters", k)
+		}
+		if _, err := fmt.Fprintf(w, "%s %s\n", k, v); err != nil {
 			return err
 		}
 	}
@@ -171,10 +194,16 @@ func PromoteFromExtras(extras map[string]string, key string, dst *string) {
 	}
 }
 
-// TypedKeysOf returns the set of json tag names that reflection-based
-// serialisation of v would emit. Empty tags and `-` are skipped.
-// Embedded structs are recursed into so v9.1.GlobalConfig (which
-// embeds core.GlobalConfig) yields the union of core and v9.1 keys.
+// TypedKeysOf returns the set of attribute names reserved by v's typed
+// fields. Empty tags and `-` are skipped. Embedded structs are recursed
+// into so v9.1.GlobalConfig (which embeds core.GlobalConfig) yields the
+// union of core and v9.1 keys.
+//
+// The set intentionally includes "extra_fields" itself: that is the
+// JSON carrier key for the map, never a qconf attribute, so an extras
+// entry keyed "extra_fields" is reserved rather than emitted. Note the
+// set is therefore not identical to what the Modify* writers emit --
+// they skip the ExtraFields field by Go field name.
 //
 // Used by the reflection-loop Modify* implementations to build the
 // collision-set passed to WriteExtraFields, and reusable by Modify*

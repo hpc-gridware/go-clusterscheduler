@@ -3489,23 +3489,29 @@ func CreateTempDirWithFileName(name string) (*os.File, error) {
 	return file, nil
 }
 
-// ModifyGlobalConfig modifies the global configuration.
-func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
-	file, err := CreateTempDirWithFileName("global")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(filepath.Dir(file.Name()))
-
+// writeGlobalConfig emits the typed fields of cfg as qconf attribute
+// lines followed by its ExtraFields. Split out of ModifyGlobalConfig so
+// the emitted file can be asserted without a cluster; the caller keeps
+// ownership of w.
+func writeGlobalConfig(w io.Writer, cfg GlobalConfig) error {
 	v := reflect.ValueOf(cfg)
 	typeOfS := v.Type()
 	for i := 0; i < v.NumField(); i++ {
-		fieldName := typeOfS.Field(i).Tag.Get("json")
-		// Skip fields that are not part of the qconf wire format
-		// (e.g. ExtraFields is tagged `json:"-"` and gets emitted
-		// separately below via WriteExtraFields).
+		field := typeOfS.Field(i)
+		// ExtraFields is part of the JSON representation but not a
+		// qconf attribute; it gets emitted separately below via
+		// WriteExtraFields.
+		if field.Name == "ExtraFields" {
+			continue
+		}
+		// The json tag doubles as the qconf attribute name; strip
+		// JSON-only options like ",omitempty".
+		fieldName := field.Tag.Get("json")
 		if fieldName == "" || fieldName == "-" {
 			continue
+		}
+		if comma := strings.Index(fieldName, ","); comma >= 0 {
+			fieldName = fieldName[:comma]
 		}
 		fieldValue := v.Field(i).Interface()
 		// if type is []string, join the values either
@@ -3531,12 +3537,22 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 				fieldValue = "NONE"
 			}
 		}
-		_, err = file.WriteString(fmt.Sprintf("%s %v\n", fieldName, fieldValue))
-		if err != nil {
+		if _, err := fmt.Fprintf(w, "%s %v\n", fieldName, fieldValue); err != nil {
 			return err
 		}
 	}
-	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+	return WriteExtraFields(w, cfg.ExtraFields, TypedKeysOf(cfg))
+}
+
+// ModifyGlobalConfig modifies the global configuration.
+func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
+	file, err := CreateTempDirWithFileName("global")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(filepath.Dir(file.Name()))
+
+	if err := writeGlobalConfig(file, cfg); err != nil {
 		return err
 	}
 	file.Close()
@@ -4184,6 +4200,73 @@ func (c *CommandLineQConf) ShowSchedulerConfiguration() (*SchedulerConfig, error
 	return &cfg, nil
 }
 
+// writeSchedulerConfig emits the typed fields of cfg as qconf attribute
+// lines followed by its ExtraFields. Split out of ModifySchedulerConfig
+// so the emitted file can be asserted without a cluster; the caller
+// keeps ownership of w.
+func writeSchedulerConfig(w io.Writer, cfg SchedulerConfig) error {
+	v := reflect.ValueOf(cfg)
+	typeOfS := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		field := typeOfS.Field(i)
+		// ExtraFields is part of the JSON representation but not a
+		// qconf attribute; it is emitted separately below via
+		// WriteExtraFields.
+		if field.Name == "ExtraFields" {
+			continue
+		}
+		// The json tag doubles as the qconf attribute name; strip
+		// JSON-only options like ",omitempty".
+		fieldName := field.Tag.Get("json")
+		if fieldName == "" || fieldName == "-" {
+			continue
+		}
+		if comma := strings.Index(fieldName, ","); comma >= 0 {
+			fieldName = fieldName[:comma]
+		}
+		fieldValue := v.Field(i).Interface()
+		// if type is []string, join the values either
+		// comma separated or space separated depending on fieldName
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Slice {
+			if len(fieldValue.([]string)) == 0 {
+				fieldValue = []string{"NONE"}
+			}
+			switch fieldName {
+			case "job_load_adjustments", "halflife_decay_list", "usage_weight_list", "params":
+				fieldValue = strings.Join(fieldValue.([]string), ",")
+			default:
+				return fmt.Errorf("unsupported slice type: %s", fieldName)
+			}
+		}
+
+		// for booleans, write "TRUE" or "FALSE"
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Bool {
+			if fieldValue.(bool) {
+				fieldValue = "TRUE"
+			} else {
+				fieldValue = "FALSE"
+			}
+		}
+
+		// for float64, write the value with 6 decimal places
+		if reflect.TypeOf(fieldValue).Kind() == reflect.Float64 {
+			fieldValue = fmt.Sprintf("%.6f", fieldValue)
+		}
+
+		// an empty string should be written as "NONE"
+		if reflect.TypeOf(fieldValue).Kind() == reflect.String {
+			if fieldValue.(string) == "" {
+				fieldValue = "NONE"
+			}
+		}
+
+		if _, err := fmt.Fprintf(w, "%s %v\n", fieldName, fieldValue); err != nil {
+			return err
+		}
+	}
+	return WriteExtraFields(w, cfg.ExtraFields, TypedKeysOf(cfg))
+}
+
 // ModifySchedulerConfig modifies the scheduler configuration.
 func (c *CommandLineQConf) ModifySchedulerConfig(cfg SchedulerConfig) error {
 
@@ -4225,60 +4308,9 @@ func (c *CommandLineQConf) ModifySchedulerConfig(cfg SchedulerConfig) error {
 	if err != nil {
 		return err
 	}
-	//defer os.RemoveAll(filepath.Dir(file.Name()))
+	defer os.RemoveAll(filepath.Dir(file.Name()))
 
-	v := reflect.ValueOf(cfg)
-	typeOfS := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		fieldName := typeOfS.Field(i).Tag.Get("json")
-		// Skip fields that are not part of the qconf wire format
-		// (e.g. ExtraFields is tagged `json:"-"` and is emitted
-		// separately below via WriteExtraFields).
-		if fieldName == "" || fieldName == "-" {
-			continue
-		}
-		fieldValue := v.Field(i).Interface()
-		// if type is []string, join the values either
-		// comma separated or space separated depending on fieldName
-		if reflect.TypeOf(fieldValue).Kind() == reflect.Slice {
-			if len(fieldValue.([]string)) == 0 {
-				fieldValue = []string{"NONE"}
-			}
-			switch fieldName {
-			case "job_load_adjustments", "halflife_decay_list", "usage_weight_list", "params":
-				fieldValue = strings.Join(fieldValue.([]string), ",")
-			default:
-				return fmt.Errorf("unsupported slice type: %s", fieldName)
-			}
-		}
-
-		// for booleans, write "TRUE" or "FALSE"
-		if reflect.TypeOf(fieldValue).Kind() == reflect.Bool {
-			if fieldValue.(bool) {
-				fieldValue = "TRUE"
-			} else {
-				fieldValue = "FALSE"
-			}
-		}
-
-		// for float64, write the value with 6 decimal places
-		if reflect.TypeOf(fieldValue).Kind() == reflect.Float64 {
-			fieldValue = fmt.Sprintf("%.6f", fieldValue)
-		}
-
-		// an empty string should be written as "NONE"
-		if reflect.TypeOf(fieldValue).Kind() == reflect.String {
-			if fieldValue.(string) == "" {
-				fieldValue = "NONE"
-			}
-		}
-
-		_, err = file.WriteString(fmt.Sprintf("%s %v\n", fieldName, fieldValue))
-		if err != nil {
-			return err
-		}
-	}
-	if err := WriteExtraFields(file, cfg.ExtraFields, TypedKeysOf(cfg)); err != nil {
+	if err := writeSchedulerConfig(file, cfg); err != nil {
 		return err
 	}
 	file.Close()

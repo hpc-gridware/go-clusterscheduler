@@ -21,6 +21,7 @@ package qconf
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -87,26 +88,30 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	return cfg, nil
 }
 
-// ModifyGlobalConfig modifies the global configuration with v9.1-specific
-// fields included. It writes both the embedded core fields and v9.1 fields
-// to the configuration file.
-func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
-	file, err := core.CreateTempDirWithFileName("global")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(filepath.Dir(file.Name()))
-
+// writeGlobalConfig emits the embedded core fields, then the
+// v9.1-specific fields, then any preserved unknown keys. Split out of
+// ModifyGlobalConfig so the emitted file can be asserted without a
+// cluster; the caller keeps ownership of w.
+func writeGlobalConfig(w io.Writer, cfg GlobalConfig) error {
 	// Write embedded core GlobalConfig fields.
 	v := reflect.ValueOf(cfg.GlobalConfig)
 	typeOfS := v.Type()
 	for i := 0; i < v.NumField(); i++ {
-		fieldName := typeOfS.Field(i).Tag.Get("json")
-		// Skip fields that are not part of the qconf wire format
-		// (e.g. ExtraFields is tagged `json:"-"` and is emitted
-		// separately below via WriteExtraFields).
+		field := typeOfS.Field(i)
+		// ExtraFields is part of the JSON representation but not a
+		// qconf attribute; it is emitted separately below via
+		// core.WriteExtraFields.
+		if field.Name == "ExtraFields" {
+			continue
+		}
+		// The json tag doubles as the qconf attribute name; strip
+		// JSON-only options like ",omitempty".
+		fieldName := field.Tag.Get("json")
 		if fieldName == "" || fieldName == "-" {
 			continue
+		}
+		if comma := strings.Index(fieldName, ","); comma >= 0 {
+			fieldName = fieldName[:comma]
 		}
 		fieldValue := v.Field(i).Interface()
 
@@ -130,8 +135,7 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 				fieldValue = "NONE"
 			}
 		}
-		_, err = file.WriteString(fmt.Sprintf("%s %v\n", fieldName, fieldValue))
-		if err != nil {
+		if _, err := fmt.Fprintf(w, "%s %v\n", fieldName, fieldValue); err != nil {
 			return err
 		}
 	}
@@ -141,7 +145,7 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 		if value == "" {
 			value = "NONE"
 		}
-		_, err := file.WriteString(fmt.Sprintf("%s %s\n", name, value))
+		_, err := fmt.Fprintf(w, "%s %s\n", name, value)
 		return err
 	}
 
@@ -167,10 +171,22 @@ func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
 	// Emit unknown keys preserved through the round trip. Typed keys
 	// of cfg include both the core v9.0 fields (via embedding) and the
 	// v9.1 fields written above, so a collision drops the extras entry.
-	if err := core.WriteExtraFields(file, cfg.ExtraFields, core.TypedKeysOf(cfg)); err != nil {
+	return core.WriteExtraFields(w, cfg.ExtraFields, core.TypedKeysOf(cfg))
+}
+
+// ModifyGlobalConfig modifies the global configuration with v9.1-specific
+// fields included. It writes both the embedded core fields and v9.1 fields
+// to the configuration file.
+func (c *CommandLineQConf) ModifyGlobalConfig(cfg GlobalConfig) error {
+	file, err := core.CreateTempDirWithFileName("global")
+	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(filepath.Dir(file.Name()))
 
+	if err := writeGlobalConfig(file, cfg); err != nil {
+		return err
+	}
 	file.Close()
 
 	_, err = c.RunCommand("-Mconf", file.Name())

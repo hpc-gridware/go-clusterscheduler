@@ -20,8 +20,10 @@
 package core
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -107,6 +109,74 @@ var _ = Describe("Add-path object file writers", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(ContainSubstring(
 				"future_key future_value\n"))
+		})
+	})
+})
+
+// The reflection-based writers derive qconf attribute names from json
+// tags. Since ExtraFields became serialisable (json:"extra_fields") the
+// tag no longer excludes it, so the loops skip it by Go field name
+// instead. These specs fail if that skip is lost -- without them the
+// regression surfaces only as a corrupted file sent to the qmaster.
+var _ = Describe("Reflection-based config writers", func() {
+
+	Describe("writeGlobalConfig", func() {
+		It("emits typed fields followed by ExtraFields", func() {
+			var buf bytes.Buffer
+			cfg := GlobalConfig{
+				ExecdSpoolDir: "/opt/spool",
+				ExtraFields:   map[string]string{"port_range": "2000-2100"},
+			}
+			Expect(writeGlobalConfig(&buf, cfg)).To(Succeed())
+			Expect(buf.String()).To(ContainSubstring("execd_spool_dir /opt/spool\n"))
+			Expect(buf.String()).To(ContainSubstring("port_range 2000-2100\n"))
+		})
+
+		It("never emits an extra_fields attribute line", func() {
+			var buf bytes.Buffer
+			cfg := GlobalConfig{
+				ExecdSpoolDir: "/opt/spool",
+				ExtraFields:   map[string]string{"port_range": "2000-2100"},
+			}
+			Expect(writeGlobalConfig(&buf, cfg)).To(Succeed())
+			for _, line := range strings.Split(buf.String(), "\n") {
+				Expect(strings.HasPrefix(line, "extra_fields")).To(BeFalse(),
+					"qconf would reject the attribute line %q", line)
+			}
+		})
+
+		It("rejects extras that would corrupt the file", func() {
+			var buf bytes.Buffer
+			cfg := GlobalConfig{
+				ExtraFields: map[string]string{"a_key": "1\nprolog /tmp/pwn.sh"},
+			}
+			Expect(writeGlobalConfig(&buf, cfg)).NotTo(Succeed())
+		})
+	})
+
+	Describe("writeSchedulerConfig", func() {
+		It("emits typed fields followed by ExtraFields", func() {
+			var buf bytes.Buffer
+			cfg := SchedulerConfig{
+				Algorithm:   "default",
+				ExtraFields: map[string]string{"future_param": "42"},
+			}
+			Expect(writeSchedulerConfig(&buf, cfg)).To(Succeed())
+			Expect(buf.String()).To(ContainSubstring("algorithm default\n"))
+			Expect(buf.String()).To(ContainSubstring("future_param 42\n"))
+		})
+
+		It("never emits an extra_fields attribute line", func() {
+			var buf bytes.Buffer
+			cfg := SchedulerConfig{
+				Algorithm:   "default",
+				ExtraFields: map[string]string{"future_param": "42"},
+			}
+			Expect(writeSchedulerConfig(&buf, cfg)).To(Succeed())
+			for _, line := range strings.Split(buf.String(), "\n") {
+				Expect(strings.HasPrefix(line, "extra_fields")).To(BeFalse(),
+					"qconf would reject the attribute line %q", line)
+			}
 		})
 	})
 })

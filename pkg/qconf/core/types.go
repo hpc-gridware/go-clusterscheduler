@@ -81,7 +81,7 @@ type CalendarConfig struct {
 	Year string `json:"year"`
 	Week string `json:"week"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // ComplexEntryConfig represents the configuration for a complex entry.
@@ -95,7 +95,7 @@ type ComplexEntryConfig struct {
 	Default     string `json:"default"`
 	Urgency     int    `json:"urgency"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // CkptInterfaceConfig represents the configuration for a checkpointing interface.
@@ -110,9 +110,12 @@ type CkptInterfaceConfig struct {
 	Signal            string `json:"signal"`
 	When              string `json:"when"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
+// GlobalConfig represents the cluster-wide configuration shown by
+// "qconf -sconf global". v9.1 extends it by embedding this type; see
+// ExtraFields for how parameters outside this struct are preserved.
 type GlobalConfig struct {
 	ExecdSpoolDir string `json:"execd_spool_dir"`
 	Mailer        string `json:"mailer"`
@@ -174,12 +177,15 @@ type GlobalConfig struct {
 	// the typed fields, so a UI client editing one typed field does not
 	// silently destroy parameters set out-of-band via qconf -mconf.
 	//
-	// Tagged json:"-" so it is not part of the wire format. Callers that
-	// want to surface unknowns to a REST client must read this map and
-	// project it into a sibling envelope field. See
-	// pkg/qconf/core/extras.go for the sanitisation, key-collision, and
-	// sorted-emit contract.
-	ExtraFields map[string]string `json:"-"`
+	// Serialized as "extra_fields" in JSON so the preservation guarantee
+	// survives serialization boundaries (REST, MCP, config dumps): a
+	// client can show a config, edit a typed field, and send it back
+	// without silently deleting parameters this struct version does not
+	// know about. The qconf file writers skip this field by Go field
+	// name (it is not a qconf attribute) and emit the entries via
+	// WriteExtraFields; see pkg/qconf/core/extras.go for the
+	// sanitisation, key-collision, and sorted-emit contract.
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // HostConfiguration represents the local configuration for a host.
@@ -213,7 +219,7 @@ type HostConfiguration struct {
 	LibJvmPath        *string  `json:"libjvm_path,omitempty"`
 	AdditionalJvmArgs *string  `json:"additional_jvm_args,omitempty"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // HostGroupConfig represents the configuration for a host group.
@@ -222,7 +228,7 @@ type HostGroupConfig struct {
 	// Hosts are space separated.
 	Hosts []string `json:"hostlist"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // HostExecConfig represents the execution host configuration.
@@ -240,7 +246,7 @@ type HostExecConfig struct {
 	// ReportVariables includes the resources that are reported by the execution host.
 	ReportVariables []string `json:"report_variables"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // ResourceQuotaSetConfig represents the configuration for a resource quota set.
@@ -250,7 +256,7 @@ type ResourceQuotaSetConfig struct {
 	Enabled     bool     `json:"enabled"`
 	Limits      []string `json:"limits"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // ParallelEnvironmentConfig represents the configuration for a parallel environment.
@@ -270,7 +276,7 @@ type ParallelEnvironmentConfig struct {
 	MasterForksSlaves              bool     `json:"master_forks_slaves"`
 	DaemonForksSlaves              bool     `json:"daemon_forks_slaves"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // ProjectConfig represents the configuration for a project.
@@ -281,7 +287,7 @@ type ProjectConfig struct {
 	ACL     []string `json:"acl"`  // user_list space separated
 	XACL    []string `json:"xacl"` // user_list space separated
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 const QTypeBatch string = "BATCH"
@@ -365,7 +371,7 @@ type ClusterQueueConfig struct {
 	SVmem             []string `json:"s_vmem"`
 	HVmem             []string `json:"h_vmem"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // UserSetListConfig represents the configuration for a user set list.
@@ -376,7 +382,7 @@ type UserSetListConfig struct {
 	OTicket int      `json:"oticket"`
 	Entries []string `json:"entries"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // UserConfig represents the configuration for a user.
@@ -387,7 +393,7 @@ type UserConfig struct {
 	DeleteTime     int    `json:"delete_time"`
 	DefaultProject string `json:"default_project"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // ComplexAttributeConfig represents the configuration for complex attributes.
@@ -433,7 +439,7 @@ type SchedulerConfig struct {
 	MaxReservation              int      `json:"max_reservation"`
 	DefaultDuration             string   `json:"default_duration"`
 	// ExtraFields preserves unrecognised keys across modify; see GlobalConfig.ExtraFields.
-	ExtraFields map[string]string `json:"-"`
+	ExtraFields map[string]string `json:"extra_fields,omitempty"`
 }
 
 // ShareTreeNodeShare represents a node in the share tree with its share value
