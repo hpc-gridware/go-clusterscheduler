@@ -76,7 +76,11 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	core.PromoteFromExtras(cfg.ExtraFields, "mail_tag", &cfg.MailTag)
 	core.PromoteFromExtras(cfg.ExtraFields, "gdi_request_limits", &cfg.GDIRequestLimits)
 	if v, ok := cfg.ExtraFields["binding_params"]; ok {
-		cfg.BindingParams = core.ParseIntoStringStringMap(v, ",")
+		bp, err := core.ParseIntoStringStringMap(v, ",")
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse binding_params: %w", err)
+		}
+		cfg.BindingParams = bp
 		delete(cfg.ExtraFields, "binding_params")
 	}
 

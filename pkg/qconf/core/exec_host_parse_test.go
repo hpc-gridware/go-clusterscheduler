@@ -46,14 +46,16 @@ usage_scaling         NONE
 report_variables      NONE`
 
 	It("parses typed fields from qconf -se output", func() {
-		cfg := core.ParseExecHostConfigFromLines(strings.Split(seOutput, "\n"))
+		cfg, err := core.ParseExecHostConfigFromLines(strings.Split(seOutput, "\n"))
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.Name).To(Equal("master"))
 		Expect(cfg.ComplexValues).To(HaveKeyWithValue("test_mem", "1024"))
 		Expect(cfg.UserLists).To(Equal([]string{"arusers", "deadlineusers"}))
 	})
 
 	It("does not round-trip read-only runtime attributes", func() {
-		cfg := core.ParseExecHostConfigFromLines(strings.Split(seOutput, "\n"))
+		cfg, err := core.ParseExecHostConfigFromLines(strings.Split(seOutput, "\n"))
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.ExtraFields).NotTo(HaveKey("load_values"))
 		Expect(cfg.ExtraFields).NotTo(HaveKey("processors"))
 		Expect(cfg.ExtraFields).To(BeEmpty())
@@ -61,8 +63,28 @@ report_variables      NONE`
 
 	It("still captures unknown settable attributes into ExtraFields", func() {
 		lines := strings.Split(seOutput+"\nfuture_param 42", "\n")
-		cfg := core.ParseExecHostConfigFromLines(lines)
+		cfg, err := core.ParseExecHostConfigFromLines(lines)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.ExtraFields).To(HaveKeyWithValue("future_param", "42"))
 		Expect(cfg.ExtraFields).NotTo(HaveKey("load_values"))
+	})
+
+	It("rejects malformed complex_values instead of dropping entries", func() {
+		lines := strings.Split(strings.Replace(seOutput,
+			"complex_values        test_mem=1024",
+			"complex_values        test_mem=1024,broken", 1), "\n")
+		_, err := core.ParseExecHostConfigFromLines(lines)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("complex_values"))
+		Expect(err.Error()).To(ContainSubstring("broken"))
+	})
+
+	It("rejects malformed load_scaling values", func() {
+		lines := strings.Split(strings.Replace(seOutput,
+			"load_scaling          NONE",
+			"load_scaling          np_load_avg=abc", 1), "\n")
+		_, err := core.ParseExecHostConfigFromLines(lines)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("load_scaling"))
 	})
 })

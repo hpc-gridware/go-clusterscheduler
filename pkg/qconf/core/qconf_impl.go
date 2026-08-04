@@ -1475,39 +1475,69 @@ func (c *CommandLineQConf) DeleteExecHost(hostList string) error {
 	return err
 }
 
-func ParseIntoStringFloatMap(val string, sep string) map[string]float64 {
-	pairs := strings.Split(val, sep)
+// ParseIntoStringFloatMap parses sep-separated "key=value" tokens into a
+// map. "NONE" and empty input yield an empty map (the counterpart of
+// JoinStringFloatMap, which writes "NONE" for an empty map). A token
+// without "=" or with a non-numeric value is an error: dropping it
+// silently would erase that entry from the cluster configuration on the
+// next show/modify round-trip.
+func ParseIntoStringFloatMap(val string, sep string) (map[string]float64, error) {
 	out := make(map[string]float64)
-	for _, pair := range pairs {
-		kv := strings.Split(pair, "=")
-		if len(kv) != 2 {
-			continue
-		}
-		f, err := strconv.ParseFloat(kv[1], 64)
-		if err != nil {
-			continue
-		}
-		out[kv[0]] = f
+	trimmed := strings.TrimSpace(val)
+	if trimmed == "" || strings.EqualFold(trimmed, "NONE") {
+		return out, nil
 	}
-	return out
+	for _, pair := range strings.Split(trimmed, sep) {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
+			continue
+		}
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 || strings.TrimSpace(kv[0]) == "" {
+			return nil, fmt.Errorf("malformed key=value pair %q in %q", pair, val)
+		}
+		f, err := strconv.ParseFloat(strings.TrimSpace(kv[1]), 64)
+		if err != nil {
+			return nil, fmt.Errorf("malformed numeric value in pair %q in %q: %w", pair, val, err)
+		}
+		out[strings.TrimSpace(kv[0])] = f
+	}
+	return out, nil
 }
 
-func ParseIntoStringStringMap(val string, sep string) map[string]string {
-	pairs := strings.Split(val, sep)
+// ParseIntoStringStringMap parses sep-separated "key=value" tokens into a
+// map. "NONE" and empty input yield an empty map (the counterpart of
+// JoinStringStringMap, which writes "NONE" for an empty map). The value
+// may itself contain "=" (only the first one separates key and value).
+// A token without "=" is an error: dropping it silently would erase that
+// entry from the cluster configuration on the next show/modify
+// round-trip.
+func ParseIntoStringStringMap(val string, sep string) (map[string]string, error) {
 	out := make(map[string]string)
-	for _, pair := range pairs {
-		kv := strings.Split(pair, "=")
-		if len(kv) != 2 {
+	trimmed := strings.TrimSpace(val)
+	if trimmed == "" || strings.EqualFold(trimmed, "NONE") {
+		return out, nil
+	}
+	for _, pair := range strings.Split(trimmed, sep) {
+		pair = strings.TrimSpace(pair)
+		if pair == "" {
 			continue
 		}
-		out[kv[0]] = kv[1]
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 || strings.TrimSpace(kv[0]) == "" {
+			return nil, fmt.Errorf("malformed key=value pair %q in %q", pair, val)
+		}
+		out[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
 	}
-	return out
+	return out, nil
 }
 
 // ParseExecHostConfigFromLines parses qconf -se output into a
-// HostExecConfig.
-func ParseExecHostConfigFromLines(lines []string) HostExecConfig {
+// HostExecConfig. It returns an error when a map-valued attribute
+// (load_scaling, complex_values, usage_scaling) contains a token that
+// cannot be parsed, since continuing would drop that entry on the next
+// modify.
+func ParseExecHostConfigFromLines(lines []string) (HostExecConfig, error) {
 	cfg := HostExecConfig{}
 	for i, line := range lines {
 		fields := strings.Fields(line)
@@ -1519,10 +1549,18 @@ func ParseExecHostConfigFromLines(lines []string) HostExecConfig {
 			cfg.Name = fields[1]
 		case "load_scaling":
 			line, _ := ParseMultiLineValue(lines, i)
-			cfg.LoadScaling = ParseIntoStringFloatMap(line, ",")
+			m, err := ParseIntoStringFloatMap(line, ",")
+			if err != nil {
+				return cfg, fmt.Errorf("failed to parse load_scaling: %w", err)
+			}
+			cfg.LoadScaling = m
 		case "complex_values":
 			line, _ := ParseMultiLineValue(lines, i)
-			cfg.ComplexValues = ParseIntoStringStringMap(line, ",")
+			m, err := ParseIntoStringStringMap(line, ",")
+			if err != nil {
+				return cfg, fmt.Errorf("failed to parse complex_values: %w", err)
+			}
+			cfg.ComplexValues = m
 		case "user_lists":
 			// https://linux.die.net/man/5/sge_host_conf
 			cfg.UserLists = ParseSpaceSeparatedMultiLineValues(lines, i)
@@ -1534,7 +1572,11 @@ func ParseExecHostConfigFromLines(lines []string) HostExecConfig {
 			cfg.XProjects = ParseSpaceSeparatedMultiLineValues(lines, i)
 		case "usage_scaling":
 			line, _ := ParseMultiLineValue(lines, i)
-			cfg.UsageScaling = ParseIntoStringFloatMap(line, ",")
+			m, err := ParseIntoStringFloatMap(line, ",")
+			if err != nil {
+				return cfg, fmt.Errorf("failed to parse usage_scaling: %w", err)
+			}
+			cfg.UsageScaling = m
 		case "report_variables":
 			cfg.ReportVariables = ParseCommaSeparatedMultiLineValues(lines, i)
 		case "load_values", "processors":
@@ -1546,7 +1588,7 @@ func ParseExecHostConfigFromLines(lines []string) HostExecConfig {
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
-	return cfg
+	return cfg, nil
 }
 
 // ShowExecHost shows the specified execution host.
@@ -1555,7 +1597,10 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 	if err != nil {
 		return HostExecConfig{}, err
 	}
-	cfg := ParseExecHostConfigFromLines(strings.Split(out, "\n"))
+	cfg, err := ParseExecHostConfigFromLines(strings.Split(out, "\n"))
+	if err != nil {
+		return HostExecConfig{}, fmt.Errorf("failed to parse exec host %s: %w", hostName, err)
+	}
 	if cfg.Name == "" {
 		cfg.Name = hostName
 	}
