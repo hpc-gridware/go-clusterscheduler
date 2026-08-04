@@ -21,6 +21,7 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -71,24 +72,40 @@ func JoinListWithOverrides(elements []string, sep string) string {
 	return result
 }
 
+// JoinStringFloatMap joins a map as "key=value" pairs in sorted key
+// order so that repeated writes of the same map produce identical
+// output. Returns "NONE" for an empty map.
 func JoinStringFloatMap(m map[string]float64, sep string) string {
 	if len(m) == 0 {
 		return "NONE"
 	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	elems := make([]string, 0, len(m))
-	for k, v := range m {
-		elems = append(elems, fmt.Sprintf("%s=%f", k, v))
+	for _, k := range keys {
+		elems = append(elems, fmt.Sprintf("%s=%f", k, m[k]))
 	}
 	return strings.Join(elems, sep)
 }
 
+// JoinStringStringMap joins a map as "key=value" pairs in sorted key
+// order so that repeated writes of the same map produce identical
+// output. Returns "NONE" for an empty map.
 func JoinStringStringMap(m map[string]string, sep string) string {
 	if len(m) == 0 {
 		return "NONE"
 	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	elems := make([]string, 0, len(m))
-	for k, v := range m {
-		elems = append(elems, fmt.Sprintf("%s=%s", k, v))
+	for _, k := range keys {
+		elems = append(elems, fmt.Sprintf("%s=%s", k, m[k]))
 	}
 	return strings.Join(elems, sep)
 }
