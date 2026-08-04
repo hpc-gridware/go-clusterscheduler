@@ -92,6 +92,7 @@ var ApplySubtreeMove = core.ApplySubtreeMove
 var ErrNoShareTree = core.ErrNoShareTree
 var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
 var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
+var ErrNoModification = core.ErrNoModification
 
 // ShareCode* re-exports so qontrol handlers can branch on validation
 // errors without typing the raw string literals. Keep in lock-step with

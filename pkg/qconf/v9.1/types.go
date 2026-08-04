@@ -56,6 +56,7 @@ var ApplySubtreeMove = core.ApplySubtreeMove
 
 var ErrNoShareTree = core.ErrNoShareTree
 var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
+var ErrNoModification = core.ErrNoModification
 var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
 
 // ShareCode* re-exports so qontrol handlers can branch on validation

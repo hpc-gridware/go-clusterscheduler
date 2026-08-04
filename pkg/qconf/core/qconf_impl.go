@@ -22,6 +22,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -3212,21 +3213,81 @@ func validateAttrArgs(objName, attrName, val, objIDList string) error {
 	return nil
 }
 
-// ModifyAttribute modifies an attribute of an object.
+// ErrNoModification reports that qconf exited successfully but did not
+// apply the requested change. The qmaster emits these notices with
+// STATUS_OK and ANSWER_QUALITY_INFO (see attr_mod_sub_list in
+// source/daemons/qmaster/sge_utility_qmaster.cc), so the exit status
+// alone cannot distinguish them from a change that took effect.
+//
+// The dangerous case is a key=value sublist such as complex_values:
+// "already exists" matches on the key alone, so
+//
+//	qconf -aattr exechost complex_values slots=99 master
+//
+// exits 0 and leaves the previous slots value in place. Reporting
+// success there would tell a caller it had written a value the cluster
+// never accepted.
+//
+// Callers that want idempotent semantics -- adding a value that is
+// already present, or deleting one that is already absent, where the
+// intended end state does hold -- should check for it explicitly:
+//
+//	if err := qc.DeleteAttribute(...); err != nil &&
+//		!errors.Is(err, core.ErrNoModification) {
+//		return err
+//	}
+var ErrNoModification = errors.New("qconf performed no modification")
+
+// checkAttrModification turns the qmaster's "nothing was changed"
+// notices into an error. qconf prints them on stdout and still exits 0,
+// so the output is the only signal available.
+func checkAttrModification(out string) error {
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// MSG_OBJECT_ALREADYEXIN_SSS (append: value already present)
+		// and the remove-side "does not exist in" notice. The other
+		// INFO messages from the same function ("is empty - Adding new
+		// element(s).", "Unable to find ... - Adding new element.")
+		// report changes that did take effect and must not be flagged.
+		if strings.Contains(line, "No modification because") ||
+			strings.Contains(line, `does not exist in "`) {
+			return fmt.Errorf("%w: %s", ErrNoModification, line)
+		}
+	}
+	return nil
+}
+
+// ModifyAttribute modifies an attribute of an object. It returns an
+// error wrapping ErrNoModification when qconf reports that the change
+// was not applied.
 func (c *CommandLineQConf) ModifyAttribute(objName, attrName, val, objIDList string) error {
 	if err := validate.Enforce(validateAttrArgs(objName, attrName, val, objIDList)); err != nil {
 		return err
 	}
-	_, err := c.RunCommand("-mattr", objName, attrName, val, objIDList)
-	return err
+	out, err := c.RunCommand("-mattr", objName, attrName, val, objIDList)
+	if err != nil {
+		return err
+	}
+	return checkAttrModification(out)
 }
 
+// AddAttribute adds a value to a list-valued attribute of an object. It
+// returns an error wrapping ErrNoModification when qconf reports that
+// the value was not added -- notably when the key of a key=value
+// attribute is already present, in which case the supplied value is
+// discarded and the old one kept.
 func (c *CommandLineQConf) AddAttribute(objName, attrName, val, objIDList string) error {
 	if err := validate.Enforce(validateAttrArgs(objName, attrName, val, objIDList)); err != nil {
 		return err
 	}
-	_, err := c.RunCommand("-aattr", objName, attrName, val, objIDList)
-	return err
+	out, err := c.RunCommand("-aattr", objName, attrName, val, objIDList)
+	if err != nil {
+		return err
+	}
+	return checkAttrModification(out)
 }
 
 // ModifyAllComplexes modifies complex attributes.
@@ -4173,13 +4234,19 @@ func (c *CommandLineQConf) ModifyUser(userName string, cfg UserConfig) error {
 	return err
 }
 
-// DeleteAttribute deletes an attribute from an object.
+// DeleteAttribute deletes a value from a list-valued attribute of an
+// object. It returns an error wrapping ErrNoModification when qconf
+// reports that the value was not present; callers doing idempotent
+// cleanup should ignore that case with errors.Is.
 func (c *CommandLineQConf) DeleteAttribute(objName, attrName, val, objIDList string) error {
 	if err := validate.Enforce(validateAttrArgs(objName, attrName, val, objIDList)); err != nil {
 		return err
 	}
-	_, err := c.RunCommand("-dattr", objName, attrName, val, objIDList)
-	return err
+	out, err := c.RunCommand("-dattr", objName, attrName, val, objIDList)
+	if err != nil {
+		return err
+	}
+	return checkAttrModification(out)
 }
 
 // ShowSchedulerConfiguration shows the scheduler configuration.
