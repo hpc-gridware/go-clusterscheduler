@@ -128,12 +128,20 @@ func ParseSpaceSeparatedMultiLineValues(lines []string, i int) []string {
 	return entries
 }
 
-// ParseSpaceSeparatedValuesWithOverrides. Like PE list in queue config.
-// It can look like this: pe1 p2,[host=p2]
+// ParseSpaceSeparatedValuesWithOverrides parses a space-separated value
+// list with per-host overrides, like the PE list in a queue config:
+//
+//	pe_list       make test test2,[master=make test2],[global=test]
+//
+// lines[i] must be one complete logical line. Unlike the *MultiLineValues
+// helpers this one does not follow backslash continuations, so a wrapped
+// line would be truncated at the break and the trailing backslash kept as
+// a value. Callers parsing qconf output are safe because RunCommand sets
+// SGE_SINGLE_LINE=true; callers parsing files must run the input through
+// normalizeConfigLines first.
 func ParseSpaceSeparatedValuesWithOverrides(lines []string, i int) []string {
-	// Assuming single line output! First part is the name of the element.
-	// pe_list       make test test2,[master=make test2],[global=test]
-	// remove the "pe_list" (which can have different names)
+	// First part is the name of the element; remove the "pe_list"
+	// (which can have different names).
 	values := strings.SplitAfterN(lines[i], " ", 2)
 	if len(values) == 1 {
 		return nil
@@ -155,17 +163,24 @@ func ParseSpaceSeparatedValuesWithOverrides(lines []string, i int) []string {
 	return append(pelist, fields[1:]...)
 }
 
-// ParseCommaSeparatedValuesWithOverrides. Like complex_values in queue config.
-// It can look like this: slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G]
+// ParseCommaSeparatedValuesWithOverrides parses a comma-separated value
+// list with per-host overrides, like complex_values in a queue config:
+//
+//	complex_values    slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G],[sim2=slots=30,mem_free=3G]
+//
+// results in:
+//
+//	[]string{"slots=10", "mem_free=1G", "[sim1=slots=20,mem_free=2G]", "[sim2=slots=30,mem_free=3G]"}
+//
+// lines[i] must be one complete logical line. Unlike the *MultiLineValues
+// helpers this one does not follow backslash continuations, so a wrapped
+// line would be truncated at the break and the trailing backslash kept as
+// a value. Callers parsing qconf output are safe because RunCommand sets
+// SGE_SINGLE_LINE=true; callers parsing files must run the input through
+// normalizeConfigLines first.
 func ParseCommaSeparatedValuesWithOverrides(lines []string, i int) []string {
-	// Example:
-	// slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G],[sim2=slots=30,mem_free=3G]
-	// results in:
-	// []string{"slots=10", "mem_free=1G", "[sim1=slots=20,mem_free=2G]", "[sim2=slots=30,mem_free=3G]"}
-
-	// Assuming single line output! First part is the name of the element.
-	// complex_values    slots=10,mem_free=1G,[sim1=slots=20,mem_free=2G],[sim2=slots=30,mem_free=3G]
-	// remove the field name (which can have different names)
+	// First part is the name of the element; remove the field name
+	// (which can have different names).
 	values := strings.SplitAfterN(lines[i], " ", 2)
 	if len(values) == 1 {
 		return nil

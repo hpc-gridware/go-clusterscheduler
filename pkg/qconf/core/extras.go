@@ -76,14 +76,17 @@ var validExtrasKey = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 // skipped -- the outer Show* loop visits them but they belong to a
 // known key already consumed.
 //
-// Backslash-continued unknown values are deliberately NOT captured.
+// Backslash-continued unknown values are NOT captured, because
 // ParseMultiLineValue concatenates continuation lines without
-// preserving the original delimiter (space vs comma vs none), so a
+// preserving the original delimiter (space vs comma vs none) and a
 // round trip would silently corrupt the value on re-emit. Rather than
-// store a malformed value, the helper drops the key entirely. The
-// drop is silent; a future revision should surface it through a
-// logger but the qconf package today does not depend on klog. See
-// qontrol/todos/185-* for the long-term fix.
+// store a malformed value, the helper drops the key entirely.
+//
+// The parsers that reach this function no longer hit that case:
+// normalizeConfigLines folds continuations delimiter-correctly before
+// the key dispatch runs, so a wrapped unknown key arrives here as one
+// logical line and is preserved. The guard still matters for callers
+// that pass raw, un-normalised lines.
 func CaptureExtraField(extras *map[string]string, lines []string, i int) {
 	line := lines[i]
 	if strings.HasPrefix(line, "  ") {

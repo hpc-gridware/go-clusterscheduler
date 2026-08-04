@@ -100,7 +100,12 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 	cmd.Stdout = &out
 	cmd.Stderr = &out
 	// Set the SGE_SINGLE_LINE environment variable to true to ensure that
-	// qconf returns a single line of output for each entry.
+	// qconf returns a single line of output for each entry. Without it
+	// qconf wraps long values at the terminal width and continues them
+	// with a trailing backslash, which the index-based parse helpers
+	// would truncate. Parsers must not rely on this alone: input read
+	// from a file has no such guarantee and goes through
+	// normalizeConfigLines instead.
 	cmd.Env = append(cmd.Environ(), "SGE_SINGLE_LINE=true")
 	err := cmd.Run()
 	if c.config.DelayAfter != 0 {
@@ -630,13 +635,75 @@ func (c *CommandLineQConf) DeleteCalendar(calendarName string) error {
 }
 
 // normalizeConfigLines returns a copy of lines with trailing carriage
-// returns stripped. Config template files may be edited on Windows; a
-// copy is made so the index-based multi-line helpers keep seeing
-// consistent data without mutating the caller's slice.
+// returns stripped and backslash continuations folded into single
+// logical lines. Config template files may be edited on Windows; a copy
+// is made so the index-based multi-line helpers keep seeing consistent
+// data without mutating the caller's slice.
+//
+// Carriage returns must go first: a CRLF file ends continued lines with
+// "\\\r", which would otherwise defeat the continuation check.
 func normalizeConfigLines(lines []string) []string {
 	out := make([]string, len(lines))
 	for i, l := range lines {
 		out[i] = strings.TrimRight(l, "\r")
+	}
+	return joinContinuationLines(out)
+}
+
+// joinContinuationLines folds qconf backslash continuations so each
+// returned entry is one complete "key value" line.
+//
+// RunCommand sets SGE_SINGLE_LINE=true, so qconf output never wraps.
+// On-disk config and template files carry no such guarantee: qconf
+// writes them wrapped at the terminal width, and parsing a wrapped line
+// as-is truncates the value at the break and leaves a literal
+// backslash in the data. Folding here means every parser downstream can
+// treat its input as single-line regardless of where it came from.
+//
+// qconf breaks a line after a separator, so the rejoin has to preserve
+// which separator that was:
+//
+//	complex_values  slots=10,mem_free=1G, \     -> comma already present,
+//	                h_vmem=2G                      join directly
+//
+//	year            1.1.2026=on 2.1.2026=on \  -> the space before the
+//	                3.1.2026=on                    backslash is the separator
+func joinContinuationLines(lines []string) []string {
+	out := make([]string, 0, len(lines))
+	var pending string
+	continuing := false
+
+	for _, line := range lines {
+		if continuing {
+			pending += strings.TrimLeft(line, " \t")
+		} else {
+			pending = line
+		}
+
+		if !strings.HasSuffix(strings.TrimRight(pending, " \t"), "\\") {
+			out = append(out, pending)
+			pending, continuing = "", false
+			continue
+		}
+
+		// Drop the backslash and the padding in front of it. A value
+		// already ending in "," carries its own separator; otherwise
+		// the whitespace that was there is the separator and one space
+		// has to survive the fold.
+		body := strings.TrimRight(
+			strings.TrimSuffix(strings.TrimRight(pending, " \t"), "\\"), " \t")
+		if strings.HasSuffix(body, ",") {
+			pending = body
+		} else {
+			pending = body + " "
+		}
+		continuing = true
+	}
+
+	// Input ended on a continuation; keep what was accumulated rather
+	// than dropping the key entirely.
+	if continuing {
+		out = append(out, strings.TrimRight(pending, " \t"))
 	}
 	return out
 }
@@ -1271,7 +1338,10 @@ func (c *CommandLineQConf) ShowHostConfiguration(hostName string) (HostConfigura
 
 // ParseGlobalConfigFromLines parses the output lines of "qconf -sconf global"
 // into a GlobalConfig struct. Exported for reuse by version-specific packages.
+// CRLF line endings and backslash continuations are normalised first, so
+// on-disk config files parse the same as qconf output.
 func ParseGlobalConfigFromLines(lines []string) GlobalConfig {
+	lines = normalizeConfigLines(lines)
 	cfg := GlobalConfig{}
 	for i, line := range lines {
 		fields := strings.Fields(line)
@@ -1536,8 +1606,10 @@ func ParseIntoStringStringMap(val string, sep string) (map[string]string, error)
 // HostExecConfig. It returns an error when a map-valued attribute
 // (load_scaling, complex_values, usage_scaling) contains a token that
 // cannot be parsed, since continuing would drop that entry on the next
-// modify.
+// modify. CRLF line endings and backslash continuations are normalised
+// first, so on-disk config files parse the same as qconf output.
 func ParseExecHostConfigFromLines(lines []string) (HostExecConfig, error) {
+	lines = normalizeConfigLines(lines)
 	cfg := HostExecConfig{}
 	for i, line := range lines {
 		fields := strings.Fields(line)
@@ -2683,8 +2755,11 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 	if err != nil {
 		return ClusterQueueConfig{}, err
 	}
-	// switching to single line output
-	lines := strings.Split(out, "\n")
+	// The *WithOverrides helpers below read one line at a time, so the
+	// input must be free of backslash continuations. RunCommand's
+	// SGE_SINGLE_LINE=true already guarantees that for qconf output;
+	// normalising keeps it true if this ever parses a file.
+	lines := normalizeConfigLines(strings.Split(out, "\n"))
 	cfg := ClusterQueueConfig{Name: queueName}
 	for i, line := range lines {
 		fields := strings.Fields(line)
