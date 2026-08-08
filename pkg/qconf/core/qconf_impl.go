@@ -100,6 +100,13 @@ func (c *CommandLineQConf) RunCommand(args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
+	// Without WaitDelay the Timeout above does not actually bound this call.
+	// CommandContext kills the direct child when ctx expires, but Run then
+	// waits for the stdout/stderr pipes to close, and any grandchild inherits
+	// them -- so a qconf that spawns a helper blocks for as long as the
+	// helper lives, however short the Timeout. WaitDelay bounds that second
+	// wait and closes the pipes.
+	cmd.WaitDelay = time.Second
 	// Set the SGE_SINGLE_LINE environment variable to true to ensure that
 	// qconf returns a single line of output for each entry. Without it
 	// qconf wraps long values at the terminal width and continues them
@@ -164,32 +171,87 @@ func strictEach(what string, xs []string, strict func(string) error) error {
 	return nil
 }
 
-// GetVersion returns the version information of the cluster scheduler
-// by running "qhost -help" and parsing the first line of output.
-// The qhost binary is derived from the configured qconf executable path.
+// GetVersion returns the version information of the cluster scheduler by
+// running "-help" on a client binary and parsing the first line of output.
+//
+// It never contacts qmaster, so it answers while the cluster is down, and it
+// costs one short-lived process rather than a configuration query.
+//
+// The CONFIGURED executable (normally qconf) is tried first, and qhost only
+// as a fallback. Callers configure the qconf path and are entitled to assume
+// that is the binary used; qhost is a guess derived by string substitution,
+// and it is absent on hosts that install a subset of the client commands.
+// Preferring the configured binary also makes the answer describe the
+// program whose output the caller is about to parse, which is what version
+// detection is usually for.
 func (c *CommandLineQConf) GetVersion() (ClusterSchedulerVersion, error) {
 	if c.config.DryRun {
-		fmt.Printf("Executing: qhost -help")
+		fmt.Printf("Executing: %s -help", c.config.Executable)
 		return ClusterSchedulerVersion{}, nil
 	}
 
-	// Derive qhost path from qconf executable path
-	qhostPath := deriveQhostPath(c.config.Executable)
+	candidates := []string{c.config.Executable}
+	if qhost := deriveQhostPath(c.config.Executable); qhost != c.config.Executable {
+		candidates = append(candidates, qhost)
+	}
 
-	cmd := exec.Command(qhostPath, "-help")
+	// The CONFIGURED binary's failure is the one reported. A fallback that
+	// is simply absent produces "no output from .../qhost", which would
+	// otherwise mask the real cause -- a timeout, or qconf missing.
+	var firstErr error
+	for _, path := range candidates {
+		version, err := c.versionFrom(path)
+		if err == nil {
+			return version, nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	return ClusterSchedulerVersion{}, firstErr
+}
+
+// versionFrom runs "<path> -help" and parses the banner.
+//
+// Bounded by the configured Timeout. Without it a client binary that hangs --
+// on an unreachable shared filesystem, say -- blocks the caller forever, and
+// this is the one command a caller is most likely to run at startup, before
+// anything else has had a chance to fail fast.
+func (c *CommandLineQConf) versionFrom(path string) (ClusterSchedulerVersion, error) {
+	timeout := c.config.Timeout
+	if timeout <= 0 {
+		timeout = defaultCommandTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, path, "-help")
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
-	// qhost -help may return a non-zero exit code, but the output
-	// still contains the version information we need.
+	// WaitDelay is what actually makes the timeout effective.
+	//
+	// CommandContext kills the direct child when ctx expires, but Run also
+	// waits for the stdout/stderr pipes to close, and any GRANDCHILD the
+	// client spawned inherits them. Without this, a wrapper script that
+	// backgrounds work keeps the pipe open and Run blocks for as long as
+	// the grandchild lives -- observed as a full 30s wait against a 300ms
+	// timeout. WaitDelay bounds that second wait and closes the pipes.
+	cmd.WaitDelay = time.Second
+	// "-help" may exit non-zero depending on the product and version, but
+	// the banner is on the first line either way, so the exit code is not
+	// consulted -- only whether anything was produced.
 	_ = cmd.Run()
 
-	output := out.String()
-	if output == "" {
+	if ctx.Err() != nil {
 		return ClusterSchedulerVersion{}, fmt.Errorf(
-			"no output from %s -help", qhostPath)
+			"%s -help timed out after %s: %w", path, timeout, ctx.Err())
 	}
-
+	output := out.String()
+	if strings.TrimSpace(output) == "" {
+		return ClusterSchedulerVersion{}, fmt.Errorf(
+			"no output from %s -help", path)
+	}
 	return ParseVersionInfo(output)
 }
 
