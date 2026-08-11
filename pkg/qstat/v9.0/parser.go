@@ -801,6 +801,14 @@ func ParseClusterQueueSummary(out string) ([]ClusterQueueSummary, error) {
 	var summaries []ClusterQueueSummary
 	lines := strings.Split(out, "\n")
 
+	// Output without the two header lines carries no queues. This is reached
+	// with empty output, which qstat produces when the qmaster is unreachable
+	// or still starting: strings.Split returns a single empty element, so
+	// slicing the header off would panic rather than report no queues.
+	if len(lines) < 2 {
+		return summaries, nil
+	}
+
 	// Skip the header lines
 	for _, line := range lines[2:] {
 		fields := strings.Fields(line)

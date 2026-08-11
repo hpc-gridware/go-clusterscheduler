@@ -450,6 +450,26 @@ test.q                            0.08      0      0      2      2      0      0
 			Expect(summary[1].CdsuE).To(Equal(0))
 		})
 
+		// qstat produces empty output when the qmaster is unreachable or still
+		// starting up. Slicing the header lines off that used to panic with a
+		// slice bounds error, which takes down any long-running caller that
+		// polls qstat rather than costing it a single reading.
+		It("should return no queues for output without header lines", func() {
+			for _, input := range []string{"", "\n", "CLUSTER QUEUE  CQLOAD"} {
+				summary, err := qstat.ParseClusterQueueSummary(input)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(summary).To(BeEmpty())
+			}
+		})
+
+		It("should return no queues when only the header is present", func() {
+			input := `CLUSTER QUEUE                   CQLOAD   USED    RES  AVAIL  TOTAL aoACDS  cdsuE
+--------------------------------------------------------------------------------`
+			summary, err := qstat.ParseClusterQueueSummary(input)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(summary).To(BeEmpty())
+		})
+
 		It("should handle -NA- load values", func() {
 			input := `CLUSTER QUEUE                   CQLOAD   USED    RES  AVAIL  TOTAL aoACDS  cdsuE
 --------------------------------------------------------------------------------
