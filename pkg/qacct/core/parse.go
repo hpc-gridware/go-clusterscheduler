@@ -88,7 +88,9 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 		case "slots":
 			job.Slots = parseInt64(value)
 		case "failed":
-			job.Failed = parseInt64(value)
+			// qacct prints the failed code with a trailing description, e.g.
+			// "100 : assumedly after job"; keep only the leading numeric code.
+			job.Failed = parseInt64(firstField(value))
 		case "exit_status":
 			job.ExitStatus = parseInt64(value)
 		case "ru_wallclock":
@@ -183,6 +185,17 @@ func parseInt(value string) int {
 func parseInt64(value string) int64 {
 	i, _ := strconv.ParseInt(value, 10, 64)
 	return i
+}
+
+// firstField returns the first whitespace-delimited token of value, or "" when
+// value is blank. Used for fields whose value carries a trailing description
+// (e.g. the qacct "failed" code "100 : assumedly after job").
+func firstField(value string) string {
+	fields := strings.Fields(value)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
 }
 
 func parseFloat(value string) float64 {
