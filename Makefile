@@ -19,19 +19,34 @@
 #___INFO__MARK_END_NEW__
 
 # OCS version to install inside the container (override: make run OCS_VERSION=9.1.4)
-# Supported: 9.0.5 - 9.0.12 and 9.1.0 - 9.1.4; the authoritative list is the
+# Supported: 9.0.5 - 9.0.12 and 9.1.0 - 9.1.5; the authoritative list is the
 # quickinstall installer (ocs.sh), which is re-fetched on every image build so
 # new releases become available without touching this repo.
 # Note: ./installation persists an installed cluster. Remove it when switching
 # OCS_VERSION, otherwise the previously installed version is booted again.
-OCS_VERSION    ?= 9.1.4
+OCS_VERSION    ?= 9.1.5
 
 IMAGE_NAME      = go-clusterscheduler
 CONTAINER_NAME  = $(IMAGE_NAME)
 PLATFORM        = linux/amd64
 PROJECT_DIR     = /root/go/src/github.com/hpc-gridware/go-clusterscheduler
 
-.PHONY: build run run-privileged test test-all test-integration simulate adapter run-rest clean
+# Gridware Cluster Scheduler (GCS) is not downloadable, so the run-gcs and
+# test-gcs targets install it from tarballs kept in ./packages. Point
+# GCS_PACKAGES at another directory to test a different GCS release; the
+# matching installation directory keeps the versions apart.
+# (override: make run-gcs GCS_PACKAGES=packages/gcs910)
+GCS_PACKAGES    ?= packages/gcs914
+GCS_INSTALL_DIR  = installation-$(notdir $(GCS_PACKAGES))
+
+GCS_RUN_FLAGS = --platform=$(PLATFORM) --rm -h master \
+	--entrypoint $(PROJECT_DIR)/entrypoint-gcs.sh \
+	-v $(CURDIR)/$(GCS_INSTALL_DIR):/opt/ocs \
+	-v $(CURDIR)/$(GCS_PACKAGES):/packages:ro \
+	-v $(CURDIR):$(PROJECT_DIR)
+
+.PHONY: build run run-privileged test test-all test-integration simulate adapter run-rest \
+	run-gcs test-gcs clean
 
 build:
 	docker build --platform=$(PLATFORM) \
@@ -81,6 +96,21 @@ test-integration: build
 		-v $(CURDIR):$(PROJECT_DIR) \
 		$(IMAGE_NAME)
 
+run-gcs: build
+	mkdir -p ./$(GCS_INSTALL_DIR)
+	docker run $(GCS_RUN_FLAGS) -it \
+		-p 7070:7070 -p 8888:8888 \
+		--name $(CONTAINER_NAME) \
+		$(IMAGE_NAME)
+
+# -p 1 because the cluster-backed packages share one cluster and interfere
+# when go test runs them concurrently.
+test-gcs: build
+	rm -rf ./$(GCS_INSTALL_DIR) && mkdir -p ./$(GCS_INSTALL_DIR)
+	docker run $(GCS_RUN_FLAGS) \
+		$(IMAGE_NAME) \
+		/bin/bash -c "cd $(PROJECT_DIR) && go test -p 1 ./pkg/... -v"
+
 simulate: build
 	rm -rf ./installation && mkdir -p ./installation
 	docker run --platform=$(PLATFORM) --rm -it -h master \
@@ -126,4 +156,4 @@ run-rest: build
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
 	docker rmi $(IMAGE_NAME) || true
-	rm -rf ./installation
+	rm -rf ./installation ./installation-gcs*
