@@ -73,6 +73,28 @@ var _ = Describe("Parse map helpers", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("does not split inside an RSMAP id list or characteristics block", func() {
+			// GCS RSMAP characteristics are comma-separated inside brackets.
+			// sge_complex(5): the flatfile parser is bracket-depth aware, so a
+			// naive split turned this into "gpu" => "2(gpu0[device=/dev/nvidia0"
+			// plus a bogus "memory" key -- and a modify would write that back.
+			m, err := core.ParseIntoStringStringMap(
+				"slots=14,gpu=2(gpu0[device=/dev/nvidia0,memory=80G] gpu1[device=/dev/nvidia1,memory=80G]),h_vmem=2G", ",")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m).To(Equal(map[string]string{
+				"slots":  "14",
+				"gpu":    "2(gpu0[device=/dev/nvidia0,memory=80G] gpu1[device=/dev/nvidia1,memory=80G])",
+				"h_vmem": "2G",
+			}))
+		})
+
+		It("round-trips an RSMAP with characteristics through JoinStringStringMap", func() {
+			in := map[string]string{"gpu": "1(gpu0[device=/dev/nvidia0,memory=80G])", "slots": "4"}
+			m, err := core.ParseIntoStringStringMap(core.JoinStringStringMap(in, ","), ",")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(m).To(Equal(in))
+		})
+
 		It("round-trips through JoinStringStringMap", func() {
 			in := map[string]string{"slots": "10", "gpu": "2"}
 			m, err := core.ParseIntoStringStringMap(

@@ -1620,7 +1620,7 @@ func ParseIntoStringFloatMap(val string, sep string) (map[string]float64, error)
 	if trimmed == "" || strings.EqualFold(trimmed, "NONE") {
 		return out, nil
 	}
-	for _, pair := range strings.Split(trimmed, sep) {
+	for _, pair := range splitTopLevel(trimmed, sep) {
 		pair = strings.TrimSpace(pair)
 		if pair == "" {
 			continue
@@ -1645,13 +1645,20 @@ func ParseIntoStringFloatMap(val string, sep string) (map[string]float64, error)
 // A token without "=" is an error: dropping it silently would erase that
 // entry from the cluster configuration on the next show/modify
 // round-trip.
+//
+// sep never splits inside (...) or [...]. An RSMAP entry carries its id
+// list in parentheses and, in Gridware Cluster Scheduler, per-instance
+// characteristics in brackets that are themselves comma-separated:
+// "gpu=2(gpu0[device=/dev/nvidia0,memory=80G] gpu1[...])". sge_complex(5)
+// defines the flatfile parser as bracket-depth aware; splitting naively
+// broke the entry apart and a modify wrote the pieces back.
 func ParseIntoStringStringMap(val string, sep string) (map[string]string, error) {
 	out := make(map[string]string)
 	trimmed := strings.TrimSpace(val)
 	if trimmed == "" || strings.EqualFold(trimmed, "NONE") {
 		return out, nil
 	}
-	for _, pair := range strings.Split(trimmed, sep) {
+	for _, pair := range splitTopLevel(trimmed, sep) {
 		pair = strings.TrimSpace(pair)
 		if pair == "" {
 			continue
