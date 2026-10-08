@@ -1,0 +1,14 @@
+ar-id   name       owner        state start at             end at               duration
+------------------------------------------------------------------------------------------
+      1 plain      root         E     2026-10-08 10:10:05  2026-10-08 11:10:05  01:00:00
+       reserved queue all.q@master is disabled
+      2 has space  root         W     2026-10-08 11:10:00  2026-10-08 12:10:04  01:00:04
+       reserved queue all.q@master is disabled
+      3 pe_ar      root         W     2026-10-08 11:10:00  2026-10-08 11:20:00  00:10:00
+       reserved queue all.q@master is disabled
+      4 dashrange  root         W     2026-10-08 11:10:00  2026-10-08 11:20:00  00:10:00
+       reserved queue all.q@master is disabled
+      5 averyveryv root         W     2026-10-08 11:10:00  2026-10-08 11:20:00  00:10:00
+       reserved queue all.q@master is disabled
+      6 -foo       root         E     2026-10-08 10:10:05  2026-10-08 10:20:05  00:10:00
+       reserved queue all.q@master is disabled

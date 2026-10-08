@@ -1,0 +1,96 @@
+--------------------------------------------------------------------------------
+id                             8
+name                           plain
+owner                          root
+state                          r
+start_time                     2026-10-08 10:09:41.141550
+end_time                       2026-10-08 11:09:41.141550
+duration                       01:00:00
+submission_time                2026-10-08 10:09:41.141558
+group                          root
+account                        sge
+exec_queue_list                all.q@master=1
+--------------------------------------------------------------------------------
+id                             9
+name                           has space name
+owner                          root
+state                          w
+start_time                     2026-10-08 11:09:00.000000
+end_time                       2026-10-08 12:09:40.000000
+duration                       01:00:40
+submission_time                2026-10-08 10:09:41.208933
+group                          root
+account                        acct1
+resource_list                  h_rt=600, arch=lx-amd64
+error_handling                 true
+exec_queue_list                all.q@master=1
+checkpoint_name                ck
+mail_options                   be
+mail_list                      root@master,other@NONE
+acl_list                       root,@myacl
+xacl_list                      nobody
+--------------------------------------------------------------------------------
+id                             10
+name                           pe_ar
+owner                          root
+state                          w
+start_time                     2026-10-08 11:09:00.000000
+end_time                       2026-10-08 11:19:00.000000
+duration                       00:10:00
+submission_time                2026-10-08 10:09:41.274797
+group                          root
+account                        sge
+exec_queue_list                all.q@master=2
+granted_parallel_environment   mpi slots 2
+master hard queue_list         all.q@master
+--------------------------------------------------------------------------------
+id                             11
+name                           dashrange
+owner                          root
+state                          w
+start_time                     2026-10-08 11:09:00.000000
+end_time                       2026-10-08 11:19:00.000000
+duration                       00:10:00
+submission_time                2026-10-08 10:09:41.341840
+group                          root
+account                        sge
+exec_queue_list                all.q@master=2
+granted_parallel_environment   mpi slots 1,2
+--------------------------------------------------------------------------------
+id                             12
+name                           averyveryverylongreservationname
+owner                          root
+state                          w
+start_time                     2026-10-08 11:09:00.000000
+end_time                       2026-10-08 11:19:00.000000
+duration                       00:10:00
+submission_time                2026-10-08 10:09:41.403857
+group                          root
+account                        sge
+exec_queue_list                all.q@master=1
+--------------------------------------------------------------------------------
+id                             13
+name                           -foo
+owner                          root
+state                          r
+start_time                     2026-10-08 10:09:41.465456
+end_time                       2026-10-08 10:19:41.465456
+duration                       00:10:00
+submission_time                2026-10-08 10:09:41.465464
+group                          root
+account                        sge
+exec_queue_list                all.q@master=1
+--------------------------------------------------------------------------------
+id                             18
+name                           bind
+owner                          root
+state                          r
+start_time                     2026-10-08 10:09:42.662108
+end_time                       2026-10-08 10:19:42.662108
+duration                       00:10:00
+submission_time                2026-10-08 10:09:42.662115
+group                          root
+account                        sge
+binding                        bamount=1,binstance=set,bstrategy=packed,btype=slot,bunit=C
+exec_binding_list              master=ScCCCCCCCCCCCCC
+exec_queue_list                all.q@master=1

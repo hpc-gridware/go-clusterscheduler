@@ -151,9 +151,11 @@ var SchedulingOptimizationPrompt = "# Scheduling Optimization Guidelines for the
 	"qsub -hold_jid $job1_id second_job.sh\n" +
 	"```\n\n" +
 	"### Resource Reservations\n\n" +
-	"For critical workloads, consider advance reservations:\n" +
+	"For critical workloads, consider advance reservations (the user must be a manager\n" +
+	"or in the `arusers` access list, and run on a submit host):\n" +
 	"```bash\n" +
-	"qrsub -a START_TIME -d DURATION -l resource=value\n" +
+	"qrsub -a [[CC]YY]MMDDhhmm[.SS] -d hh:mm:ss -l resource=value  # prints the AR id\n" +
+	"qsub -ar AR_ID job.sh                                          # run a job in the AR\n" +
 	"```\n\n" +
 	"### Job Priorities\n\n" +
 	"Set job priorities based on importance:\n" +

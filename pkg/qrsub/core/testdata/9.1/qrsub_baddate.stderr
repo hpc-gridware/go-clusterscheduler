@@ -1,0 +1,3 @@
+
+Invalid format of date/hour-minute field.
+qrsub: ERROR! Wrong date/time format "99999" specified to -a option

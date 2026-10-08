@@ -1,0 +1,12 @@
+--------------------------------------------------------------------------------
+id                             1
+name                           plain
+owner                          root
+state                          d
+start_time                     2026-10-08 10:10:05.005149
+end_time                       2026-10-08 11:10:05.005149
+duration                       01:00:00
+submission_time                2026-10-08 10:10:05.005643
+group                          root
+account                        sge
+granted_slots_list             all.q@master=1

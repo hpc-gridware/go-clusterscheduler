@@ -12,6 +12,10 @@ The Go API offers a range of powerful features, including:
 - **`qconf` Command Line Wrapper**: This primary feature enables
 developers to build robust applications to configure the Open/Gridware
 Cluster Scheduler effortlessly.
+- **Advance Reservations**: `qrsub`, `qrstat` and `qrdel` wrappers to
+create (with an options struct or a fluent builder), verify, list,
+inspect and delete advance reservations, with typed results.
+(See [`examples/advancereservation`](examples/advancereservation).)
 - **`simulator` Application**: This application implements a
 container based simulator of a real "Grid Engine" cluster. It can
 dump the configuration of a SGE or Open Grid Engine cluster and

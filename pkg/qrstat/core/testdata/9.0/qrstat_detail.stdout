@@ -1,0 +1,82 @@
+--------------------------------------------------------------------------------
+id                             1
+name                           plain
+owner                          root
+state                          r
+start_time                     2026-10-08 10:10:05.005149
+end_time                       2026-10-08 11:10:05.005149
+duration                       01:00:00
+submission_time                2026-10-08 10:10:05.005643
+group                          root
+account                        sge
+granted_slots_list             all.q@master=1
+--------------------------------------------------------------------------------
+id                             2
+name                           has space name
+owner                          root
+state                          w
+start_time                     2026-10-08 11:10:00.000000
+end_time                       2026-10-08 12:10:04.000000
+duration                       01:00:04
+submission_time                2026-10-08 10:10:05.074054
+group                          root
+account                        acct1
+resource_list                  h_rt=600, arch=lx-amd64
+error_handling                 true
+granted_slots_list             all.q@master=1
+checkpoint_name                ck
+mail_options                   be
+mail_list                      root@master,other@NONE
+acl_list                       root,@myacl
+xacl_list                      nobody
+--------------------------------------------------------------------------------
+id                             3
+name                           pe_ar
+owner                          root
+state                          w
+start_time                     2026-10-08 11:10:00.000000
+end_time                       2026-10-08 11:20:00.000000
+duration                       00:10:00
+submission_time                2026-10-08 10:10:05.137704
+group                          root
+account                        sge
+granted_slots_list             all.q@master=2
+granted_parallel_environment   mpi slots 2
+master hard queue_list         all.q@master
+--------------------------------------------------------------------------------
+id                             4
+name                           dashrange
+owner                          root
+state                          w
+start_time                     2026-10-08 11:10:00.000000
+end_time                       2026-10-08 11:20:00.000000
+duration                       00:10:00
+submission_time                2026-10-08 10:10:05.204959
+group                          root
+account                        sge
+granted_slots_list             all.q@master=2
+granted_parallel_environment   mpi slots 1,2
+--------------------------------------------------------------------------------
+id                             5
+name                           averyveryverylongreservationname
+owner                          root
+state                          w
+start_time                     2026-10-08 11:10:00.000000
+end_time                       2026-10-08 11:20:00.000000
+duration                       00:10:00
+submission_time                2026-10-08 10:10:05.270333
+group                          root
+account                        sge
+granted_slots_list             all.q@master=1
+--------------------------------------------------------------------------------
+id                             6
+name                           -foo
+owner                          root
+state                          r
+start_time                     2026-10-08 10:10:05.332584
+end_time                       2026-10-08 10:20:05.332584
+duration                       00:10:00
+submission_time                2026-10-08 10:10:05.332591
+group                          root
+account                        sge
+granted_slots_list             all.q@master=1

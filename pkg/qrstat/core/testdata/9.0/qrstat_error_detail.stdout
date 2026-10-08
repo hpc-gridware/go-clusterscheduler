@@ -1,0 +1,28 @@
+--------------------------------------------------------------------------------
+id                             1
+name                           plain
+owner                          root
+state                          E
+start_time                     2026-10-08 10:10:05.005149
+end_time                       2026-10-08 11:10:05.005149
+duration                       01:00:00
+message                        reserved queue all.q@master is disabled
+submission_time                2026-10-08 10:10:05.005643
+group                          root
+account                        sge
+granted_slots_list             all.q@master=1
+--------------------------------------------------------------------------------
+id                             3
+name                           pe_ar
+owner                          root
+state                          W
+start_time                     2026-10-08 11:10:00.000000
+end_time                       2026-10-08 11:20:00.000000
+duration                       00:10:00
+message                        reserved queue all.q@master is disabled
+submission_time                2026-10-08 10:10:05.137704
+group                          root
+account                        sge
+granted_slots_list             all.q@master=2
+granted_parallel_environment   mpi slots 2
+master hard queue_list         all.q@master

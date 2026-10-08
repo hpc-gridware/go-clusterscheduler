@@ -1,0 +1,12 @@
+--------------------------------------------------------------------------------
+id                             8
+name                           plain
+owner                          root
+state                          r
+start_time                     2026-10-08 10:09:41.141550
+end_time                       2026-10-08 11:09:41.141550
+duration                       01:00:00
+submission_time                2026-10-08 10:09:41.141558
+group                          root
+account                        sge
+exec_queue_list                all.q@master=1
