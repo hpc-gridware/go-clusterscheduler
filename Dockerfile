@@ -23,7 +23,7 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     git tar binutils sudo make wget bash curl gcc vim \
     libtirpc3 libtirpc-dev libhwloc-dev hwloc \
-    man-db software-properties-common
+    man-db software-properties-common munge
 
 ARG GOLANG_VERSION=1.24.11
 RUN wget -q https://go.dev/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz && \

@@ -24,9 +24,33 @@ set -e
 
 SGE_ROOT="/opt/ocs"
 
+# OCS 9.1.7 and later install with MUNGE authentication by default. The
+# installation in ${SGE_ROOT} is persisted, but the MUNGE key and munged
+# live in the container and are gone after a restart, so the qmaster would
+# not start. A new key is fine on this single-host cluster: MUNGE
+# credentials are short-lived and never stored.
+start_munge() {
+    if [ ! -f /etc/munge/munge.key ]; then
+        echo "Creating MUNGE key..."
+        (umask 077 && dd if=/dev/urandom bs=1 count=1024 \
+            of=/etc/munge/munge.key 2>/dev/null)
+        chown munge:munge /etc/munge/munge.key
+        chmod 0400 /etc/munge/munge.key
+    fi
+    # No systemd in the container, so neither tmpfiles nor a unit
+    # prepares /run/munge and starts munged.
+    mkdir -p /run/munge
+    chown munge:munge /run/munge
+    chmod 755 /run/munge
+    runuser -u munge -- /usr/sbin/munged
+}
+
 if [ -f "${SGE_ROOT}/default/common/settings.sh" ]; then
     echo "OCS already installed. Starting daemons..."
     source "${SGE_ROOT}/default/common/settings.sh"
+    if grep -q '^security_mode.*munge' "${SGE_ROOT}/default/common/bootstrap"; then
+        start_munge
+    fi
     "${SGE_ROOT}/default/common/sgemaster" || true
     "${SGE_ROOT}/default/common/sgeexecd" || true
 else

@@ -81,6 +81,13 @@ var _ = Describe("Apply", func() {
 				})
 			Expect(err).ToNot(HaveOccurred())
 
+			// The cleanup below removes master from the submit hosts. Later
+			// specs and packages submit jobs from master, so put it back
+			// even when this spec fails half way.
+			DeferCleanup(func() {
+				_ = qc.AddSubmitHosts([]string{"master"})
+			})
+
 			// first delete them all
 			deleted, _ := qconf.DeleteAllEnries(qc, add, true)
 

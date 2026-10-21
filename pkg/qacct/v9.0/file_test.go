@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -36,6 +37,14 @@ var _ = Describe("File", func() {
 				Synchronize: qsub.ToPtr(true),
 			})
 			Expect(err).NotTo(HaveOccurred())
+
+			// qmaster buffers accounting records (reporting_params
+			// flush_time), so on a fresh cluster the file can appear
+			// only after the synchronous job has returned.
+			Eventually(func() error {
+				_, err := os.Stat(qacct.GetDefaultQacctFile())
+				return err
+			}, "30s", "200ms").Should(Succeed())
 
 			jobDetailsChan, err := qacct.WatchFile(context.Background(),
 				qacct.GetDefaultQacctFile(), 0)

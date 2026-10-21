@@ -20,6 +20,7 @@
 package qconf_test
 
 import (
+	"errors"
 	"net"
 	"os"
 	"strings"
@@ -872,10 +873,16 @@ usage: qhost [options]`
 			err = qc.DeleteAttribute("hostgroup", "hostlist", "master", "@allhosts")
 			Expect(err).To(BeNil())
 
-			// remove direct host-level reference from all.q (created by
-			// host-specific overrides like slots set during cluster setup)
+			// A cluster may also list master directly in all.q, which
+			// blocks the delete as well. The quickinstall and GCS setups
+			// reference it only through @allhosts, so qconf reports that
+			// there was nothing to remove.
 			err = qc.DeleteAttribute("queue", "hostlist", "master", "all.q")
-			Expect(err).To(BeNil())
+			removedFromQueue := err == nil
+			if !removedFromQueue {
+				Expect(errors.Is(err, qconf.ErrNoModification)).To(BeTrue(),
+					"unexpected error: %v", err)
+			}
 
 			// now it must work
 			err = qc.DeleteExecHost("master")
@@ -884,17 +891,14 @@ usage: qhost [options]`
 			err = qc.AddExecHost(eh)
 			Expect(err).To(BeNil())
 
-			// restore master in all.q and @allhosts
-			err = qc.AddAttribute("queue", "hostlist", "master", "all.q")
-			Expect(err).To(BeNil())
+			// restore master in all.q (if it was listed there) and @allhosts
+			if removedFromQueue {
+				err = qc.AddAttribute("queue", "hostlist", "master", "all.q")
+				Expect(err).To(BeNil())
+			}
 
 			err = qc.AddAttribute("hostgroup", "hostlist", "master", "@allhosts")
 			Expect(err).To(BeNil())
-
-			// make it submit host (use "master" since it is the only resolvable host)
-			err = qc.AddSubmitHosts([]string{"master"})
-			Expect(err).To(BeNil())
-
 		})
 
 		It("should show, add, and delete execution hosts", func() {
