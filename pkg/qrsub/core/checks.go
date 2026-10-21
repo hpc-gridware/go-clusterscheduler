@@ -89,6 +89,21 @@ func checkPESlots(slots string) error {
 	return nil
 }
 
+// allocationRulePattern is what qrsub -par accepts (verified on 9.1.7). A
+// number with a leading zero is refused by qrsub too.
+var allocationRulePattern = regexp.MustCompile(`^(\$pe_slots|\$fill_up|\$round_robin|[1-9][0-9]*)$`)
+
+// errAllocationRuleWithoutPE refuses -par without -pe, as qrsub 9.1.7 does
+// ("-par can be used only together with -pe").
+var errAllocationRuleWithoutPE = errors.New("allocation rule: needs a parallel environment (-pe)")
+
+func checkAllocationRule(rule string) error {
+	if !allocationRulePattern.MatchString(rule) {
+		return fmt.Errorf("allocation rule %q: must be $pe_slots, $fill_up, $round_robin or a positive number of slots per host", rule)
+	}
+	return nil
+}
+
 func checkMailOptions(options string) error {
 	if !mailOptionsPattern.MatchString(options) {
 		return fmt.Errorf("mail options %q: must be a combination of b, e, a and n", options)
@@ -195,6 +210,14 @@ func checkPreconditions(opts ReservationOptions) error {
 	}
 	if (opts.PEName == nil) != (opts.PESlots == nil) {
 		return errors.New("pe name and pe slots must be set together")
+	}
+	if opts.AllocationRule != nil {
+		if opts.PEName == nil {
+			return errAllocationRuleWithoutPE
+		}
+		if err := checkAllocationRule(*opts.AllocationRule); err != nil {
+			return err
+		}
 	}
 	if opts.PESlots != nil {
 		return checkPESlots(*opts.PESlots)

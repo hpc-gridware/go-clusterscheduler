@@ -167,6 +167,9 @@ func BuildQrsubArgs(opts ReservationOptions) ([]string, error) {
 	if opts.PEName != nil {
 		args = append(args, "-pe", *opts.PEName, *opts.PESlots)
 	}
+	if opts.AllocationRule != nil {
+		args = append(args, "-par", *opts.AllocationRule)
+	}
 	if opts.Checkpoint != nil {
 		args = append(args, "-ckpt", *opts.Checkpoint)
 	}

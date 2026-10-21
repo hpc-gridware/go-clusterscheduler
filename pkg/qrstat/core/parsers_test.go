@@ -207,6 +207,20 @@ var _ = Describe("ParseDetail", func() {
 		}
 	})
 
+	It("parses the allocation rule an AR set with qrsub -par (9.1.7+)", func() {
+		ars, err := core.ParseDetail(fixture("9.1", "qrstat_allocation_rule.stdout"))
+		Expect(err).NotTo(HaveOccurred())
+		m := byID(ars, func(r core.Reservation) int64 { return r.ID })
+		Expect(m[18].AllocationRule).To(Equal("$pe_slots"))
+		Expect(m[21].AllocationRule).To(Equal("2"))
+		// qrstat prints no allocation_rule for an AR that kept the PE's rule.
+		Expect(m[20].AllocationRule).To(BeEmpty())
+		Expect(m[20].GrantedParallelEnvironment).To(Equal(&core.GrantedPE{Name: "mpi", Range: "4"}))
+		for _, r := range ars {
+			Expect(r.ExtraFields).To(BeEmpty())
+		}
+	})
+
 	DescribeTable("collects error messages and the deleted state",
 		func(version, file string, state core.ReservationState, messages int) {
 			ars, err := core.ParseDetail(fixture(version, file))

@@ -60,6 +60,16 @@ func recordedArgv(argvFile string) []string {
 	return strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
 }
 
+// peWithRule is a valid PE request with the given allocation rule.
+func peWithRule(rule string) core.ReservationOptions {
+	return core.ReservationOptions{
+		Duration:       core.ToPtr(time.Hour),
+		PEName:         core.ToPtr("mpi"),
+		PESlots:        core.ToPtr("4"),
+		AllocationRule: core.ToPtr(rule),
+	}
+}
+
 var _ = Describe("BuildQrsubArgs", func() {
 	start := time.Date(2026, 10, 9, 8, 0, 0, 0, time.Local)
 	end := start.Add(2 * time.Hour)
@@ -75,6 +85,7 @@ var _ = Describe("BuildQrsubArgs", func() {
 			MasterQueues:      []string{"all.q@master"},
 			PEName:            core.ToPtr("mpi"),
 			PESlots:           core.ToPtr("-8"),
+			AllocationRule:    core.ToPtr("$pe_slots"),
 			Checkpoint:        core.ToPtr("ck"),
 			Users:             []string{"root", "@myacl", "!nobody"},
 			MailOptions:       core.ToPtr("be"),
@@ -92,6 +103,7 @@ var _ = Describe("BuildQrsubArgs", func() {
 			"-q", "all.q,gpu.q@node1",
 			"-masterq", "all.q@master",
 			"-pe", "mpi", "-8",
+			"-par", "$pe_slots",
 			"-ckpt", "ck",
 			"-u", "root,@myacl,!nobody",
 			"-m", "be",
@@ -100,6 +112,19 @@ var _ = Describe("BuildQrsubArgs", func() {
 			"-now", "n",
 		}))
 	})
+
+	DescribeTable("passes each allocation rule qrsub accepts after -pe",
+		func(rule string) {
+			args, err := core.BuildQrsubArgs(peWithRule(rule))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(args).To(Equal([]string{"-d", "01:00:00", "-pe", "mpi", "4", "-par", rule}))
+		},
+		Entry("all slots on one host", "$pe_slots"),
+		Entry("fill up", "$fill_up"),
+		Entry("round robin", "$round_robin"),
+		Entry("slots per host", "4"),
+		Entry("one slot per host", "1"),
+	)
 
 	It("formats durations as hh:mm:ss and converts times to the local zone", func() {
 		utcStart := time.Date(2026, 10, 9, 8, 0, 30, 0, time.UTC)
@@ -124,6 +149,14 @@ var _ = Describe("BuildQrsubArgs", func() {
 		Entry("pe without slots", core.ReservationOptions{Duration: core.ToPtr(time.Hour), PEName: core.ToPtr("mpi")}, "set together"),
 		Entry("slots without pe", core.ReservationOptions{Duration: core.ToPtr(time.Hour), PESlots: core.ToPtr("2")}, "set together"),
 		Entry("bad slot range", core.ReservationOptions{Duration: core.ToPtr(time.Hour), PEName: core.ToPtr("mpi"), PESlots: core.ToPtr("2 -u x")}, "slot range"),
+		Entry("allocation rule without pe", core.ReservationOptions{Duration: core.ToPtr(time.Hour), AllocationRule: core.ToPtr("$pe_slots")}, "needs a parallel environment"),
+		Entry("allocation rule 0", peWithRule("0"), "positive number of slots per host"),
+		Entry("negative allocation rule", peWithRule("-2"), "positive number of slots per host"),
+		Entry("allocation rule with a leading zero, which qrsub refuses", peWithRule("010"), "positive number of slots per host"),
+		Entry("unknown allocation rule keyword", peWithRule("$PE_SLOTS"), "positive number of slots per host"),
+		Entry("allocation rule with a trailing space", peWithRule("$pe_slots "), "positive number of slots per host"),
+		Entry("empty allocation rule, which qrsub would ignore", peWithRule(""), "positive number of slots per host"),
+		Entry("allocation rule forging a switch", peWithRule("4 -u x"), "positive number of slots per host"),
 	)
 
 	DescribeTable("rejects argument injection",

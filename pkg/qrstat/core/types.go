@@ -130,6 +130,10 @@ type Reservation struct {
 	// 9.0 prints it as granted_slots_list, 9.1 as exec_queue_list.
 	ExecQueueList              map[string]int `json:"exec_queue_list,omitempty"`
 	GrantedParallelEnvironment *GrantedPE     `json:"granted_parallel_environment,omitempty"`
+	// AllocationRule is the allocation rule the AR set for its PE with
+	// qrsub -par (9.1.7 and later). qrstat prints it only for an AR that
+	// overrode the rule of the PE, so empty means the PE's own rule.
+	AllocationRule string `json:"allocation_rule,omitempty"`
 	// MasterQueueList holds the queues requested with qrsub -masterq.
 	MasterQueueList []string `json:"master_queue_list,omitempty"`
 	CheckpointName  string   `json:"checkpoint_name,omitempty"`

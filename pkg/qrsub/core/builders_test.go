@@ -51,6 +51,7 @@ var _ = Describe("ReservationBuilder", func() {
 			Queue("gpu.q").
 			MasterQueue("gpu.q@node1").
 			PE("mpi", "16").
+			AllocationRule("$pe_slots").
 			Checkpoint("ck").
 			Users("alice", "@hpcteam").
 			MailOptions("be").
@@ -67,6 +68,7 @@ var _ = Describe("ReservationBuilder", func() {
 			MasterQueues:      []string{"gpu.q@node1"},
 			PEName:            core.ToPtr("mpi"),
 			PESlots:           core.ToPtr("16"),
+			AllocationRule:    core.ToPtr("$pe_slots"),
 			Checkpoint:        core.ToPtr("ck"),
 			Users:             []string{"alice", "@hpcteam"},
 			MailOptions:       core.ToPtr("be"),
@@ -141,6 +143,8 @@ var _ = Describe("ReservationBuilder", func() {
 		Entry("mail options", func(b *core.ReservationBuilder) { b.MailOptions("s") }, core.ReservationOptions{MailOptions: core.ToPtr("s")}),
 		Entry("name", func(b *core.ReservationBuilder) { b.Name("") }, core.ReservationOptions{Name: core.ToPtr("")}),
 		Entry("account", func(b *core.ReservationBuilder) { b.Account("a\nb") }, core.ReservationOptions{Account: core.ToPtr("a\nb")}),
+		Entry("allocation rule", func(b *core.ReservationBuilder) { b.PE("mpi", "4").AllocationRule("010") }, core.ReservationOptions{PEName: core.ToPtr("mpi"), PESlots: core.ToPtr("4"), AllocationRule: core.ToPtr("010")}),
+		Entry("allocation rule without pe", func(b *core.ReservationBuilder) { b.AllocationRule("$pe_slots") }, core.ReservationOptions{AllocationRule: core.ToPtr("$pe_slots")}),
 	)
 
 	DescribeTable("refuses dangerous or conflicting Flag names",
@@ -157,6 +161,7 @@ var _ = Describe("ReservationBuilder", func() {
 		Entry("user list, which has its own checks", "-u"),
 		Entry("start time, which the builder must track", "-a"),
 		Entry("pe, which takes two values", "-pe"),
+		Entry("allocation rule, which has its own checks", "-par"),
 		Entry("no dash", "N"),
 		Entry("value as name", "-N x"),
 	)

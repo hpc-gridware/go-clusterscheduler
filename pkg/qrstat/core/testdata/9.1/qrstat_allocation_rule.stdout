@@ -1,0 +1,44 @@
+--------------------------------------------------------------------------------
+id                             18
+name                           pinned
+owner                          root
+state                          r
+start_time                     2026-10-21 11:04:29.979769
+end_time                       2026-10-21 12:04:29.979769
+duration                       01:00:00
+submission_time                2026-10-21 11:04:29.979809
+group                          root
+account                        sge
+exec_queue_list                all.q@master=4
+granted_parallel_environment   mpi slots 4
+allocation_rule                $pe_slots
+acl_list                       root
+--------------------------------------------------------------------------------
+id                             20
+name                           plain
+owner                          root
+state                          r
+start_time                     2026-10-21 11:04:30.062202
+end_time                       2026-10-21 12:04:30.062202
+duration                       01:00:00
+submission_time                2026-10-21 11:04:30.062213
+group                          root
+account                        sge
+exec_queue_list                all.q@master=4
+granted_parallel_environment   mpi slots 4
+acl_list                       root
+--------------------------------------------------------------------------------
+id                             21
+name                           fixed
+owner                          root
+state                          r
+start_time                     2026-10-21 11:04:38.500257
+end_time                       2026-10-21 12:04:38.500257
+duration                       01:00:00
+submission_time                2026-10-21 11:04:38.500284
+group                          root
+account                        sge
+exec_queue_list                all.q@master=2
+granted_parallel_environment   mpi slots 2
+allocation_rule                2
+acl_list                       root

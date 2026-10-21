@@ -43,6 +43,10 @@ type ReservationBuilder struct {
 	end       *time.Time
 	// hasDuration is set by Duration.
 	hasDuration bool
+	// hasPE and hasAllocationRule are set by PE and AllocationRule; -par
+	// needs -pe.
+	hasPE             bool
+	hasAllocationRule bool
 	// structuralErr is a request qmaster would reject; it is always
 	// reported. injectionErr is an argument injection check failure and
 	// follows GCS_VALIDATION, like the options path.
@@ -131,7 +135,18 @@ func (b *ReservationBuilder) MasterQueue(queues ...string) *ReservationBuilder {
 func (b *ReservationBuilder) PE(name, slots string) *ReservationBuilder {
 	b.failStructural(checkPESlots(slots))
 	b.failInjection(checkObjectName("pe name", name))
+	b.hasPE = true
 	b.args = append(b.args, "-pe", name, slots)
+	return b
+}
+
+// AllocationRule overrides the allocation rule of the PE for this AR
+// (-par, 9.1.7 and later): $pe_slots, $fill_up, $round_robin or a positive
+// number of slots per host. It needs PE.
+func (b *ReservationBuilder) AllocationRule(rule string) *ReservationBuilder {
+	b.hasAllocationRule = true
+	b.failStructural(checkAllocationRule(rule))
+	b.args = append(b.args, "-par", rule)
 	return b
 }
 
@@ -204,6 +219,9 @@ func (b *ReservationBuilder) check() error {
 	}
 	if err := checkTimeWindow(b.start, b.end, b.hasDuration); err != nil {
 		return err
+	}
+	if b.hasAllocationRule && !b.hasPE {
+		return errAllocationRuleWithoutPE
 	}
 	return validate.Enforce(b.injectionErr)
 }

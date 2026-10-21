@@ -366,6 +366,8 @@ func applyDetailAttribute(r *Reservation, a detailAttribute) error {
 			return fmt.Errorf("invalid granted_parallel_environment %q", value)
 		}
 		r.GrantedParallelEnvironment = &GrantedPE{Name: name, Range: slotRange}
+	case "allocation_rule":
+		r.AllocationRule = value
 	case "master hard queue_list":
 		r.MasterQueueList = splitList(value)
 	case "checkpoint_name":

@@ -115,3 +115,35 @@ func FuzzBuildQrsubArgs(f *testing.F) {
 		}
 	})
 }
+
+// FuzzAllocationRule asserts that an accepted -par value is one argv token
+// directly after the PE, and only ever one of the values qrsub accepts.
+func FuzzAllocationRule(f *testing.F) {
+	f.Add("$pe_slots")
+	f.Add("4")
+	f.Add("010")
+	f.Add("4 -u x")
+	f.Add("-u")
+	f.Fuzz(func(t *testing.T, rule string) {
+		args, err := core.BuildQrsubArgs(core.ReservationOptions{
+			Duration:       core.ToPtr(time.Hour),
+			PEName:         core.ToPtr("mpi"),
+			PESlots:        core.ToPtr("4"),
+			AllocationRule: &rule,
+		})
+		if err != nil {
+			return
+		}
+		want := []string{"-d", "01:00:00", "-pe", "mpi", "4", "-par", rule}
+		if strings.Join(args, "\x00") != strings.Join(want, "\x00") {
+			t.Fatalf("unexpected argv %q, want %q", args, want)
+		}
+		switch rule {
+		case "$pe_slots", "$fill_up", "$round_robin":
+			return
+		}
+		if rule == "" || rule[0] == '0' || strings.Trim(rule, "0123456789") != "" {
+			t.Fatalf("accepted allocation rule %q", rule)
+		}
+	})
+}

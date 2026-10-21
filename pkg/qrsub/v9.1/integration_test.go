@@ -88,4 +88,38 @@ var _ = Describe("QRSub v9.1 on a live cluster", Label("integration"), func() {
 		Expect(details[0].Binding).To(ContainSubstring("bunit=C"))
 		Expect(details[0].ExecBindingList).NotTo(BeEmpty())
 	})
+
+	It("overrides the allocation rule of the PE with -par (9.1.7+)", func() {
+		version, ok := clusterVersion()
+		if !ok {
+			Skip("no reachable cluster; run inside the dev container (make run)")
+		}
+		if version.Major < 9 || (version.Major == 9 && (version.Minor < 1 || (version.Minor == 1 && version.Patch < 7))) {
+			Skip("qrsub -par needs 9.1.7, cluster runs " + version.Version)
+		}
+		ctx := context.Background()
+		c, err := qrsub.NewCommandLineQRSub(qrsub.CommandLineQRSubConfig{})
+		Expect(err).NotTo(HaveOccurred())
+		// The dev container's "make" PE is offered by all.q.
+		id, out, err := c.Submit(ctx, qrsub.ReservationOptions{
+			ReservationOptions: core.ReservationOptions{
+				Name:           qrsub.ToPtr(fmt.Sprintf("gotestpar%d", time.Now().UnixNano()%1000000)),
+				Duration:       qrsub.ToPtr(5 * time.Minute),
+				PEName:         qrsub.ToPtr("make"),
+				PESlots:        qrsub.ToPtr("2"),
+				AllocationRule: qrsub.ToPtr("$pe_slots"),
+			},
+		})
+		Expect(err).NotTo(HaveOccurred(), out)
+		del, err := qrdel.NewCommandLineQRDel(qrdel.CommandLineQRDelConfig{Force: true})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { _, _ = del.DeleteReservations(ctx, id) })
+
+		stat, err := qrstat.NewCommandLineQRStat(qrstat.CommandLineQRStatConfig{})
+		Expect(err).NotTo(HaveOccurred())
+		details, err := stat.GetReservations(ctx, id)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(details).To(HaveLen(1))
+		Expect(details[0].AllocationRule).To(Equal("$pe_slots"))
+	})
 })

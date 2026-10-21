@@ -55,6 +55,12 @@ type ReservationOptions struct {
 	// "2-8", "-8" or "4-".
 	PEName  *string `json:"pe_name,omitempty"`
 	PESlots *string `json:"pe_slots,omitempty"`
+	// AllocationRule overrides the allocation rule of the requested PE for
+	// this AR (-par, 9.1.7 and later; older qrsub rejects the switch). It
+	// is one of $pe_slots, $fill_up, $round_robin or a positive number of
+	// slots per host, and needs PEName. qrstat reports it as
+	// allocation_rule, only for an AR that sets it.
+	AllocationRule *string `json:"allocation_rule,omitempty"`
 	// Checkpoint environment the AR jobs may request (-ckpt).
 	Checkpoint *string `json:"checkpoint,omitempty"`
 	// Users allowed to submit jobs into the AR (-u): user, @access_list,
