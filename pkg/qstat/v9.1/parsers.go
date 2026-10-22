@@ -125,6 +125,8 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 				task.StartTime = value
 			case "resource_map":
 				task.ResourceMap = value
+			case "error reason":
+				task.ErrorReasons = append(task.ErrorReasons, value)
 			case "granted_request":
 				task.GrantedRequests = append(task.GrantedRequests,
 					GrantedRequest{
@@ -224,6 +226,10 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			info.JobArrayTasks = strings.TrimSpace(value)
 		case "task_concurrency":
 			info.TaskConcurrency = value
+		case "execution_time":
+			info.ExecutionTime = value
+		case "ar_id":
+			info.ARID, _ = strconv.Atoi(value)
 		case "pending_tasks":
 			info.PendingTasks, _ = strconv.Atoi(value)
 		case "binding":
@@ -236,13 +242,14 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 }
 
 // extractTaskID checks if rawKey contains a trailing integer task ID
-// separated by whitespace, e.g. "job_state                  49".
-// Returns (taskID, baseKey) or (0, rawKey) if no task ID is found.
+// separated by whitespace, e.g. "job_state                  49" or the
+// two-word "error reason          1". Returns (taskID, baseKey) or
+// (0, rawKey) if no task ID is found.
 func extractTaskID(rawKey string) (int, string) {
 	fields := strings.Fields(rawKey)
-	if len(fields) == 2 {
-		if id, err := strconv.Atoi(fields[1]); err == nil {
-			return id, fields[0]
+	if len(fields) >= 2 {
+		if id, err := strconv.Atoi(fields[len(fields)-1]); err == nil {
+			return id, strings.Join(fields[:len(fields)-1], " ")
 		}
 	}
 	return 0, rawKey

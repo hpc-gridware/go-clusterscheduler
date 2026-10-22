@@ -1,0 +1,24 @@
+<?xml version='1.0'?>
+<job_info>
+  <queue_info>
+    <job_list state="running">
+      <JB_job_number>7</JB_job_number>
+      <JAT_prio>0.55500</JAT_prio>
+      <JB_name>ok</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>r</state>
+      <JAT_start_time>2026-10-22T13:16:41</JAT_start_time>
+      <queue_name>all.q@n1</queue_name>
+      <slots>4</slots>
+    </job_list>
+    <job_list state="running">
+      <JB_job_number>not-a-number</JB_job_number>
+      <JB_name>broken</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>r</state>
+      <slots>1</slots>
+    </job_list>
+  </queue_info>
+  <job_info>
+  </job_info>
+</job_info>

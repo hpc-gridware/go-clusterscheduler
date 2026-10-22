@@ -85,6 +85,10 @@ type TaskDetail struct {
 	QueueList       string           `json:"exec_queue_list,omitempty"`
 	StartTime       string           `json:"start_time,omitempty"`
 	ResourceMap     string           `json:"resource_map,omitempty"`
+	// ErrorReasons are the "error reason" lines qstat -j prints for a task
+	// (the message list of a job in error state, for example a failed
+	// prolog or a missing working directory). One entry per line.
+	ErrorReasons []string `json:"error_reasons,omitempty"`
 }
 
 // FullQueueExtendedInfo is a queue section from qstat -f -ext output.
@@ -107,15 +111,21 @@ type FullQueueExtendedInfo struct {
 type SchedulerJobInfo struct {
 	v90.SchedulerJobInfo
 
-	CategoryID      int          `json:"category_id"`
-	Groups          string       `json:"groups"`
-	SgeOLogName     string       `json:"sge_o_log_name"`
-	SgeOShell       string       `json:"sge_o_shell"`
-	Priority        int          `json:"priority"`
-	Department      string       `json:"department"`
-	SyncOptions     string       `json:"sync_options"`
-	JobArrayTasks   string       `json:"job_array_tasks"`
-	TaskConcurrency string       `json:"task_concurrency,omitempty"`
-	PendingTasks    int          `json:"pending_tasks,omitempty"`
-	Tasks           []TaskDetail `json:"tasks"`
+	CategoryID      int    `json:"category_id"`
+	Groups          string `json:"groups"`
+	SgeOLogName     string `json:"sge_o_log_name"`
+	SgeOShell       string `json:"sge_o_shell"`
+	Priority        int    `json:"priority"`
+	Department      string `json:"department"`
+	SyncOptions     string `json:"sync_options"`
+	JobArrayTasks   string `json:"job_array_tasks"`
+	TaskConcurrency string `json:"task_concurrency,omitempty"`
+	PendingTasks    int    `json:"pending_tasks,omitempty"`
+	// ExecutionTime is the earliest start time requested with qsub -a, as
+	// printed ("2030-01-01 00:00:00.000000"); empty when none was set.
+	ExecutionTime string `json:"execution_time,omitempty"`
+	// ARID is the advance reservation the job was submitted into (qsub
+	// -ar); 0 when none.
+	ARID  int          `json:"ar_id,omitempty"`
+	Tasks []TaskDetail `json:"tasks"`
 }

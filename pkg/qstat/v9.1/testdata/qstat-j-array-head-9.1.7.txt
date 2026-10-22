@@ -1,0 +1,45 @@
+==============================================================
+job_number:                      3
+category_id:                     1
+exec_file:                       job_scripts/3
+submission_time:                 2026-10-22 13:16:41.712420
+submit_cmd_line:                 qsub -b y -t 1-100000:3 -N arrayrange sleep 600
+effective_submit_cmd_line:       qsub -A sge -b yes -M root@master -N arrayrange -pty no -r yes -t 1-100000:3 sleep 600
+owner:                           root
+uid:                             0
+group:                           root
+gid:                             0
+groups:                          0(root)
+sge_o_home:                      /root
+sge_o_path:                      /opt/cs-install/bin/lx-amd64:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/root/go/bin
+sge_o_workdir:                   /tmp
+sge_o_host:                      master
+account:                         sge
+mail_list:                       root@master
+notify:                          FALSE
+job_name:                        arrayrange
+priority:                        0
+jobshare:                        0
+env_list:                        NONE
+job_args:                        600
+script_file:                     sleep
+department:                      defaultdepartment
+sync_options:                    n
+job-array tasks:                  1-100000:3
+pending_tasks:                   31334
+binding:                         NONE
+job_state                   1:   r
+usage                       1:   wallclock=00:00:00.000000,cpu=00:00:00.000000,mem=0.00000 GBs,io=0.00000,ioops=0,iow=00:00:00.000000,vmem=N/A,maxvmem=N/A,rss=N/A,maxrss=N/A
+exec_binding_list           1:   NONE
+exec_queue_list             1:   all.q@sim117=1
+exec_host_list              1:   sim117=1
+start_time                  1:   2026-10-22 13:16:41.821204
+resource_map                1:   NONE
+job_state                   4:   r
+usage                       4:   wallclock=00:00:00.000000,cpu=00:00:00.000000,mem=0.00000 GBs,io=0.00000,ioops=0,iow=00:00:00.000000,vmem=N/A,maxvmem=N/A,rss=N/A,maxrss=N/A
+exec_binding_list           4:   NONE
+exec_queue_list             4:   all.q@sim110=1
+exec_host_list              4:   sim110=1
+start_time                  4:   2026-10-22 13:16:41.823249
+resource_map                4:   NONE
+job_state                   7:   r

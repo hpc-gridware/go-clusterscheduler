@@ -1,0 +1,64 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <queue_info>
+    <Queue-List>
+      <name>all.q@master</name>
+      <qtype>BIP</qtype>
+      <slots_used>10</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>14</slots_total>
+      <arch>lx-amd64</arch>
+      <job_list state="running">
+        <JB_job_number>3</JB_job_number>
+        <JAT_prio>0.55500</JAT_prio>
+        <JB_name>arrayrange</JB_name>
+        <JB_owner>root</JB_owner>
+        <state>r</state>
+        <JAT_start_time>2026-10-22T13:16:41.930733</JAT_start_time>
+        <slots>1</slots>
+        <tasks>361</tasks>
+      </job_list>
+      <job_list state="running">
+        <JB_job_number>3</JB_job_number>
+        <JAT_prio>0.55500</JAT_prio>
+        <JB_name>arrayrange</JB_name>
+        <JB_owner>root</JB_owner>
+        <state>r</state>
+        <JAT_start_time>2026-10-22T13:16:42.039232</JAT_start_time>
+        <slots>1</slots>
+        <tasks>841</tasks>
+      </job_list>
+    </Queue-List>
+    <Queue-List>
+      <name>night.q@sim100</name>
+      <qtype>BI</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>10</slots_total>
+      <arch>lx-amd64</arch>
+      <state>D</state>
+    </Queue-List>
+    <!-- synthesized: a loaded instance in alarm, as a real execd reports it -->
+    <Queue-List>
+      <name>gpu.q@node41</name>
+      <qtype>BIP</qtype>
+      <slots_used>8</slots_used>
+      <slots_resv>2</slots_resv>
+      <slots_total>8</slots_total>
+      <load_avg>12.43000</load_avg>
+      <arch>lx-amd64</arch>
+      <state>au</state>
+    </Queue-List>
+  </queue_info>
+  <job_info>
+    <job_list state="pending">
+      <JB_job_number>5</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>future</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-22T13:16:41.805925</JAT_submission_time>
+      <slots>1</slots>
+    </job_list>
+  </job_info>
+</job_info>

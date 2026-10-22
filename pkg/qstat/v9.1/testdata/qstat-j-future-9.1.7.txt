@@ -1,0 +1,32 @@
+==============================================================
+job_number:                      5
+category_id:                     2
+exec_file:                       job_scripts/5
+submission_time:                 2026-10-22 13:16:41.805925
+submit_cmd_line:                 qsub -b y -l h_rt=10 -a 203001010000 -N future sleep 600
+effective_submit_cmd_line:       qsub -A sge -a 203001010000.00 -b yes -M root@master -N future -pty no -r yes -scope global -hard -l h_rt=10 sleep 600
+owner:                           root
+uid:                             0
+group:                           root
+gid:                             0
+groups:                          0(root)
+sge_o_home:                      /root
+sge_o_path:                      /opt/cs-install/bin/lx-amd64:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/root/go/bin
+sge_o_workdir:                   /tmp
+sge_o_host:                      master
+execution_time:                  2030-01-01 00:00:00.000000
+account:                         sge
+hard_resource_list:              h_rt=10
+mail_list:                       root@master
+notify:                          FALSE
+job_name:                        future
+priority:                        0
+jobshare:                        0
+env_list:                        NONE
+job_args:                        600
+script_file:                     sleep
+department:                      defaultdepartment
+sync_options:                    n
+pending_tasks:                   1
+binding:                         NONE
+scheduling info:                 (Collecting of scheduler job information is turned off - use qalter -w p job_id to verify if the job can be scheduled)
