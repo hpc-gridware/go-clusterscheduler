@@ -24,6 +24,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	qstat "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.1"
 	. "github.com/onsi/ginkgo/v2"
@@ -128,5 +129,94 @@ var _ = Describe("SchedulerJobInfoContext (9.1 parser over the shared runner)", 
 		s := &fakeStreamer{stderr: "error: unable to send message to qmaster", err: boom}
 		_, err := qstat.SchedulerJobInfoContext(context.Background(), nil, s, "1")
 		Expect(errors.Is(err, boom)).To(BeTrue())
+	})
+
+	Context("9.1.0 captures", func() {
+		It("parses a held job with a hostile name", func() {
+			s := &fakeStreamer{stdout: readFixture("qstat-j-held-9.1.0.txt")}
+			jobs, err := qstat.SchedulerJobInfoContext(context.Background(), nil, s, "2")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].JobName).To(Equal("held <img src=x onerror=alert(1)> & co"))
+			Expect(jobs[0].Department).To(Equal("defaultdepartment"))
+			Expect(jobs[0].PendingTasks).To(Equal(0), "9.1.0 prints no pending_tasks line; 9.1.7 does")
+		})
+
+		It("parses both running tasks of an array job with their hosts", func() {
+			s := &fakeStreamer{stdout: readFixture("qstat-j-array-9.1.0.txt")}
+			jobs, err := qstat.SchedulerJobInfoContext(context.Background(), nil, s, "4")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].CategoryID).To(Equal(1))
+			Expect(jobs[0].Tasks).To(HaveLen(2))
+			for i, task := range jobs[0].Tasks {
+				Expect(task.TaskID).To(Equal(i + 1))
+				Expect(task.State).To(Equal("r"))
+				Expect(task.ExecHostList).To(Equal([]qstat.ExecHostEntry{{Hostname: "master", Slots: 1}}))
+				Expect(task.ErrorReasons).To(BeEmpty())
+			}
+		})
+
+		It("reads the error reason of a job in Eqw", func() {
+			s := &fakeStreamer{stdout: readFixture("qstat-j-error-9.1.0.txt")}
+			jobs, err := qstat.SchedulerJobInfoContext(context.Background(), nil, s, "6")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].Tasks).To(HaveLen(1))
+			Expect(jobs[0].Tasks[0].State).To(Equal("Eqw"))
+			Expect(jobs[0].Tasks[0].ErrorReasons).To(Equal([]string{
+				"2026-10-22 14:45:45.423590 [0:3139]: error: can't chdir to /nonexistent/dir: No such file or directory",
+			}))
+		})
+
+		It("maps the captured unknown-job answer to ErrNoSuchJob", func() {
+			s := &fakeStreamer{
+				stderr: readFixture("qstat-j-unknown-9.1.0.stderr"),
+				err:    errors.New("failed to run command (Following jobs do not exist:): exit status 1"),
+			}
+			_, err := qstat.SchedulerJobInfoContext(context.Background(), nil, s, "99999999")
+			Expect(errors.Is(err, qstat.ErrNoSuchJob)).To(BeTrue())
+		})
+	})
+})
+
+// The XML decoders are the v9.0 ones; these specs only guard the aliases
+// against drifting, on the 9.1 captures kept with the v9.0 package.
+var _ = Describe("Streaming qstat XML through the 9.1 aliases", func() {
+	It("decodes the job listing", func() {
+		f, err := os.Open(filepath.Join("..", "v9.0", "testdata", "qstat-xml-jobs-9.1.0.xml"))
+		Expect(err).NotTo(HaveOccurred())
+		defer f.Close()
+		var names []string
+		stats, err := qstat.DecodeJobsXML(f, func(j qstat.JobXML) error {
+			names = append(names, j.Name)
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats).To(Equal(qstat.Stats{Decoded: 7, Complete: true}))
+		Expect(names[0]).To(Equal("plain job"))
+	})
+
+	It("decodes the queue listing", func() {
+		f, err := os.Open(filepath.Join("..", "v9.0", "testdata", "qstat-f-xml-9.1.0.xml"))
+		Expect(err).NotTo(HaveOccurred())
+		defer f.Close()
+		stats, err := qstat.DecodeQueueInstancesXML(f, func(q qstat.QueueInstanceXML) error {
+			Expect(q.Name).To(Equal("all.q@master"))
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats.Decoded).To(Equal(1))
+	})
+
+	It("reads the microsecond time form", func() {
+		t, err := qstat.ParseXMLTime("2026-10-22T14:45:45.094728")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(t.Nanosecond()).To(Equal(94728000))
+	})
+
+	It("reports a truncated document with the shared sentinel", func() {
+		_, err := qstat.DecodeJobsXML(strings.NewReader("<job_info><queue_info>"), func(qstat.JobXML) error { return nil })
+		Expect(errors.Is(err, qstat.ErrIncompleteDocument)).To(BeTrue())
 	})
 })

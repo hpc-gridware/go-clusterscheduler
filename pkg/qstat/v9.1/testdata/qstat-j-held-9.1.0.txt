@@ -1,0 +1,29 @@
+==============================================================
+job_number:                      2
+category_id:                     1
+exec_file:                       job_scripts/2
+submission_time:                 2026-10-22 14:45:45.131363
+submit_cmd_line:                 qsub -b y -h -N 'held <img src=x onerror=alert(1)> & co' sleep 600
+effective_submit_cmd_line:       qsub -A sge -b yes -M root@master -N 'held <img src=x onerror=alert(1)> & co' -pty no -r yes sleep 600
+owner:                           root
+uid:                             0
+group:                           root
+gid:                             0
+groups:                          NOT-AVAILABLE-IN-OCS
+sge_o_home:                      /root
+sge_o_path:                      /opt/ocs/bin/lx-amd64:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/root/go/bin
+sge_o_workdir:                   /tmp
+sge_o_host:                      master
+account:                         sge
+mail_list:                       root@master
+notify:                          FALSE
+job_name:                        held <img src=x onerror=alert(1)> & co
+priority:                        0
+jobshare:                        0
+env_list:                        NONE
+job_args:                        600
+script_file:                     sleep
+department:                      defaultdepartment
+sync_options:                    n
+binding:                         NONE
+scheduling info:                 (Collecting of scheduler job information is turned off - use qalter -w p job_id to verify if the job can be scheduled)

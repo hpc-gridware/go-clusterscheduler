@@ -27,18 +27,32 @@ import (
 	v90 "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
 )
 
-// The streaming XML surface is identical in 9.1: same elements, same
-// semantics, microseconds in the time fields (ParseXMLTime reads both).
+// The streaming XML surface is identical in 9.0 and 9.1: same elements,
+// same semantics, same time format (see the 9.0.12, 9.1.0 and 9.1.7
+// captures in the v9.0 testdata). The names below are the v9.0 ones.
+
+// Streamer is the bounded-memory, context-aware part of the qstat client.
 type Streamer = v90.Streamer
+
+// JobStreamOptions selects what StreamJobsXML asks qstat for.
 type JobStreamOptions = v90.JobStreamOptions
+
+// JobXML is one <job_list> element of "qstat -xml".
 type JobXML = v90.JobXML
+
+// QueueInstanceXML is one <Queue-List> element of "qstat -f -xml".
 type QueueInstanceXML = v90.QueueInstanceXML
+
+// Stats describes one streamed document.
 type Stats = v90.Stats
 
-var (
-	ErrIncompleteDocument = v90.ErrIncompleteDocument
-	ErrNoSuchJob          = v90.ErrNoSuchJob
-)
+// ErrIncompleteDocument is returned when qstat exited successfully but its
+// output did not end with the root close tag.
+var ErrIncompleteDocument = v90.ErrIncompleteDocument
+
+// ErrNoSuchJob is returned by SchedulerJobInfoContext when qstat reports
+// "Following jobs do not exist" for every requested id.
+var ErrNoSuchJob = v90.ErrNoSuchJob
 
 // DecodeJobsXML is the v9.0 decoder; the document shape is unchanged.
 func DecodeJobsXML(r io.Reader, fn func(JobXML) error) (Stats, error) {
@@ -51,7 +65,7 @@ func DecodeQueueInstancesXML(r io.Reader, fn func(QueueInstanceXML) error) (Stat
 }
 
 // ParseXMLTime parses a JAT_start_time or JAT_submission_time value.
-func ParseXMLTime(s string) (t time.Time, err error) {
+func ParseXMLTime(s string) (time.Time, error) {
 	return v90.ParseXMLTime(s)
 }
 

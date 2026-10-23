@@ -1,0 +1,44 @@
+==============================================================
+job_number:                      4
+category_id:                     1
+exec_file:                       job_scripts/4
+submission_time:                 2026-10-22 14:45:45.226111
+submit_cmd_line:                 qsub -b y -t 1-2 -N smallarray sleep 600
+effective_submit_cmd_line:       qsub -A sge -b yes -M root@master -N smallarray -pty no -r yes -t 1-2:1 sleep 600
+owner:                           root
+uid:                             0
+group:                           root
+gid:                             0
+groups:                          NOT-AVAILABLE-IN-OCS
+sge_o_home:                      /root
+sge_o_path:                      /opt/ocs/bin/lx-amd64:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/root/go/bin
+sge_o_workdir:                   /tmp
+sge_o_host:                      master
+account:                         sge
+mail_list:                       root@master
+notify:                          FALSE
+job_name:                        smallarray
+priority:                        0
+jobshare:                        0
+env_list:                        NONE
+job_args:                        600
+script_file:                     sleep
+department:                      defaultdepartment
+sync_options:                    n
+job-array tasks:   i              1-2:1
+binding:                         NONE
+job_state                   1:   r
+usage                       1:   wallclock=00:00:22.295625,cpu=00:00:00.020000,mem=0.01514 GBs,io=0.00004,ioops=102,iow=00:00:00.000000,vmem=3.028G,maxvmem=3.028G,rss=7.133M,maxrss=7.133M
+exec_binding_list           1:   NONE
+exec_queue_list             1:   all.q@master=1
+exec_host_list              1:   master=1
+start_time                  1:   2026-10-22 14:45:45.228010
+resource_map                1:   NONE
+job_state                   2:   r
+usage                       2:   wallclock=00:00:22.292522,cpu=00:00:00.020000,mem=0.01514 GBs,io=0.00004,ioops=102,iow=00:00:00.000000,vmem=3.028G,maxvmem=3.028G,rss=7.129M,maxrss=7.129M
+exec_binding_list           2:   NONE
+exec_queue_list             2:   all.q@master=1
+exec_host_list              2:   master=1
+start_time                  2:   2026-10-22 14:45:45.229204
+resource_map                2:   NONE
+scheduling info:                 (Collecting of scheduler job information is turned off - use qalter -w p job_id to verify if the job can be scheduled)

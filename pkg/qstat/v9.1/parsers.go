@@ -1024,14 +1024,14 @@ func isTrueString(s string) bool {
 // ParseJobArrayTaskWithT parses qstat -t output. Each text row is one
 // of three shapes:
 //
-//   - Running master row: 9 fields — job-ID prior name user state
+//   - Running master row: 9 fields -- job-ID prior name user state
 //     submit/start (date + time) queue master. Becomes a JobArrayTask
 //     with Slots=1 and Master set.
-//   - Pending row (qw): 7 fields — same as above but no queue and no
+//   - Pending row (qw): 7 fields -- same as above but no queue and no
 //     master role (qstat leaves those columns blank for pending jobs).
 //     Becomes a standalone JobArrayTask with Slots=0 and empty Master;
 //     does not become a "master" for subsequent slave inheritance.
-//   - Continuation (slave) row: 2 fields — queue + role ("SLAVE" or
+//   - Continuation (slave) row: 2 fields -- queue + role ("SLAVE" or
 //     "N/A"). Inherits JobID, Priority, Name, User, State, SubmitTime,
 //     and StartTime from the most recent running-master row.
 func ParseJobArrayTaskWithT(out string) ([]JobArrayTask, error) {

@@ -89,10 +89,13 @@ type JobStreamOptions struct {
 	// Users restricts the listing to these owners. Empty means EVERY user
 	// ("-u *"); without -u qstat lists only the calling user's jobs.
 	Users []string
-	// Extended adds "-ext", which carries project and department per job.
+	// Extended adds "-ext", which carries project and department per job
+	// but drops the start and submission times.
 	Extended bool
 	// ExtraArgs are appended verbatim, for example "-s", "p" for pending
-	// jobs only. Control characters are refused.
+	// jobs only. Control characters are refused. Switches that change the
+	// document ("-f", "-j", "-r") or a second "-u" are passed on as well;
+	// keeping the listing a job listing is up to the caller.
 	ExtraArgs []string
 }
 
@@ -106,14 +109,17 @@ type JobXML struct {
 	ListState string
 	JobNumber uint64
 	Priority  float64
-	Name      string
-	Owner     string
+	// Name and Owner are kept exactly as printed, surrounding blanks
+	// included; they are the user's text, not a column.
+	Name  string
+	Owner string
 	// State holds the state letters as qstat prints them ("r", "qw",
 	// "hqw", "Eqw", "dr", ...). The alphabet belongs to the scheduler;
 	// nothing here interprets it.
 	State string
 	// StartTime is set for running tasks, SubmissionTime for pending ones;
-	// exactly one of the two is non-empty.
+	// exactly one of the two is non-empty. With Extended both are empty:
+	// "qstat -ext" prints the ticket columns instead of the time.
 	StartTime      string
 	SubmissionTime string
 	// QueueName is the queue instance ("all.q@node01") for running tasks
@@ -182,6 +188,15 @@ const maxStderrBytes = 64 * 1024
 // a grandchild still holds the pipes.
 const streamWaitDelay = time.Second
 
+var _ Streamer = (*QStatImpl)(nil)
+
+// commandError is the error of a failed qstat run, in the shape the other
+// command wrappers of this module use: "failed to run command (<stderr>):
+// <cause>".
+func commandError(stderr *bytes.Buffer, cause error) error {
+	return fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), cause)
+}
+
 // RunContext implements Streamer.
 func (q *QStatImpl) RunContext(ctx context.Context, env []string, args ...string) (string, string, error) {
 	if err := validate.Enforce(validate.Args(args...)); err != nil {
@@ -197,13 +212,13 @@ func (q *QStatImpl) RunContext(ctx context.Context, env []string, args ...string
 	cmd.WaitDelay = streamWaitDelay
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
-	cmd.Stderr = newCappedWriter(&stderr, maxStderrBytes)
+	cmd.Stderr = &cappedWriter{w: &stderr, left: maxStderrBytes}
 	err := cmd.Run()
 	if err != nil {
 		if ctx.Err() != nil {
-			return stdout.String(), stderr.String(), fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), ctx.Err())
+			err = ctx.Err()
 		}
-		return stdout.String(), stderr.String(), fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), err)
+		return stdout.String(), stderr.String(), commandError(&stderr, err)
 	}
 	return stdout.String(), stderr.String(), nil
 }
@@ -248,45 +263,48 @@ func (q *QStatImpl) stream(ctx context.Context, env []string, args []string, dec
 	}
 	cmd.WaitDelay = streamWaitDelay
 	var stderr bytes.Buffer
-	cmd.Stderr = newCappedWriter(&stderr, maxStderrBytes)
+	cmd.Stderr = &cappedWriter{w: &stderr, left: maxStderrBytes}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return Stats{}, fmt.Errorf("failed to run command (): %w", err)
+		return Stats{}, fmt.Errorf("failed to start qstat: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		return Stats{}, fmt.Errorf("failed to run command (): %w", err)
+		return Stats{}, fmt.Errorf("failed to start qstat: %w", err)
 	}
 
+	// decode returns nil only after reading the root close tag and EOF, so
+	// on success there is nothing left to drain. On failure the child is
+	// killed and the pipe is NOT drained: a grandchild (a wrapper script's
+	// qstat, ssh) may hold the write end long after the child is gone, and
+	// Wait closes the read end as soon as the child has exited.
 	stats, decodeErr := decode(stdout)
 	if decodeErr != nil {
-		// Stop producing: the reader is done with the stream, whatever is
-		// left would only block the child on a full pipe.
 		_ = cmd.Process.Kill()
 	}
-	// Drain so a child blocked on write can exit; nothing after a decode
-	// error is of interest.
-	_, _ = io.Copy(io.Discard, stdout)
 	waitErr := cmd.Wait()
 
-	// Precedence: the deadline, then the process (a failed qstat prints no
-	// document, so the "incomplete document" it leaves behind is a symptom,
-	// not the cause), then whatever the decoder refused.
+	// Precedence: a complete document is the answer, even when the deadline
+	// fired while qstat was exiting. Then the deadline, then the process (a
+	// failed qstat prints no document, so the "incomplete document" it
+	// leaves behind is a symptom, not the cause), then whatever the decoder
+	// refused.
 	switch {
+	case decodeErr == nil && (waitErr == nil || errors.Is(waitErr, ctx.Err())):
+		return stats, nil
 	case ctx.Err() != nil:
-		return stats, fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), ctx.Err())
+		return stats, commandError(&stderr, ctx.Err())
 	case waitErr != nil && (decodeErr == nil || errors.Is(decodeErr, ErrIncompleteDocument)):
-		return stats, fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), waitErr)
-	case decodeErr != nil:
-		return stats, decodeErr
-	case !stats.Complete:
-		return stats, ErrIncompleteDocument
+		return stats, commandError(&stderr, waitErr)
 	}
-	return stats, nil
+	return stats, decodeErr
 }
 
 // SchedulerJobInfoContext runs "qstat -j <ids>" under ctx and parses the
-// result with this package's ParseSchedulerJobInfo. ErrNoSuchJob is returned
-// when qstat answers "Following jobs do not exist" and prints no job.
+// result with this package's ParseSchedulerJobInfo, which reads the 9.0
+// layout. For a 9.1 cluster use the v9.1 package's SchedulerJobInfoContext
+// function instead; it parses the per-task block this parser has no field
+// for. ErrNoSuchJob is returned when qstat answers "Following jobs do not
+// exist" and prints no job.
 func (q *QStatImpl) SchedulerJobInfoContext(ctx context.Context, env []string, ids ...string) ([]SchedulerJobInfo, error) {
 	out, err := RunSchedulerJobInfo(ctx, env, q, ids...)
 	if err != nil {
@@ -370,7 +388,7 @@ func decodeElements(r io.Reader, name string, handle func(*xml.Decoder, xml.Star
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				if !stats.Complete {
-					return stats, fmt.Errorf("after %d elements: %w", stats.Decoded+stats.Skipped, ErrIncompleteDocument)
+					return stats, incompleteDocument(stats)
 				}
 				return stats, nil
 			}
@@ -410,11 +428,16 @@ func decodeFailure(stats Stats, err error) error {
 	var syntax *xml.SyntaxError
 	if errors.As(err, &syntax) {
 		if syntax.Msg == "unexpected EOF" {
-			return fmt.Errorf("after %d elements: %w", stats.Decoded+stats.Skipped, ErrIncompleteDocument)
+			return incompleteDocument(stats)
 		}
 		return fmt.Errorf("malformed qstat XML after %d elements: %w", stats.Decoded+stats.Skipped, err)
 	}
 	return err
+}
+
+// incompleteDocument says how far the document got before it ended.
+func incompleteDocument(stats Stats) error {
+	return fmt.Errorf("after %d elements: %w", stats.Decoded+stats.Skipped, ErrIncompleteDocument)
 }
 
 // jobListXML is the raw shape of a <job_list> element. Every field is text
@@ -518,9 +541,10 @@ func parseUint32(s string) (uint32, error) {
 }
 
 // xmlTimeLayouts are the forms qstat -xml prints for JAT_start_time and
-// JAT_submission_time: ISO 8601 without a zone, with microseconds since
-// 9.1 and without them on older releases. The value is in the process
-// zone, exactly like qstat's text output.
+// JAT_submission_time: ISO 8601 without a zone, with microseconds (as
+// captured from 9.0.12, 9.1.0 and 9.1.7); the whole-second form is accepted
+// for older releases. The value is in the process zone, exactly like
+// qstat's text output.
 var xmlTimeLayouts = []string{
 	"2006-01-02T15:04:05.999999",
 	"2006-01-02T15:04:05",
@@ -548,10 +572,6 @@ func ParseXMLTime(s string) (time.Time, error) {
 type cappedWriter struct {
 	w    *bytes.Buffer
 	left int
-}
-
-func newCappedWriter(w *bytes.Buffer, n int) *cappedWriter {
-	return &cappedWriter{w: w, left: n}
 }
 
 func (c *cappedWriter) Write(p []byte) (int, error) {

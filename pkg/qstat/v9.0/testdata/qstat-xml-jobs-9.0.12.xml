@@ -1,0 +1,80 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <queue_info>
+    <job_list state="running">
+      <JB_job_number>1</JB_job_number>
+      <JAT_prio>0.55500</JAT_prio>
+      <JB_name>plain job</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>r</state>
+      <JAT_start_time>2026-10-22T14:45:42.976345</JAT_start_time>
+      <queue_name>all.q@master</queue_name>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="running">
+      <JB_job_number>4</JB_job_number>
+      <JAT_prio>0.55500</JAT_prio>
+      <JB_name>smallarray</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>r</state>
+      <JAT_start_time>2026-10-22T14:45:43.111111</JAT_start_time>
+      <queue_name>all.q@master</queue_name>
+      <slots>1</slots>
+      <tasks>1</tasks>
+    </job_list>
+    <job_list state="running">
+      <JB_job_number>4</JB_job_number>
+      <JAT_prio>0.55500</JAT_prio>
+      <JB_name>smallarray</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>r</state>
+      <JAT_start_time>2026-10-22T14:45:43.112944</JAT_start_time>
+      <queue_name>all.q@master</queue_name>
+      <slots>1</slots>
+      <tasks>2</tasks>
+    </job_list>
+  </queue_info>
+  <job_info>
+    <job_list state="pending">
+      <JB_job_number>6</JB_job_number>
+      <JAT_prio>0.55500</JAT_prio>
+      <JB_name>badwd</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-22T14:45:43.208703</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>2</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>held %lt;img src=x onerror=alert(1)&gt; &amp; co</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-22T14:45:43.015436</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>arrayrange</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-22T14:45:43.062777</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <tasks>6001-100000:3</tasks>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>5</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>future</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-22T14:45:43.161441</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+    </job_list>
+  </job_info>
+</job_info>

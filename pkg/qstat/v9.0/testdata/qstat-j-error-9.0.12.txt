@@ -1,0 +1,33 @@
+==============================================================
+job_number:                     6
+exec_file:                      job_scripts/6
+submission_time:                2026-10-22 14:45:43.208703
+submit_cmd_line:                qsub -b y -wd /nonexistent/dir -N badwd sleep 1
+effective_submit_cmd_line:      qsub -A sge -b yes -binding NONE -M root@master -N badwd -pty no -r yes -wd /nonexistent/dir sleep 1
+owner:                          root
+uid:                            0
+group:                          root
+gid:                            0
+groups:                         NOT-AVAILABLE-IN-OCS
+sge_o_home:                     /root
+sge_o_path:                     /opt/ocs/bin/lx-amd64:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/go/bin:/root/go/bin
+sge_o_workdir:                  /tmp
+sge_o_host:                     master
+account:                        sge
+cwd:                            /nonexistent/dir
+mail_list:                      root@master
+notify:                         FALSE
+job_name:                       badwd
+priority:                       0
+jobshare:                       0
+env_list:                       NONE
+job_args:                       1
+script_file:                    sleep
+department:                     defaultdepartment
+binding:                        NONE
+job_state                  1:   Eqw
+exec_queue_list            1:   NONE
+start_time                 1:   2026-10-22 14:46:03.404720
+resource_map               1:   NONE
+error reason               1:   2026-10-22 14:45:43.342258 [0:3067]: error: can't chdir to /nonexistent/dir: No such file or directory
+scheduling info:                (Collecting of scheduler job information is turned off - use qalter -w p job_id to verify if the job can be scheduled)
