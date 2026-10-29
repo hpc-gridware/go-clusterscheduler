@@ -215,6 +215,29 @@ var _ = Describe("Streaming qstat XML through the 9.1 aliases", func() {
 		Expect(t.Nanosecond()).To(Equal(94728000))
 	})
 
+	It("decodes the queue instance detail listing", func() {
+		f, err := os.Open(filepath.Join("..", "v9.0", "testdata", "qstat-f-xml-explain-9.1.7.xml"))
+		Expect(err).NotTo(HaveOccurred())
+		defer f.Close()
+		var alarms []string
+		stats, err := qstat.DecodeQueueInstanceDetailsXML(f, func(d qstat.QueueInstanceDetailXML) error {
+			alarms = append(alarms, d.LoadAlarmReasons...)
+			return nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats.Complete).To(BeTrue())
+		Expect(alarms).NotTo(BeEmpty())
+		var _ qstat.QueueDetailStreamer = &qstat.QStatImpl{}
+	})
+
+	It("refuses a detail listing without a queue with the shared sentinel", func() {
+		impl, err := qstat.NewCommandLineQstat(qstat.CommandLineQStatConfig{DryRun: true})
+		Expect(err).NotTo(HaveOccurred())
+		_, err = impl.StreamQueueInstanceDetailsXML(context.Background(), nil, qstat.QueueDetailOptions{},
+			func(qstat.QueueInstanceDetailXML) error { return nil })
+		Expect(errors.Is(err, qstat.ErrNoQueues)).To(BeTrue())
+	})
+
 	It("reports a truncated document with the shared sentinel", func() {
 		_, err := qstat.DecodeJobsXML(strings.NewReader("<job_info><queue_info>"), func(qstat.JobXML) error { return nil })
 		Expect(errors.Is(err, qstat.ErrIncompleteDocument)).To(BeTrue())

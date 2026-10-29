@@ -24,9 +24,9 @@ package qstat
 // NativeSpecification buffers the whole qstat output in memory and cannot be
 // cancelled; on a cluster with 200,000 queued or running jobs "qstat -xml
 // -u '*'" is tens of megabytes and takes seconds. The functions in this file
-// exist so a consumer (Qontrol's workloads indexer, qtelemetry, or any other
-// poller) can read that output ONE ELEMENT AT A TIME with a bounded memory
-// footprint, under a context deadline, with the child environment it chooses.
+// exist so a consumer (qtelemetry, or any other poller) can read that
+// output ONE ELEMENT AT A TIME with a bounded memory footprint, under a
+// context deadline, with the child environment it chooses.
 //
 // Why XML and not the fixed-width text output: plain qstat truncates job
 // names to 10 and owners to 12 characters (ocs_qstat.cc), so aggregates by
@@ -60,6 +60,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper"
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
@@ -87,7 +88,8 @@ type Streamer interface {
 // JobStreamOptions selects what StreamJobsXML asks qstat for.
 type JobStreamOptions struct {
 	// Users restricts the listing to these owners. Empty means EVERY user
-	// ("-u *"); without -u qstat lists only the calling user's jobs.
+	// ("-u *"); without -u qstat lists only the calling user's jobs. A name
+	// containing "," or space, or starting with "-", is refused.
 	Users []string
 	// Extended adds "-ext", which carries project and department per job
 	// but drops the start and submission times.
@@ -147,8 +149,11 @@ type QueueInstanceXML struct {
 	SlotsUsed     uint32
 	SlotsReserved uint32
 	SlotsTotal    uint32
-	// LoadAvg is the text as printed, empty when the host reports no load
-	// (unknown host, or a simulated one).
+	// LoadAvg is the <load_avg> text as printed. It is empty in practice:
+	// the XML writer (ocs_qstat_xml.cc) prints the element only when the
+	// load lookup failed, the inverse of the text column, so no release
+	// from 9.0.12 to 9.1.7 (OCS and GCS) prints a real load. Read host load
+	// from the qhost stream (pkg/qhost, HostXML.LoadAvg and Reporting).
 	LoadAvg string
 	Arch    string
 	// State holds the queue instance state letters ("au", "E", "d", "D",
@@ -193,7 +198,7 @@ var _ Streamer = (*QStatImpl)(nil)
 // commandError is the error of a failed qstat run, in the shape the other
 // command wrappers of this module use: "failed to run command (<stderr>):
 // <cause>".
-func commandError(stderr *bytes.Buffer, cause error) error {
+func commandError(stderr fmt.Stringer, cause error) error {
 	return fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), cause)
 }
 
@@ -210,15 +215,16 @@ func (q *QStatImpl) RunContext(ctx context.Context, env []string, args ...string
 		cmd.Env = env
 	}
 	cmd.WaitDelay = streamWaitDelay
-	var stdout, stderr bytes.Buffer
+	var stdout bytes.Buffer
+	stderr := helper.NewCappedBuffer(maxStderrBytes)
 	cmd.Stdout = &stdout
-	cmd.Stderr = &cappedWriter{w: &stderr, left: maxStderrBytes}
+	cmd.Stderr = stderr
 	err := cmd.Run()
 	if err != nil {
 		if ctx.Err() != nil {
 			err = ctx.Err()
 		}
-		return stdout.String(), stderr.String(), commandError(&stderr, err)
+		return stdout.String(), stderr.String(), commandError(stderr, err)
 	}
 	return stdout.String(), stderr.String(), nil
 }
@@ -229,9 +235,9 @@ func (q *QStatImpl) StreamJobsXML(ctx context.Context, env []string, opts JobStr
 	if opts.Extended {
 		args = append(args, "-ext")
 	}
-	users := "*"
-	if len(opts.Users) > 0 {
-		users = strings.Join(opts.Users, ",")
+	users, err := userList(opts.Users)
+	if err != nil {
+		return Stats{}, err
 	}
 	args = append(args, "-u", users)
 	args = append(args, opts.ExtraArgs...)
@@ -245,6 +251,19 @@ func (q *QStatImpl) StreamQueueInstancesXML(ctx context.Context, env []string, f
 	return q.stream(ctx, env, []string{"-f", "-xml"}, func(r io.Reader) (Stats, error) {
 		return DecodeQueueInstancesXML(r, fn)
 	})
+}
+
+// userList is the -u value for users: "*" (every user) when empty, else the
+// names comma-joined. Each name is validated first, so a name holding a ","
+// or a leading "-" cannot add users ("alice,*") or forge an option.
+func userList(users []string) (string, error) {
+	if len(users) == 0 {
+		return "*", nil
+	}
+	if err := validate.Enforce(validate.List("user", users)); err != nil {
+		return "", err
+	}
+	return strings.Join(users, ","), nil
 }
 
 // stream runs qstat with args and feeds its stdout to decode while the
@@ -262,8 +281,8 @@ func (q *QStatImpl) stream(ctx context.Context, env []string, args []string, dec
 		cmd.Env = env
 	}
 	cmd.WaitDelay = streamWaitDelay
-	var stderr bytes.Buffer
-	cmd.Stderr = &cappedWriter{w: &stderr, left: maxStderrBytes}
+	stderr := helper.NewCappedBuffer(maxStderrBytes)
+	cmd.Stderr = stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return Stats{}, fmt.Errorf("failed to start qstat: %w", err)
@@ -292,9 +311,9 @@ func (q *QStatImpl) stream(ctx context.Context, env []string, args []string, dec
 	case decodeErr == nil && (waitErr == nil || errors.Is(waitErr, ctx.Err())):
 		return stats, nil
 	case ctx.Err() != nil:
-		return stats, commandError(&stderr, ctx.Err())
+		return stats, commandError(stderr, ctx.Err())
 	case waitErr != nil && (decodeErr == nil || errors.Is(decodeErr, ErrIncompleteDocument)):
-		return stats, commandError(&stderr, waitErr)
+		return stats, commandError(stderr, waitErr)
 	}
 	return stats, decodeErr
 }
@@ -566,22 +585,4 @@ func ParseXMLTime(s string) (time.Time, error) {
 		lastErr = err
 	}
 	return time.Time{}, lastErr
-}
-
-// cappedWriter keeps the first n bytes written and drops the rest.
-type cappedWriter struct {
-	w    *bytes.Buffer
-	left int
-}
-
-func (c *cappedWriter) Write(p []byte) (int, error) {
-	if c.left > 0 {
-		n := len(p)
-		if n > c.left {
-			n = c.left
-		}
-		c.w.Write(p[:n])
-		c.left -= n
-	}
-	return len(p), nil
 }

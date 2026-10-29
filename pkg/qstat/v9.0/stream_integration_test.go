@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	qstat "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
@@ -168,5 +169,64 @@ var _ = Describe("Streaming qstat against a live cluster", Label("integration"),
 
 		_, err = impl.SchedulerJobInfoContext(context.Background(), env, "99999999")
 		Expect(errors.Is(err, qstat.ErrNoSuchJob)).To(BeTrue(), "got: %v", err)
+	})
+
+	It("explains a load alarm and lists the running job in the detail listing of its host", func() {
+		if _, err := exec.LookPath("qconf"); err != nil {
+			Skip("qconf not available")
+		}
+		running := submitJob("-b", "y", "-N", longJobName, "sleep", "300")
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+
+		var instance string
+		Eventually(func(g Gomega) {
+			job, _, err := findJob(ctx, qstat.JobStreamOptions{}, running)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(job.State).To(Equal("r"))
+			instance = job.QueueName
+		}).WithTimeout(45 * time.Second).WithPolling(time.Second).Should(Succeed())
+
+		// An impossible threshold on this one instance raises the alarm; the
+		// instance-level override is purged again afterwards.
+		out, err := exec.Command("qconf", "-mattr", "queue", "load_thresholds", "np_load_avg=0.0001", instance).CombinedOutput()
+		Expect(err).NotTo(HaveOccurred(), string(out))
+		DeferCleanup(func() {
+			if out, err := exec.Command("qconf", "-purge", "queue", "load_thresholds", instance).CombinedOutput(); err != nil {
+				GinkgoWriter.Printf("qconf -purge %s: %v: %s\n", instance, err, out)
+			}
+		})
+
+		host := instance[strings.Index(instance, "@")+1:]
+		Eventually(func(g Gomega) {
+			var details []qstat.QueueInstanceDetailXML
+			stats, err := impl.StreamQueueInstanceDetailsXML(ctx, nil,
+				qstat.QueueDetailOptions{Queues: []string{"*@" + host}},
+				func(d qstat.QueueInstanceDetailXML) error {
+					details = append(details, d)
+					return nil
+				})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(stats.Complete).To(BeTrue())
+			var found *qstat.QueueInstanceDetailXML
+			for i := range details {
+				if details[i].Name == instance {
+					found = &details[i]
+				}
+			}
+			g.Expect(found).NotTo(BeNil())
+			g.Expect(found.State).To(ContainSubstring("a"))
+			g.Expect(found.LoadAlarmReasons).To(ContainElement(ContainSubstring("load-threshold=0.0001")))
+			g.Expect(found.Jobs).To(ContainElement(And(
+				HaveField("JobNumber", running),
+				HaveField("Name", longJobName),
+				HaveField("QueueName", instance))))
+		}).WithTimeout(45 * time.Second).WithPolling(2 * time.Second).Should(Succeed())
+
+		_, err = impl.StreamQueueInstanceDetailsXML(ctx, nil,
+			qstat.QueueDetailOptions{Queues: []string{"nosuch.q.integration"}},
+			func(qstat.QueueInstanceDetailXML) error { return nil })
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(`"nosuch.q.integration"`))
 	})
 })

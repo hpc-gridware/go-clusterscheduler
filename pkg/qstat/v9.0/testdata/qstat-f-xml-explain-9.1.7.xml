@@ -1,0 +1,86 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <queue_info>
+    <Queue-List>
+      <name>all.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>14</slots_total>
+      <arch>lx-amd64</arch>
+      <state>u</state>
+    </Queue-List>
+    <Queue-List>
+      <name>bigmem.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>8</slots_total>
+      <arch>lx-amd64</arch>
+      <state>au</state>
+      <load-alarm-reason>error: no value for &quot;np_load_avg&quot; because execd is in unknown state</load-alarm-reason>
+    </Queue-List>
+    <Queue-List>
+      <name>cs2964.q@ocs-worker1</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>1</slots_total>
+      <arch>lx-amd64</arch>
+      <state>a</state>
+      <load-alarm-reason>alarm hl:np_load_avg=0.063571 load-threshold=0.0001</load-alarm-reason>
+    </Queue-List>
+    <Queue-List>
+      <name>interactive.q@ocs-worker2</name>
+      <qtype>IP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>2</slots_total>
+      <arch>lx-amd64</arch>
+      <state>au</state>
+      <load-alarm-reason>error: no value for &quot;np_load_avg&quot; because execd is in unknown state</load-alarm-reason>
+    </Queue-List>
+    <Queue-List>
+      <name>long.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>4</slots_total>
+      <arch>lx-amd64</arch>
+      <state>au</state>
+      <load-alarm-reason>error: no value for &quot;np_load_avg&quot; because execd is in unknown state</load-alarm-reason>
+    </Queue-List>
+    <Queue-List>
+      <name>night.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>4</slots_total>
+      <arch>lx-amd64</arch>
+      <state>aDu</state>
+      <load-alarm-reason>error: no value for &quot;np_load_avg&quot; because execd is in unknown state</load-alarm-reason>
+    </Queue-List>
+    <Queue-List>
+      <name>slurm.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>14</slots_total>
+      <arch>lx-amd64</arch>
+      <state>au</state>
+      <load-alarm-reason>error: no value for &quot;np_load_avg&quot; because execd is in unknown state</load-alarm-reason>
+    </Queue-List>
+    <Queue-List>
+      <name>short.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>6</slots_total>
+      <arch>lx-amd64</arch>
+      <state>au</state>
+      <load-alarm-reason>error: no value for &quot;np_load_avg&quot; because execd is in unknown state</load-alarm-reason>
+    </Queue-List>
+  </queue_info>
+  <job_info>
+  </job_info>
+</job_info>

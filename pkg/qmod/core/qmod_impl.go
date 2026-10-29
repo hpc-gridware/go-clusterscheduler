@@ -80,20 +80,29 @@ func (c *CommandLineQMod) RunCommand(args ...string) (string, error) {
 }
 
 func (c *CommandLineQMod) runAction(flag string, targets []string) (string, error) {
+	args, err := c.actionArgs(flag, targets)
+	if err != nil {
+		return "", err
+	}
+	return c.RunCommand(args...)
+}
+
+// actionArgs builds the argv of one action flag on targets, shared by
+// runAction and ActionContext so both validate the same way.
+func (c *CommandLineQMod) actionArgs(flag string, targets []string) ([]string, error) {
 	if len(targets) == 0 {
-		return "", fmt.Errorf("no targets specified")
+		return nil, fmt.Errorf("no targets specified")
 	}
 	// Layer 2: validate each job/queue target before it is comma-joined, so a
 	// leading '-' or embedded separator cannot forge an extra flag or target.
 	if err := validate.Enforce(validate.List("target", targets)); err != nil {
-		return "", err
+		return nil, err
 	}
 	args := []string{}
 	if c.config.Force {
 		args = append(args, "-f")
 	}
-	args = append(args, flag, strings.Join(targets, ","))
-	return c.RunCommand(args...)
+	return append(args, flag, strings.Join(targets, ",")), nil
 }
 
 func (c *CommandLineQMod) ClearErrorState(jobOrQueueList []string) (string, error) {

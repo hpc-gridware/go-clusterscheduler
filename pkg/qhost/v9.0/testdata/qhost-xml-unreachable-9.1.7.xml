@@ -1,0 +1,51 @@
+<?xml version='1.0'?>
+<qhost xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qhost/qhost.xsd">
+ <host name='global'>
+   <hostvalue name='arch_string'>-</hostvalue>
+   <hostvalue name='num_proc'>-</hostvalue>
+   <hostvalue name='m_socket'>-</hostvalue>
+   <hostvalue name='m_core'>-</hostvalue>
+   <hostvalue name='m_thread'>-</hostvalue>
+   <hostvalue name='load_avg'>-</hostvalue>
+   <hostvalue name='mem_total'>-</hostvalue>
+   <hostvalue name='mem_used'>-</hostvalue>
+   <hostvalue name='swap_total'>-</hostvalue>
+   <hostvalue name='swap_used'>-</hostvalue>
+ </host>
+ <host name='ocs-master'>
+   <hostvalue name='arch_string'>lx-amd64</hostvalue>
+   <hostvalue name='num_proc'>14</hostvalue>
+   <hostvalue name='m_socket'>1</hostvalue>
+   <hostvalue name='m_core'>14</hostvalue>
+   <hostvalue name='m_thread'>14</hostvalue>
+   <hostvalue name='load_avg'>0.91</hostvalue>
+   <hostvalue name='mem_total'>11.7G</hostvalue>
+   <hostvalue name='mem_used'>3.6G</hostvalue>
+   <hostvalue name='swap_total'>12.7G</hostvalue>
+   <hostvalue name='swap_used'>0.0</hostvalue>
+ </host>
+ <host name='ocs-worker1'>
+   <hostvalue name='arch_string'>lx-amd64</hostvalue>
+   <hostvalue name='num_proc'>14</hostvalue>
+   <hostvalue name='m_socket'>1</hostvalue>
+   <hostvalue name='m_core'>14</hostvalue>
+   <hostvalue name='m_thread'>14</hostvalue>
+   <hostvalue name='load_avg'>0.89</hostvalue>
+   <hostvalue name='mem_total'>11.7G</hostvalue>
+   <hostvalue name='mem_used'>3.6G</hostvalue>
+   <hostvalue name='swap_total'>12.7G</hostvalue>
+   <hostvalue name='swap_used'>0.0</hostvalue>
+ </host>
+ <host name='ocs-worker2'>
+   <hostvalue name='arch_string'>lx-amd64</hostvalue>
+   <hostvalue name='num_proc'>14</hostvalue>
+   <hostvalue name='m_socket'>-</hostvalue>
+   <hostvalue name='m_core'>-</hostvalue>
+   <hostvalue name='m_thread'>-</hostvalue>
+   <hostvalue name='load_avg'>-</hostvalue>
+   <hostvalue name='mem_total'>11.7G</hostvalue>
+   <hostvalue name='mem_used'>-</hostvalue>
+   <hostvalue name='swap_total'>12.7G</hostvalue>
+   <hostvalue name='swap_used'>-</hostvalue>
+ </host>
+</qhost>

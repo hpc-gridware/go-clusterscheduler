@@ -34,3 +34,7 @@ type CommandLineQModConfig = core.CommandLineQModConfig
 func NewCommandLineQMod(config CommandLineQModConfig) (*CommandLineQMod, error) {
 	return core.NewCommandLineQMod(config)
 }
+
+// ContextRunner runs qmod under a context with a chosen environment; see
+// core.ContextRunner.
+type ContextRunner = core.ContextRunner

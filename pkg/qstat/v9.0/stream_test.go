@@ -445,6 +445,16 @@ var _ = Describe("Streaming qstat XML", func() {
 			Expect(string(got)).To(Equal("-f\n-xml\n"))
 		})
 
+		It("refuses a user name that would widen the listing or forge an option", func() {
+			argsFile := filepath.Join(GinkgoT().TempDir(), "args")
+			for _, user := range []string{"alice,*", "-s", "a b"} {
+				_, err := impl.StreamJobsXML(context.Background(), env("FAKE_QSTAT_ARGS_FILE="+argsFile),
+					qstat.JobStreamOptions{Users: []string{user}}, func(qstat.JobXML) error { return nil })
+				Expect(err).To(HaveOccurred(), user)
+			}
+			Expect(argsFile).NotTo(BeAnExistingFile(), "qstat must not have been started")
+		})
+
 		It("refuses control characters in extra switches before spawning anything", func() {
 			argsFile := filepath.Join(GinkgoT().TempDir(), "args")
 			_, err := impl.StreamJobsXML(context.Background(), env("FAKE_QSTAT_ARGS_FILE="+argsFile),

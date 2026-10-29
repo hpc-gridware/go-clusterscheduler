@@ -82,3 +82,22 @@ func SchedulerJobInfoContext(ctx context.Context, env []string, s Streamer, ids 
 	}
 	return ParseSchedulerJobInfo(out)
 }
+
+// QueueDetailStreamer reads the queue instance detail listing
+// ("qstat -f -xml -explain aAcE -s r -q ..."); the shape is unchanged.
+type QueueDetailStreamer = v90.QueueDetailStreamer
+
+// QueueDetailOptions selects the queue instances of the detail listing.
+type QueueDetailOptions = v90.QueueDetailOptions
+
+// ErrNoQueues is returned when QueueDetailOptions.Queues is empty.
+var ErrNoQueues = v90.ErrNoQueues
+
+// QueueInstanceDetailXML is one <Queue-List> element of the detail listing.
+type QueueInstanceDetailXML = v90.QueueInstanceDetailXML
+
+// DecodeQueueInstanceDetailsXML is the v9.0 decoder; the document shape is
+// unchanged.
+func DecodeQueueInstanceDetailsXML(r io.Reader, fn func(QueueInstanceDetailXML) error) (Stats, error) {
+	return v90.DecodeQueueInstanceDetailsXML(r, fn)
+}

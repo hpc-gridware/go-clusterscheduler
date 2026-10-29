@@ -38,7 +38,7 @@
       <arch>lx-amd64</arch>
       <state>D</state>
     </Queue-List>
-    <!-- synthesized: a loaded instance in alarm, as a real execd reports it -->
+    <!-- synthesized: no release prints a real load_avg (see QueueInstanceXML.LoadAvg); the element is here so the parser still reads one -->
     <Queue-List>
       <name>gpu.q@node41</name>
       <qtype>BIP</qtype>
