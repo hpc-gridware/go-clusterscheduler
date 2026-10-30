@@ -20,6 +20,9 @@
 package qstat_test
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	qstat "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
@@ -28,6 +31,40 @@ import (
 )
 
 var _ = Describe("Parser", func() {
+
+	Context("ParseSchedulerJobInfo scheduling info", func() {
+		It("keeps every line of a multi-line scheduling info (live 9.1.7 output)", func() {
+			// Captured 2026-10-30 from qstat -j on a job in Eqw. The parser
+			// kept only the first message; the indented continuation lines
+			// carry no key of their own.
+			raw, err := os.ReadFile(filepath.Join("testdata", "qstat-j-eqw-schedinfo-9.1.7.txt"))
+			Expect(err).NotTo(HaveOccurred())
+			jobs, err := qstat.ParseSchedulerJobInfo(string(raw))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(strings.Split(jobs[0].SchedulingInfo, "\n")).To(Equal([]string{
+				`queue instance "night.q@ocs-worker1" dropped because it is disabled`,
+				`queue instance "night.q@ocs-worker2" dropped because it is disabled`,
+				`queue instance "night.q@ocs-master" dropped because it is disabled`,
+				"(Scheduler job information not available for every job)",
+			}))
+		})
+
+		It("does not read a scheduling info line with a colon as another field", func() {
+			out := "==============================================================\n" +
+				"job_number:                      7\n" +
+				"job_name:                        sleep\n" +
+				"scheduling info:                 cannot run in queue \"all.q\" because it is full\n" +
+				"                                 owner: cannot run because of a quota\n" +
+				"                                 job_name: not a field\n"
+			jobs, err := qstat.ParseSchedulerJobInfo(out)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].JobName).To(Equal("sleep"), "a continuation line never overwrites a field")
+			Expect(jobs[0].Owner).To(BeEmpty())
+			Expect(strings.Split(jobs[0].SchedulingInfo, "\n")).To(HaveLen(3))
+		})
+	})
 
 	Context("ParseGroupByTask", func() {
 

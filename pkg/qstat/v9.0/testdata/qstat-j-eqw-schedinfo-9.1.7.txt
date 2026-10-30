@@ -1,0 +1,38 @@
+==============================================================
+job_number:                      3032
+category_id:                     536
+exec_file:                       job_scripts/3032
+submission_time:                 2026-10-30 08:43:05.361501
+submit_cmd_line:                 qsub -wd /no/such/dir -b y /bin/sleep 60
+effective_submit_cmd_line:       qsub -A sge -b yes -M root@ocs-worker2 -N sleep -pty no -r yes -wd /no/such/dir /bin/sleep 60
+owner:                           root
+uid:                             0
+group:                           root
+gid:                             0
+groups:                          0(root)
+sge_o_home:                      /root
+sge_o_workdir:                   /
+sge_o_host:                      ocs-worker2
+account:                         sge
+cwd:                             /no/such/dir
+mail_list:                       root@ocs-worker2
+notify:                          FALSE
+job_name:                        sleep
+priority:                        0
+jobshare:                        0
+env_list:                        NONE
+job_args:                        60
+script_file:                     /bin/sleep
+department:                      defaultdepartment
+sync_options:                    n
+pending_tasks:                   0
+binding:                         NONE
+job_state                   1:   Eqw
+exec_queue_list             1:   NONE
+start_time                  1:   2026-10-30 08:43:11.876337
+resource_map                1:   NONE
+error reason                1:   2026-10-30 08:43:05.441132 [0:56445]: error: can't chdir to /no/such/dir: No such file or directory
+scheduling info:                 queue instance "night.q@ocs-worker1" dropped because it is disabled
+                                 queue instance "night.q@ocs-worker2" dropped because it is disabled
+                                 queue instance "night.q@ocs-master" dropped because it is disabled
+                                 (Scheduler job information not available for every job)

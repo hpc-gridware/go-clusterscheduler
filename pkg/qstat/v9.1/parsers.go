@@ -91,7 +91,21 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 	var info SchedulerJobInfo
 	lines := strings.Split(block, "\n")
 
+	// "scheduling info" is the one multi-line value: qstat prints each
+	// further message on its own line, indented to the value column. Those
+	// lines carry no "key:" of their own (or a colon inside a message), so
+	// they are appended to the field until a line starts at column 0.
+	inSchedulingInfo := false
 	for _, line := range lines {
+		if inSchedulingInfo {
+			if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+				if msg := strings.TrimSpace(line); msg != "" {
+					info.SchedulingInfo += "\n" + msg
+				}
+				continue
+			}
+			inSchedulingInfo = false
+		}
 		line = strings.TrimSpace(line)
 		if line == "" || line == "==============================================================" {
 			continue
@@ -236,6 +250,7 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 			info.Binding = value
 		case "scheduling info":
 			info.SchedulingInfo = value
+			inSchedulingInfo = true
 		}
 	}
 	return info, nil
