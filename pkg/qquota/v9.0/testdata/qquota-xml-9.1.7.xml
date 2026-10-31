@@ -1,0 +1,31 @@
+<?xml version='1.0'?>
+<qquota_result xmlns="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qquota/qquota.xsd">
+ <qquota_rule name='license_limits/1'>
+   <projects>finance</projects>
+   <limit resource='matlab' limit='5' value='1'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>bob</users>
+   <limit resource='slots' limit='24' value='3'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>dave</users>
+   <limit resource='slots' limit='24' value='9'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>alice</users>
+   <limit resource='slots' limit='24' value='8'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>carol</users>
+   <limit resource='slots' limit='24' value='14'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>frank</users>
+   <limit resource='slots' limit='24' value='5'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>erin</users>
+   <limit resource='slots' limit='24' value='2'/>
+ </qquota_rule>
+</qquota_result>

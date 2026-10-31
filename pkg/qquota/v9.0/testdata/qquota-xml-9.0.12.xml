@@ -1,0 +1,17 @@
+<?xml version='1.0'?>
+<qquota_result xmlns="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qquota/qquota.xsd">
+ <qquota_rule name='zz_probe/1'>
+   <users>root</users>
+   <hosts>master</hosts>
+   <limit resource='slots' limit='28' value='1'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe/2'>
+   <users>*</users>
+   <limit resource='h_vmem' limit='64G'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe_named/probe_x'>
+   <xusers>bob</xusers>
+   <queues>all.q</queues>
+   <limit resource='slots' limit='1000' value='1'/>
+ </qquota_rule>
+</qquota_result>

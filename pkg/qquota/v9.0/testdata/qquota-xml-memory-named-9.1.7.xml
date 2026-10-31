@@ -1,0 +1,24 @@
+<?xml version='1.0'?>
+<qquota_result xmlns="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qquota/qquota.xsd">
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>frank</users>
+   <limit resource='slots' limit='24' value='7'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>erin</users>
+   <limit resource='slots' limit='24' value='23'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>alice</users>
+   <limit resource='slots' limit='24' value='1'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe_mem/1'>
+   <users>alice</users>
+   <limit resource='scratch' limit='100.000G' value='1.500G'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe_named/probe_x'>
+   <xusers>bob</xusers>
+   <queues>all.q</queues>
+   <limit resource='slots' limit='1000' value='20'/>
+ </qquota_rule>
+</qquota_result>

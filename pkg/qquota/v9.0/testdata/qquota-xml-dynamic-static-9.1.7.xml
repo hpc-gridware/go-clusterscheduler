@@ -1,0 +1,39 @@
+<?xml version='1.0'?>
+<qquota_result xmlns="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qquota/qquota.xsd">
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>alice</users>
+   <limit resource='slots' limit='24' value='1'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>frank</users>
+   <limit resource='slots' limit='24' value='7'/>
+ </qquota_rule>
+ <qquota_rule name='max_slots_per_user/1'>
+   <users>erin</users>
+   <limit resource='slots' limit='24' value='23'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe/1'>
+   <users>frank</users>
+   <hosts>ocs-worker2</hosts>
+   <limit resource='slots' limit='56' value='7'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe/1'>
+   <users>alice</users>
+   <hosts>ocs-worker1</hosts>
+   <limit resource='slots' limit='56' value='1'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe/1'>
+   <users>erin</users>
+   <hosts>ocs-master</hosts>
+   <limit resource='slots' limit='56' value='13'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe/1'>
+   <users>erin</users>
+   <hosts>ocs-worker1</hosts>
+   <limit resource='slots' limit='56' value='10'/>
+ </qquota_rule>
+ <qquota_rule name='zz_probe/2'>
+   <users>*</users>
+   <limit resource='h_vmem' limit='64G'/>
+ </qquota_rule>
+</qquota_result>
