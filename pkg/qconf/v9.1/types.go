@@ -148,3 +148,13 @@ type GlobalConfig struct {
 	GDIRequestLimits string            `json:"gdi_request_limits"`
 	BindingParams    map[string]string `json:"binding_params"`
 }
+
+// ConfigContextReader reads configuration under the caller's context; see
+// core.ConfigContextReader. CommandLineQConf implements it (promoted from
+// the embedded core implementation).
+type ConfigContextReader = core.ConfigContextReader
+
+// ParseResourceQuotaSets reads "qconf -srqs" output holding any number of sets.
+var ParseResourceQuotaSets = core.ParseResourceQuotaSets
+
+var _ ConfigContextReader = (*CommandLineQConf)(nil)

@@ -26,3 +26,10 @@ import (
 // QConf defines the methods for interacting with the Open Cluster Scheduler
 // configuration. This is a type alias to the core QConf interface.
 type QConf = core.QConf
+
+// ConfigContextReader reads configuration under the caller's context; see
+// core.ConfigContextReader. CommandLineQConf implements it.
+type ConfigContextReader = core.ConfigContextReader
+
+// ParseResourceQuotaSets reads "qconf -srqs" output holding any number of sets.
+var ParseResourceQuotaSets = core.ParseResourceQuotaSets

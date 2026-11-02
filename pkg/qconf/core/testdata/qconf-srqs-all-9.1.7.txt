@@ -1,0 +1,19 @@
+{
+   name         max_slots_per_user
+   description  "Fair use: no single user takes more than 24 slots"
+   enabled      TRUE
+   limit        users {*} to slots=24
+}
+{
+   name         license_limits
+   description  "Finance gets a capped share of the MATLAB pool"
+   enabled      TRUE
+   limit        projects finance to matlab=5
+   limit        users {*} to ansys=4
+}
+{
+   name         gpu_per_user
+   description  "At most two GPUs per user"
+   enabled      TRUE
+   limit        users {*} queues gpu.q to gpu=2
+}

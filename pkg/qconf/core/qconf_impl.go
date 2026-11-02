@@ -1003,6 +1003,11 @@ func (c *CommandLineQConf) ShowAllComplexes() ([]ComplexEntryConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseAllComplexes(output)
+}
+
+// parseAllComplexes reads the "qconf -sc" table.
+func parseAllComplexes(output string) ([]ComplexEntryConfig, error) {
 	lines := strings.Split(output, "\n")
 	var complexes []ComplexEntryConfig
 	for _, line := range lines {
@@ -1971,8 +1976,13 @@ func (c *CommandLineQConf) ShowResourceQuotaSet(rqsList string) (ResourceQuotaSe
 	if err != nil {
 		return ResourceQuotaSetConfig{}, err
 	}
-	lines := strings.Split(out, "\n")
-	cfg := ResourceQuotaSetConfig{Name: rqsList}
+	return parseResourceQuotaSet(strings.Split(out, "\n"), rqsList), nil
+}
+
+// parseResourceQuotaSet reads the lines of one resource quota set as
+// "qconf -srqs" prints it; name is used when the lines carry none.
+func parseResourceQuotaSet(lines []string, name string) ResourceQuotaSetConfig {
+	cfg := ResourceQuotaSetConfig{Name: name}
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		fields := strings.Fields(line)
@@ -1994,7 +2004,7 @@ func (c *CommandLineQConf) ShowResourceQuotaSet(rqsList string) (ResourceQuotaSe
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
-	return cfg, nil
+	return cfg
 }
 
 // ShowResourceQuotaSets shows all resource quota sets.
