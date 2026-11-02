@@ -43,7 +43,8 @@ import (
 type QueueResourceStreamer interface {
 	// StreamQueueResourcesXML runs "qstat -F <resources> -q <queues> -xml"
 	// and calls fn once per <Queue-List> element (one queue instance).
-	// resources and queues must not be empty.
+	// resources and queues must not be empty. Lists longer than
+	// MaxListArgument are handled as that constant says.
 	StreamQueueResourcesXML(ctx context.Context, env []string, resources, queues []string,
 		fn func(QueueResourcesXML) error) (Stats, error)
 }
@@ -83,10 +84,52 @@ func (q *QStatImpl) StreamQueueResourcesXML(ctx context.Context, env []string, r
 	if err := validate.Enforce(validate.List("resource", resources), validate.List("queue", queues)); err != nil {
 		return Stats{}, err
 	}
-	args := []string{"-F", strings.Join(resources, ","), "-q", strings.Join(queues, ","), "-xml"}
-	return q.stream(ctx, env, args, func(r io.Reader) (Stats, error) {
-		return DecodeQueueResourcesXML(r, fn)
-	})
+	list := strings.Join(resources, ",")
+	var total Stats
+	for _, chunk := range chunkList(queues, MaxListArgument) {
+		args := []string{"-q", strings.Join(chunk, ","), "-xml", "-F"}
+		if len(list) <= MaxListArgument {
+			args = []string{"-F", list, "-q", strings.Join(chunk, ","), "-xml"}
+		}
+		st, err := q.stream(ctx, env, args, func(r io.Reader) (Stats, error) {
+			return DecodeQueueResourcesXML(r, fn)
+		})
+		total.Decoded += st.Decoded
+		total.Skipped += st.Skipped
+		total.Complete = st.Complete
+		if err != nil {
+			total.Complete = false
+			return total, err
+		}
+	}
+	return total, nil
+}
+
+// MaxListArgument is the longest comma-joined list passed as one argument.
+// Linux refuses a single argument above 128 KiB (MAX_ARG_STRLEN) with E2BIG
+// before the command runs. A longer resource list is left out (qstat -F then
+// prints every value, the caller keeps the names it asked for); a longer
+// queue list is split into several calls -- the queue instances of
+// different queues never overlap, so nothing is read twice.
+const MaxListArgument = 96 * 1024
+
+// chunkList splits list into runs whose comma-joined length stays within
+// max (an element longer than max is a run of its own).
+func chunkList(list []string, max int) [][]string {
+	var out [][]string
+	start, size := 0, 0
+	for i, s := range list {
+		add := len(s)
+		if i > start {
+			add++
+		}
+		if i > start && size+add > max {
+			out = append(out, list[start:i])
+			start, size, add = i, 0, len(s)
+		}
+		size += add
+	}
+	return append(out, list[start:])
 }
 
 // DecodeQueueResourcesXML reads a "qstat -F ... -xml" document from r and

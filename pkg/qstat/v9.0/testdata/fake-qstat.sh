@@ -7,6 +7,7 @@
 # a background child sleeping that long with stdout open, like the qstat of
 # a wrapper script, which outlives a killed wrapper.
 if [ -n "$FAKE_QSTAT_ARGS_FILE" ]; then printf '%s\n' "$@" > "$FAKE_QSTAT_ARGS_FILE"; fi
+if [ -n "$FAKE_QSTAT_ARGS_LOG" ]; then printf '%s\n' "$*" >> "$FAKE_QSTAT_ARGS_LOG"; fi
 if [ -n "$FAKE_QSTAT_LINGER" ]; then sleep "$FAKE_QSTAT_LINGER" & fi
 if [ -n "$FAKE_QSTAT_SLEEP" ]; then sleep "$FAKE_QSTAT_SLEEP"; fi
 if [ -n "$FAKE_QSTAT_FILE" ]; then cat "$FAKE_QSTAT_FILE"; fi

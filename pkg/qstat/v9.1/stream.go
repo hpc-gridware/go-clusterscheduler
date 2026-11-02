@@ -115,6 +115,9 @@ type QueueResourceValueXML = v90.QueueResourceValueXML
 // ErrNoQueueResources is returned when no resource or queue is asked for.
 var ErrNoQueueResources = v90.ErrNoQueueResources
 
+// MaxListArgument is the longest list passed to qstat as one argument.
+const MaxListArgument = v90.MaxListArgument
+
 // DecodeQueueResourcesXML is the v9.0 decoder; the document shape is unchanged.
 func DecodeQueueResourcesXML(r io.Reader, fn func(QueueResourcesXML) error) (Stats, error) {
 	return v90.DecodeQueueResourcesXML(r, fn)

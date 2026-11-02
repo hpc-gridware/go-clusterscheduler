@@ -22,6 +22,7 @@ package qstat_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -157,6 +158,44 @@ var _ = Describe("Streaming qstat queue resource values", func() {
 				func(qstat.QueueResourcesXML) error { return stop })
 			Expect(err).To(BeIdenticalTo(stop))
 			Expect(time.Since(started)).To(BeNumerically("<", 5*time.Second))
+		})
+
+		It("splits a queue list too long for one argument into calls, and leaves out a too long name list", func() {
+			queues := make([]string, 3000)
+			for i := range queues {
+				queues[i] = fmt.Sprintf("q%059d.q", i)
+			}
+			argsLog := filepath.Join(GinkgoT().TempDir(), "args")
+			calls := 0
+			stats, err := impl.StreamQueueResourcesXML(context.Background(),
+				env("FAKE_QSTAT_ARGS_LOG="+argsLog, "FAKE_QSTAT_FILE="+fixture("qstat-F-queue-xml-9.1.7.xml")),
+				[]string{"zz_q"}, queues, func(qstat.QueueResourcesXML) error { calls++; return nil })
+			Expect(err).NotTo(HaveOccurred())
+			logged, _ := os.ReadFile(argsLog)
+			lines := strings.Split(strings.TrimSpace(string(logged)), "\n")
+			Expect(len(lines)).To(BeNumerically(">=", 2), "3,000 queues of 64 characters do not fit one argument")
+			seen := 0
+			for _, l := range lines {
+				f := strings.Fields(l)
+				Expect(f[0:2]).To(Equal([]string{"-F", "zz_q"}))
+				Expect(len(f[3])).To(BeNumerically("<=", qstat.MaxListArgument))
+				seen += len(strings.Split(f[3], ","))
+			}
+			Expect(seen).To(Equal(3000), "every queue asked for exactly once")
+			Expect(stats.Decoded).To(Equal(4*len(lines)), "each call's instances are counted")
+			Expect(stats.Complete).To(BeTrue())
+
+			names := make([]string, 2000)
+			for i := range names {
+				names[i] = fmt.Sprintf("r%063d", i)
+			}
+			argsFile := filepath.Join(GinkgoT().TempDir(), "argsfile")
+			_, err = impl.StreamQueueResourcesXML(context.Background(),
+				env("FAKE_QSTAT_ARGS_FILE="+argsFile, "FAKE_QSTAT_FILE="+fixture("qstat-F-queue-xml-9.1.7.xml")),
+				names, []string{"all.q"}, noop)
+			Expect(err).NotTo(HaveOccurred())
+			got, _ := os.ReadFile(argsFile)
+			Expect(string(got)).To(Equal("-q\nall.q\n-xml\n-F\n"))
 		})
 
 		It("is cancelled by its context while qstat is still silent", func() {

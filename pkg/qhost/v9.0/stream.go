@@ -64,6 +64,12 @@ type ResourceValueXML = core.ResourceValueXML
 // ErrNoResources is returned when no resource is asked for.
 var ErrNoResources = core.ErrNoResources
 
+// MaxListArgument is the longest list passed as one argument.
+const MaxListArgument = core.MaxListArgument
+
+// ErrListTooLong is returned for a host list longer than MaxListArgument.
+var ErrListTooLong = core.ErrListTooLong
+
 // DecodeHostResourcesXML reads a "qhost -F ... -xml" document and calls fn
 // once per host.
 func DecodeHostResourcesXML(r io.Reader, fn func(HostResourcesXML) error) (HostStats, error) {

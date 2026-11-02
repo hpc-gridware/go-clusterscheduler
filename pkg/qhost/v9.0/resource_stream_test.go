@@ -22,6 +22,7 @@ package qhost_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,6 +143,22 @@ var _ = Describe("Streaming qhost resource values", func() {
 			Expect(err).NotTo(HaveOccurred())
 			got, _ = os.ReadFile(argsFile)
 			Expect(string(got)).To(Equal("-xml\n-F\nmatlab\n-h\nocs-worker1\n"))
+		})
+
+		It("leaves out a resource list too long for one argument, and refuses such a host list", func() {
+			// 2,000 names of 64 characters: past Linux's 128 KiB per argument.
+			names := make([]string, 2000)
+			for i := range names {
+				names[i] = fmt.Sprintf("r%063d", i)
+			}
+			argsFile := filepath.Join(GinkgoT().TempDir(), "args")
+			_, err := impl.StreamHostResourcesXML(context.Background(),
+				env("FAKE_QHOST_ARGS_FILE="+argsFile, "FAKE_QHOST_FILE="+capture), names, []string{"ocs-worker1"}, noop)
+			Expect(err).NotTo(HaveOccurred())
+			got, _ := os.ReadFile(argsFile)
+			Expect(string(got)).To(Equal("-xml\n-h\nocs-worker1\n-F\n"), "every value; the caller keeps its names")
+			_, err = impl.StreamHostResourcesXML(context.Background(), env(), []string{"matlab"}, names, noop)
+			Expect(err).To(MatchError(qhost.ErrListTooLong))
 		})
 
 		It("refuses an empty resource list without running qhost", func() {
