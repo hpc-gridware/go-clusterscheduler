@@ -163,7 +163,17 @@ func (q *QHostImpl) RunContext(ctx context.Context, env []string, args ...string
 
 // StreamHostsXML implements HostStreamer.
 func (q *QHostImpl) StreamHostsXML(ctx context.Context, env []string, fn func(HostXML) error) (HostStats, error) {
-	args := []string{"-xml"}
+	return q.streamXML(ctx, env, []string{"-xml"}, func(r io.Reader) (HostStats, error) {
+		return DecodeHostsXML(r, fn)
+	})
+}
+
+// streamXML runs qhost with args and hands its stdout to decode while it
+// runs. A decode error kills the process. The precedence of the outcome is
+// the qstat streams': a complete document is the answer, then the
+// deadline, then the process, then the decoder.
+func (q *QHostImpl) streamXML(ctx context.Context, env []string, args []string,
+	decode func(io.Reader) (HostStats, error)) (HostStats, error) {
 	if err := validate.Enforce(validate.Args(args...)); err != nil {
 		return HostStats{}, err
 	}
@@ -184,14 +194,12 @@ func (q *QHostImpl) StreamHostsXML(ctx context.Context, env []string, fn func(Ho
 	if err := cmd.Start(); err != nil {
 		return HostStats{}, fmt.Errorf("failed to start qhost: %w", err)
 	}
-	stats, decodeErr := DecodeHostsXML(stdout, fn)
+	stats, decodeErr := decode(stdout)
 	if decodeErr != nil {
 		_ = cmd.Process.Kill()
 	}
 	waitErr := cmd.Wait()
 
-	// Same precedence as the qstat streams: a complete document is the
-	// answer, then the deadline, then the process, then the decoder.
 	switch {
 	case decodeErr == nil && (waitErr == nil || errors.Is(waitErr, ctx.Err())):
 		return stats, nil
@@ -207,6 +215,25 @@ func (q *QHostImpl) StreamHostsXML(ctx context.Context, env []string, fn func(Ho
 // <host> element. It is the pure half of StreamHostsXML and works on
 // captured output as well.
 func DecodeHostsXML(r io.Reader, fn func(HostXML) error) (HostStats, error) {
+	return decodeHostElements(r, func(dec *xml.Decoder, start xml.StartElement) (bool, error) {
+		var raw hostXML
+		if err := dec.DecodeElement(&raw, &start); err != nil {
+			return false, err
+		}
+		h, ok := raw.typed()
+		if !ok {
+			return false, nil
+		}
+		return true, fn(h)
+	})
+}
+
+// decodeHostElements walks a qhost XML document and hands every <host>
+// start element to handle, which decodes it and reports whether it was
+// usable (counted as Decoded) or skipped. A handle error ends the walk:
+// XML errors are classified by hostDecodeFailure, callback errors pass
+// through unchanged. The document is complete once its root closes.
+func decodeHostElements(r io.Reader, handle func(*xml.Decoder, xml.StartElement) (bool, error)) (HostStats, error) {
 	var stats HostStats
 	dec := xml.NewDecoder(r)
 	// Host names are what the admin configured; treat the bytes as UTF-8
@@ -227,19 +254,17 @@ func DecodeHostsXML(r io.Reader, fn func(HostXML) error) (HostStats, error) {
 		switch t := tok.(type) {
 		case xml.StartElement:
 			if t.Name.Local == "host" {
-				var raw hostXML
-				if err := dec.DecodeElement(&raw, &t); err != nil {
+				// DecodeElement consumes through the matching end tag, so
+				// the depth is unchanged afterwards.
+				ok, err := handle(dec, t)
+				if err != nil {
 					return stats, hostDecodeFailure(stats, err)
 				}
-				h, ok := raw.typed()
-				if !ok {
+				if ok {
+					stats.Decoded++
+				} else {
 					stats.Skipped++
-					continue
 				}
-				if err := fn(h); err != nil {
-					return stats, err
-				}
-				stats.Decoded++
 				continue
 			}
 			depth++

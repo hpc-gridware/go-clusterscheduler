@@ -63,3 +63,19 @@ var _ = Describe("Streaming qhost XML through the 9.1 aliases", func() {
 		Expect(stats.Complete).To(BeTrue())
 	})
 })
+
+var _ = Describe("v9.1 qhost resource stream", func() {
+	It("is the core decoder", func() {
+		var names []string
+		stats, err := qhost.DecodeHostResourcesXML(strings.NewReader(
+			`<qhost><host name='global'><resourcevalue name='matlab' dominance='gc'>60</resourcevalue></host></qhost>`),
+			func(h qhost.HostResourcesXML) error {
+				names = append(names, h.Name+"="+h.Resources[0].Dominance+":"+h.Resources[0].Value)
+				return nil
+			})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats.Complete).To(BeTrue())
+		Expect(names).To(Equal([]string{"global=gc:60"}))
+		var _ qhost.ResourceStreamer = (*qhost.QHostImpl)(nil)
+	})
+})

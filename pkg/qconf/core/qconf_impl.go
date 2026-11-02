@@ -834,8 +834,7 @@ func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, er
 func (c *CommandLineQConf) ShowCalendars() ([]string, error) {
 	output, err := c.RunCommand("-scall")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -985,8 +984,7 @@ func (c *CommandLineQConf) ShowComplexEntry(entryName string) (ComplexEntryConfi
 func (c *CommandLineQConf) ShowComplexEntries() ([]string, error) {
 	output, err := c.RunCommand("-scel")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -1144,8 +1142,7 @@ func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfac
 func (c *CommandLineQConf) ShowCkptInterfaces() ([]string, error) {
 	output, err := c.RunCommand("-sckptl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -1536,8 +1533,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 func (c *CommandLineQConf) ShowHostConfigurations() ([]string, error) {
 	output, err := c.RunCommand("-sconfl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -1758,8 +1754,7 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 func (c *CommandLineQConf) ShowExecHosts() ([]string, error) {
 	output, err := c.RunCommand("-sel")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -1915,8 +1910,7 @@ func (c *CommandLineQConf) ShowHostGroupResolved(groupName string) ([]string, er
 func (c *CommandLineQConf) ShowHostGroups() ([]string, error) {
 	output, err := c.RunCommand("-shgrpl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -2011,8 +2005,7 @@ func parseResourceQuotaSet(lines []string, name string) ResourceQuotaSetConfig {
 func (c *CommandLineQConf) ShowResourceQuotaSets() ([]string, error) {
 	output, err := c.RunCommand("-srqsl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -2081,8 +2074,7 @@ func (c *CommandLineQConf) DeleteUserFromOperatorList(users []string) error {
 func (c *CommandLineQConf) ShowOperators() ([]string, error) {
 	output, err := c.RunCommand("-so")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -2292,8 +2284,7 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 func (c *CommandLineQConf) ShowParallelEnvironments() ([]string, error) {
 	output, err := c.RunCommand("-spl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -2387,8 +2378,7 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 func (c *CommandLineQConf) ShowProjects() ([]string, error) {
 	output, err := c.RunCommand("-sprjl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -2835,11 +2825,17 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 	if err != nil {
 		return ClusterQueueConfig{}, err
 	}
+	return parseClusterQueue(strings.Split(out, "\n"), queueName), nil
+}
+
+// parseClusterQueue reads the lines of one cluster queue as "qconf -sq"
+// prints it; name is used when the lines carry none.
+func parseClusterQueue(raw []string, queueName string) ClusterQueueConfig {
 	// The *WithOverrides helpers below read one line at a time, so the
 	// input must be free of backslash continuations. RunCommand's
 	// SGE_SINGLE_LINE=true already guarantees that for qconf output;
 	// normalising keeps it true if this ever parses a file.
-	lines := normalizeConfigLines(strings.Split(out, "\n"))
+	lines := normalizeConfigLines(raw)
 	cfg := ClusterQueueConfig{Name: queueName}
 	for i, line := range lines {
 		fields := strings.Fields(line)
@@ -2956,15 +2952,14 @@ func (c *CommandLineQConf) ShowClusterQueue(queueName string) (ClusterQueueConfi
 	// Make sure all nil fields are properly converted to ["NONE"]
 	SetDefaultQueueValues(&cfg)
 
-	return cfg, nil
+	return cfg
 }
 
 // ShowClusterQueues shows all cluster queues.
 func (c *CommandLineQConf) ShowClusterQueues() ([]string, error) {
 	output, err := c.RunCommand("-sql")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -3000,8 +2995,7 @@ func (c *CommandLineQConf) DeleteSubmitHost(hostnames []string) error {
 func (c *CommandLineQConf) ShowSubmitHosts() ([]string, error) {
 	output, err := c.RunCommand("-ss")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, fmt.Errorf("error showing submit hosts: %v", err)
@@ -3201,8 +3195,7 @@ func (c *CommandLineQConf) ShowUser(userName string) (UserConfig, error) {
 func (c *CommandLineQConf) ShowUsers() ([]string, error) {
 	output, err := c.RunCommand("-suserl")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -3214,8 +3207,7 @@ func (c *CommandLineQConf) ShowUsers() ([]string, error) {
 func (c *CommandLineQConf) ShowUserSetLists() ([]string, error) {
 	output, err := c.RunCommand("-sul")
 	if err != nil {
-		if strings.Contains(output, "no") &&
-			strings.Contains(output, "defined") {
+		if strings.Contains(output, msgNoClusterQueue) {
 			return []string{}, nil
 		}
 		return nil, err

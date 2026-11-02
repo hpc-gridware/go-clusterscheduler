@@ -23,6 +23,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -107,6 +108,81 @@ esac`)
 		_, err := c.ShowAllResourceQuotaSetsContext(ctx, nil)
 		Expect(err).To(MatchError(context.DeadlineExceeded))
 		Expect(time.Since(start)).To(BeNumerically("<", 5*time.Second))
+	})
+
+	It("reads one execution host, the global one included, with its complex values (live 9.1.7 capture)", func() {
+		src, err := filepath.Abs(filepath.Join("testdata", "qconf-se-global-9.1.7.txt"))
+		Expect(err).NotTo(HaveOccurred())
+		c := contextQconf(fakeQconf(`[ "$1 $2" = "-se global" ] || { echo "unexpected $*" >&2; exit 2; }
+cat `+src), 0)
+		cfg, err := c.ShowExecHostContext(context.Background(), nil, "global")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.Name).To(Equal("global"))
+		Expect(cfg.ComplexValues).To(HaveKeyWithValue("matlab", "60"))
+		Expect(cfg.ComplexValues).To(HaveKeyWithValue("license", "100"))
+		Expect(cfg.ComplexValues).To(HaveLen(8))
+	})
+
+	It("parses every cluster queue of one qconf -sq answer, with its complex values (live 9.1.7 capture)", func() {
+		data, err := os.ReadFile(filepath.Join("testdata", "qconf-sq-all-9.1.7.txt"))
+		Expect(err).NotTo(HaveOccurred())
+		queues := core.ParseClusterQueues(string(data))
+		Expect(queues).To(HaveLen(10))
+		byName := map[string]core.ClusterQueueConfig{}
+		for _, q := range queues {
+			byName[q.Name] = q
+		}
+		Expect(byName).To(HaveKey("all.q"))
+		Expect(strings.Join(byName["all.q"].ComplexValues, ",")).To(ContainSubstring("zz_q=3"))
+		Expect(strings.Join(byName["all.q"].ComplexValues, ",")).To(ContainSubstring("ocs-worker1=zz_q=1"))
+	})
+
+	It("reads every cluster queue with one -sql and one -sq, and no queue as an empty list", func() {
+		src, err := filepath.Abs(filepath.Join("testdata", "qconf-sq-all-9.1.7.txt"))
+		Expect(err).NotTo(HaveOccurred())
+		argsLog := filepath.Join(GinkgoT().TempDir(), "args")
+		c := contextQconf(fakeQconf(`echo "$*" >> `+argsLog+`
+case "$1" in
+  -sql) grep '^qname' `+src+` | awk '{print $2}' ;;
+  -sq) cat `+src+` ;;
+  *) exit 2 ;;
+esac`), 0)
+		queues, err := c.ShowAllClusterQueuesContext(context.Background(), nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(queues).To(HaveLen(10))
+		calls, _ := os.ReadFile(argsLog)
+		lines := strings.Split(strings.TrimSpace(string(calls)), "\n")
+		Expect(lines).To(HaveLen(2), "two qconf calls whatever the number of queues")
+		Expect(lines[1]).To(Equal("-sq alarm.q,all.q,bigmem.q,err.q,gpu.q,interactive.q,long.q,night.q,short.q,slurm.q"), "every queue -sql named, in one list")
+		empty := contextQconf(fakeQconf(`echo "no cqueue list defined" >&2; exit 1`), 0)
+		queues, err = empty.ShowAllClusterQueuesContext(context.Background(), nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(queues).To(BeEmpty())
+	})
+
+	It("returns a failed -sql as an error unless it is the no-queue answer", func() {
+		c := contextQconf(fakeQconf(`echo "error: no permission, user root not defined as manager" >&2; exit 1`), 0)
+		queues, err := c.ShowAllClusterQueuesContext(context.Background(), nil)
+		Expect(err).To(HaveOccurred())
+		Expect(queues).To(BeNil())
+		_, err = c.ShowClusterQueues()
+		Expect(err).To(HaveOccurred(), "the context-free reader matches the same exact message")
+	})
+
+	It("refuses a host operand that could read as a flag, without running qconf", func() {
+		exe := fakeQconf(`echo ran > "$0.ran"`)
+		c := contextQconf(exe, 0)
+		_, err := c.ShowExecHostContext(context.Background(), nil, "-sc")
+		Expect(err).To(HaveOccurred())
+		Expect(exe+".ran").NotTo(BeAnExistingFile(), "qconf must not have been started")
+	})
+
+	It("ends a host read with the caller's context", func() {
+		c := contextQconf(fakeQconf(`sleep 30`), time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		_, err := c.ShowExecHostContext(ctx, nil, "global")
+		Expect(err).To(MatchError(context.DeadlineExceeded))
 	})
 
 	It("runs with the caller's environment plus SGE_SINGLE_LINE, never the process environment", func() {

@@ -43,6 +43,14 @@ type ConfigContextReader interface {
 	ShowAllResourceQuotaSetsContext(ctx context.Context, env []string) ([]ResourceQuotaSetConfig, error)
 	// ShowAllComplexesContext returns the complex table ("qconf -sc").
 	ShowAllComplexesContext(ctx context.Context, env []string) ([]ComplexEntryConfig, error)
+	// ShowExecHostContext returns one execution host's configuration
+	// ("qconf -se <host>"), the "global" host included.
+	ShowExecHostContext(ctx context.Context, env []string, host string) (HostExecConfig, error)
+	// ShowAllClusterQueuesContext returns every cluster queue's
+	// configuration in two qconf calls ("qconf -sql", then one "qconf -sq
+	// <q1,q2,...>"). No cluster queue defined is an empty list. A queue
+	// deleted between the two calls fails the whole read; retry it.
+	ShowAllClusterQueuesContext(ctx context.Context, env []string) ([]ClusterQueueConfig, error)
 }
 
 var _ ConfigContextReader = (*CommandLineQConf)(nil)
@@ -50,6 +58,10 @@ var _ ConfigContextReader = (*CommandLineQConf)(nil)
 // msgNoResourceQuotaSet is qconf's answer (exit 1) when no resource quota
 // set exists (MSG_NORQSFOUND in the scheduler's msg_clients_common.h).
 const msgNoResourceQuotaSet = "No resource quota set found"
+
+// msgNoClusterQueue is "qconf -sql"'s answer (exit 1) when no cluster queue
+// exists (MSG_QCONF_NOXDEFINED_S with "cqueue list" in msg_common.h).
+const msgNoClusterQueue = "no cqueue list defined"
 
 // RunCommandContext runs qconf like RunCommand, but ends with ctx (and
 // still at the configured Timeout, whichever comes first), and runs with
@@ -133,4 +145,70 @@ func ParseResourceQuotaSets(output string) []ResourceQuotaSetConfig {
 		}
 	}
 	return sets
+}
+
+// ShowExecHostContext implements ConfigContextReader.
+func (c *CommandLineQConf) ShowExecHostContext(ctx context.Context, env []string, host string) (HostExecConfig, error) {
+	if err := validate.Enforce(validate.Operand(host), validate.StrictObjectName(host)); err != nil {
+		return HostExecConfig{}, err
+	}
+	out, err := c.RunCommandContext(ctx, env, "-se", host)
+	if err != nil {
+		return HostExecConfig{}, err
+	}
+	cfg, err := ParseExecHostConfigFromLines(strings.Split(out, "\n"))
+	if err != nil {
+		return HostExecConfig{}, fmt.Errorf("failed to parse exec host %s: %w", host, err)
+	}
+	if cfg.Name == "" {
+		cfg.Name = host
+	}
+	return cfg, nil
+}
+
+// ShowAllClusterQueuesContext implements ConfigContextReader.
+func (c *CommandLineQConf) ShowAllClusterQueuesContext(ctx context.Context, env []string) ([]ClusterQueueConfig, error) {
+	out, err := c.RunCommandContext(ctx, env, "-sql")
+	if err != nil {
+		if ctx.Err() == nil && strings.Contains(out, msgNoClusterQueue) {
+			return []ClusterQueueConfig{}, nil
+		}
+		return nil, err
+	}
+	names := splitWithoutEmptyLines(out, "\n")
+	if len(names) == 0 {
+		return []ClusterQueueConfig{}, nil
+	}
+	if err := validate.Enforce(validate.List("cluster queue", names)); err != nil {
+		return nil, err
+	}
+	out, err = c.RunCommandContext(ctx, env, "-sq", strings.Join(names, ","))
+	if err != nil {
+		return nil, err
+	}
+	return ParseClusterQueues(out), nil
+}
+
+// ParseClusterQueues reads "qconf -sq" output that holds any number of
+// cluster queues; each starts with its "qname" line.
+func ParseClusterQueues(output string) []ClusterQueueConfig {
+	queues := []ClusterQueueConfig{}
+	var block []string
+	flush := func() {
+		if len(block) == 0 {
+			return
+		}
+		if cfg := parseClusterQueue(block, ""); cfg.Name != "" {
+			queues = append(queues, cfg)
+		}
+		block = nil
+	}
+	for _, line := range strings.Split(output, "\n") {
+		if f := strings.Fields(line); len(f) > 0 && f[0] == "qname" {
+			flush()
+		}
+		block = append(block, line)
+	}
+	flush()
+	return queues
 }

@@ -50,3 +50,22 @@ var ErrIncompleteHostDocument = core.ErrIncompleteHostDocument
 func DecodeHostsXML(r io.Reader, fn func(HostXML) error) (HostStats, error) {
 	return core.DecodeHostsXML(r, fn)
 }
+
+// ResourceStreamer is the resource part of the qhost client
+// ("qhost -F <resources> -xml"); see core/resource_stream.go.
+type ResourceStreamer = core.ResourceStreamer
+
+// HostResourcesXML is one <host> element with its resource values.
+type HostResourcesXML = core.HostResourcesXML
+
+// ResourceValueXML is one resource value with its dominance.
+type ResourceValueXML = core.ResourceValueXML
+
+// ErrNoResources is returned when no resource is asked for.
+var ErrNoResources = core.ErrNoResources
+
+// DecodeHostResourcesXML reads a "qhost -F ... -xml" document and calls fn
+// once per host.
+func DecodeHostResourcesXML(r io.Reader, fn func(HostResourcesXML) error) (HostStats, error) {
+	return core.DecodeHostResourcesXML(r, fn)
+}

@@ -33,3 +33,6 @@ type ConfigContextReader = core.ConfigContextReader
 
 // ParseResourceQuotaSets reads "qconf -srqs" output holding any number of sets.
 var ParseResourceQuotaSets = core.ParseResourceQuotaSets
+
+// ParseClusterQueues reads "qconf -sq" output holding any number of cluster queues.
+var ParseClusterQueues = core.ParseClusterQueues

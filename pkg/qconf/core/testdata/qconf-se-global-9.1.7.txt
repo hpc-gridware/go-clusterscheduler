@@ -1,0 +1,11 @@
+hostname              global
+load_scaling          NONE
+complex_values        simulink=20,ansys=16,comsol=8,matlab=60,abaqus=12,license=100,zz_lic=5,zz_both=10
+load_values           zz_lic=3
+processors            0
+user_lists            NONE
+xuser_lists           NONE
+projects              NONE
+xprojects             NONE
+usage_scaling         NONE
+report_variables      NONE

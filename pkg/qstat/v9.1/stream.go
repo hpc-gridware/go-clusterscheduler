@@ -101,3 +101,21 @@ type QueueInstanceDetailXML = v90.QueueInstanceDetailXML
 func DecodeQueueInstanceDetailsXML(r io.Reader, fn func(QueueInstanceDetailXML) error) (Stats, error) {
 	return v90.DecodeQueueInstanceDetailsXML(r, fn)
 }
+
+// QueueResourceStreamer is the queue-level resource part of the qstat
+// client ("qstat -F <resources> -q <queues> -xml"); see v9.0.
+type QueueResourceStreamer = v90.QueueResourceStreamer
+
+// QueueResourcesXML is one queue instance with its resource values.
+type QueueResourcesXML = v90.QueueResourcesXML
+
+// QueueResourceValueXML is one resource value with its dominance.
+type QueueResourceValueXML = v90.QueueResourceValueXML
+
+// ErrNoQueueResources is returned when no resource or queue is asked for.
+var ErrNoQueueResources = v90.ErrNoQueueResources
+
+// DecodeQueueResourcesXML is the v9.0 decoder; the document shape is unchanged.
+func DecodeQueueResourcesXML(r io.Reader, fn func(QueueResourcesXML) error) (Stats, error) {
+	return v90.DecodeQueueResourcesXML(r, fn)
+}

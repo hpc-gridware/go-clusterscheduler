@@ -243,3 +243,15 @@ var _ = Describe("Streaming qstat XML through the 9.1 aliases", func() {
 		Expect(errors.Is(err, qstat.ErrIncompleteDocument)).To(BeTrue())
 	})
 })
+
+var _ = Describe("v9.1 qstat queue resource stream", func() {
+	It("is the v9.0 decoder", func() {
+		var got []string
+		_, err := qstat.DecodeQueueResourcesXML(strings.NewReader(
+			`<job_info><queue_info><Queue-List><name>a.q@n1</name><resource name='r' type='qc'>2</resource></Queue-List></queue_info></job_info>`),
+			func(q qstat.QueueResourcesXML) error { got = append(got, q.Name+"="+q.Resources[0].Value); return nil })
+		Expect(err).NotTo(HaveOccurred())
+		Expect(got).To(Equal([]string{"a.q@n1=2"}))
+		var _ qstat.QueueResourceStreamer = (*qstat.QStatImpl)(nil)
+	})
+})

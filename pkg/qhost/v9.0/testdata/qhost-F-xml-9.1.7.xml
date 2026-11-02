@@ -1,0 +1,68 @@
+<?xml version='1.0'?>
+<qhost xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qhost/qhost.xsd">
+ <host name='global'>
+   <hostvalue name='arch_string'>-</hostvalue>
+   <hostvalue name='num_proc'>-</hostvalue>
+   <hostvalue name='m_socket'>-</hostvalue>
+   <hostvalue name='m_core'>-</hostvalue>
+   <hostvalue name='m_thread'>-</hostvalue>
+   <hostvalue name='load_avg'>-</hostvalue>
+   <hostvalue name='mem_total'>-</hostvalue>
+   <hostvalue name='mem_used'>-</hostvalue>
+   <hostvalue name='swap_total'>-</hostvalue>
+   <hostvalue name='swap_used'>-</hostvalue>
+   <resourcevalue name='zz_lic' dominance='gl'>3</resourcevalue>
+   <resourcevalue name='matlab' dominance='gc'>60</resourcevalue>
+   <resourcevalue name='zz_both' dominance='gc'>9</resourcevalue>
+ </host>
+ <host name='ocs-master'>
+   <hostvalue name='arch_string'>lx-amd64</hostvalue>
+   <hostvalue name='num_proc'>14</hostvalue>
+   <hostvalue name='m_socket'>1</hostvalue>
+   <hostvalue name='m_core'>14</hostvalue>
+   <hostvalue name='m_thread'>14</hostvalue>
+   <hostvalue name='load_avg'>0.43</hostvalue>
+   <hostvalue name='mem_total'>11.7G</hostvalue>
+   <hostvalue name='mem_used'>3.0G</hostvalue>
+   <hostvalue name='swap_total'>12.7G</hostvalue>
+   <hostvalue name='swap_used'>0.0</hostvalue>
+   <resourcevalue name='zz_lic' dominance='gl'>3</resourcevalue>
+   <resourcevalue name='matlab' dominance='gc'>60</resourcevalue>
+   <resourcevalue name='zz_both' dominance='gc'>9</resourcevalue>
+   <resourcevalue name='scratch' dominance='hc'>200.000G</resourcevalue>
+ </host>
+ <host name='ocs-worker1'>
+   <hostvalue name='arch_string'>lx-amd64</hostvalue>
+   <hostvalue name='num_proc'>14</hostvalue>
+   <hostvalue name='m_socket'>1</hostvalue>
+   <hostvalue name='m_core'>14</hostvalue>
+   <hostvalue name='m_thread'>14</hostvalue>
+   <hostvalue name='load_avg'>0.43</hostvalue>
+   <hostvalue name='mem_total'>11.7G</hostvalue>
+   <hostvalue name='mem_used'>3.0G</hostvalue>
+   <hostvalue name='swap_total'>12.7G</hostvalue>
+   <hostvalue name='swap_used'>0.0</hostvalue>
+   <resourcevalue name='zz_lic' dominance='gl'>3</resourcevalue>
+   <resourcevalue name='matlab' dominance='gc'>60</resourcevalue>
+   <resourcevalue name='zz_both' dominance='hc'>1</resourcevalue>
+   <resourcevalue name='gpu' dominance='hc'>4</resourcevalue>
+   <resourcevalue name='scratch' dominance='hc'>500.000G</resourcevalue>
+   <resourcevalue name='zz_gpu' dominance='hc'>3</resourcevalue>
+ </host>
+ <host name='ocs-worker2'>
+   <hostvalue name='arch_string'>lx-amd64</hostvalue>
+   <hostvalue name='num_proc'>14</hostvalue>
+   <hostvalue name='m_socket'>1</hostvalue>
+   <hostvalue name='m_core'>14</hostvalue>
+   <hostvalue name='m_thread'>14</hostvalue>
+   <hostvalue name='load_avg'>0.43</hostvalue>
+   <hostvalue name='mem_total'>11.7G</hostvalue>
+   <hostvalue name='mem_used'>3.0G</hostvalue>
+   <hostvalue name='swap_total'>12.7G</hostvalue>
+   <hostvalue name='swap_used'>0.0</hostvalue>
+   <resourcevalue name='zz_lic' dominance='gl'>3</resourcevalue>
+   <resourcevalue name='matlab' dominance='gc'>60</resourcevalue>
+   <resourcevalue name='zz_both' dominance='gc'>9</resourcevalue>
+   <resourcevalue name='scratch' dominance='hc'>2048.000G</resourcevalue>
+ </host>
+</qhost>

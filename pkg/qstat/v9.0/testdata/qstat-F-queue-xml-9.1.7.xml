@@ -1,0 +1,61 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <queue_info>
+    <Queue-List>
+      <name>all.q@ocs-master</name>
+      <qtype>BIP</qtype>
+      <slots_used>1</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>14</slots_total>
+      <arch>lx-amd64</arch>
+      <resource name="zz_q" type="qc">1</resource>
+    </Queue-List>
+    <Queue-List>
+      <name>all.q@ocs-worker1</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>14</slots_total>
+      <arch>lx-amd64</arch>
+      <resource name="zz_q" type="qc">1</resource>
+    </Queue-List>
+    <Queue-List>
+      <name>all.q@ocs-worker2</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>14</slots_total>
+      <arch>lx-amd64</arch>
+      <resource name="zz_q" type="qc">3</resource>
+    </Queue-List>
+    <Queue-List>
+      <name>gpu.q@ocs-worker1</name>
+      <qtype>BIP</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>4</slots_total>
+      <arch>lx-amd64</arch>
+      <state>d</state>
+    </Queue-List>
+  </queue_info>
+  <job_info>
+    <job_list state="pending">
+      <JB_job_number>3030</JB_job_number>
+      <JAT_prio>0.55512</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-30T08:34:49.279936</JAT_submission_time>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3032</JB_job_number>
+      <JAT_prio>0.52048</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-30T08:43:05.361501</JAT_submission_time>
+      <slots>1</slots>
+    </job_list>
+  </job_info>
+</job_info>
