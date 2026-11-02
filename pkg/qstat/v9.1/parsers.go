@@ -96,6 +96,10 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 	// lines carry no "key:" of their own (or a colon inside a message), so
 	// they are appended to the field until a line starts at column 0.
 	inSchedulingInfo := false
+	// taskIndex maps a task ID to its position in info.Tasks: a job with
+	// 50k running tasks prints ~350k per-task lines, and a linear lookup
+	// per line made the parse quadratic (4.5 s at 50k tasks).
+	taskIndex := map[int]int{}
 	for _, line := range lines {
 		if inSchedulingInfo {
 			if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
@@ -123,7 +127,7 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 		// e.g. "job_state                  49" or "usage                      49".
 		taskID, baseKey := extractTaskID(rawKey)
 		if taskID > 0 {
-			task := findOrCreateTask(&info, taskID)
+			task := findOrCreateTask(&info, taskIndex, taskID)
 			switch baseKey {
 			case "job_state":
 				task.State = value
@@ -259,25 +263,36 @@ func parseJob(block string) (SchedulerJobInfo, error) {
 // extractTaskID checks if rawKey contains a trailing integer task ID
 // separated by whitespace, e.g. "job_state                  49" or the
 // two-word "error reason          1". Returns (taskID, baseKey) or
-// (0, rawKey) if no task ID is found.
+// (0, rawKey) if no task ID is found. It runs once per output line, so it
+// avoids strings.Fields: the common key needs no allocation.
 func extractTaskID(rawKey string) (int, string) {
-	fields := strings.Fields(rawKey)
-	if len(fields) >= 2 {
-		if id, err := strconv.Atoi(fields[len(fields)-1]); err == nil {
-			return id, strings.Join(fields[:len(fields)-1], " ")
-		}
+	key := strings.TrimRight(rawKey, " \t")
+	end := len(key)
+	start := end
+	for start > 0 && key[start-1] >= '0' && key[start-1] <= '9' {
+		start--
 	}
-	return 0, rawKey
+	if start == end || start == 0 || (key[start-1] != ' ' && key[start-1] != '\t') {
+		return 0, rawKey
+	}
+	id, err := strconv.Atoi(key[start:end])
+	if err != nil {
+		return 0, rawKey
+	}
+	base := strings.TrimSpace(key[:start])
+	if strings.Contains(base, "  ") || strings.ContainsRune(base, '\t') {
+		base = strings.Join(strings.Fields(base), " ")
+	}
+	return id, base
 }
 
-// findOrCreateTask looks up the TaskDetail for taskID in info.Tasks,
-// creating a new entry with empty slices if not found.
-func findOrCreateTask(info *SchedulerJobInfo, taskID int) *TaskDetail {
-	for i := range info.Tasks {
-		if info.Tasks[i].TaskID == taskID {
-			return &info.Tasks[i]
-		}
+// findOrCreateTask looks up the TaskDetail for taskID in info.Tasks via
+// index, creating a new entry with empty slices if not found.
+func findOrCreateTask(info *SchedulerJobInfo, index map[int]int, taskID int) *TaskDetail {
+	if i, ok := index[taskID]; ok {
+		return &info.Tasks[i]
 	}
+	index[taskID] = len(info.Tasks)
 	info.Tasks = append(info.Tasks, TaskDetail{
 		TaskID:          taskID,
 		ExecHostList:    []ExecHostEntry{},

@@ -22,6 +22,7 @@ package qstat_test
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,6 +65,32 @@ var _ = Describe("Parsers v9.1", func() {
 			Expect(jobs[0].JobName).To(Equal("sleep"), "a continuation line never overwrites a field")
 			Expect(jobs[0].Owner).To(BeEmpty())
 			Expect(strings.Split(jobs[0].SchedulingInfo, "\n")).To(HaveLen(3))
+		})
+
+		It("parses a job with 50,000 running tasks in linear time", func() {
+			// The task lookup was a linear scan per per-task line: 4.5 s for
+			// 50k tasks. Each task prints its own block of keyed lines.
+			var b strings.Builder
+			b.WriteString("==============================================================\n")
+			b.WriteString("job_number:                      9\n")
+			const tasks = 50000
+			for t := 1; t <= tasks; t++ {
+				id := strconv.Itoa(t)
+				b.WriteString("job_state                  " + id + ":    r\n")
+				b.WriteString("exec_queue_list            " + id + ":    all.q@node1\n")
+				b.WriteString("start_time                 " + id + ":    2026-11-02 10:00:00.000\n")
+			}
+			b.WriteString("error reason          7:          failed\n")
+			start := time.Now()
+			jobs, err := qstat.ParseSchedulerJobInfo(b.String())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(time.Since(start)).To(BeNumerically("<", 2*time.Second))
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].Tasks).To(HaveLen(tasks))
+			Expect(jobs[0].Tasks[tasks-1].TaskID).To(Equal(tasks))
+			Expect(jobs[0].Tasks[tasks-1].QueueList).To(Equal("all.q@node1"))
+			Expect(jobs[0].Tasks[6].ErrorReasons).To(Equal([]string{"failed"}),
+				"a two-word key with a task id, out of order, finds its task")
 		})
 
 		qstatJ := `==============================================================
