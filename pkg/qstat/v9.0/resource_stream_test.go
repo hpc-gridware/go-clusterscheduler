@@ -66,6 +66,33 @@ var _ = Describe("Streaming qstat queue resource values", func() {
 		}
 	})
 
+	It("reads the value qmaster resolved per instance from host and host-group overrides (live 9.1.7)", func() {
+		// complex_values matlab=5,scratch=100G,[@gpu=gpu=2,matlab=4],
+		// [@bigmem=scratch=500G],[ocs-worker2=matlab=1]; @gpu is
+		// ocs-worker1, @bigmem ocs-worker2. An override replaces the whole
+		// list, and the host override wins over the group one.
+		data, err := os.ReadFile(filepath.Join("testdata", "qstat-F-queue-domains-xml-9.1.7.xml"))
+		Expect(err).NotTo(HaveOccurred())
+		qis, stats, err := decode(string(data))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats.Complete).To(BeTrue())
+		// Where the instance's queue list does not set a resource, qstat
+		// prints the instance's effective value from the host (hc) instead.
+		got := map[string]map[string]string{}
+		for _, q := range qis {
+			Expect(q.State).To(Equal("d"))
+			got[q.Name] = map[string]string{}
+			for _, v := range q.Resources {
+				got[q.Name][v.Name] = v.Dominance + ":" + v.Value
+			}
+		}
+		Expect(got).To(Equal(map[string]map[string]string{
+			"zzdom.q@ocs-master":  {"matlab": "qc:5", "scratch": "qc:100.000G"},
+			"zzdom.q@ocs-worker1": {"matlab": "qc:4", "gpu": "qc:2", "scratch": "hc:500.000G"},
+			"zzdom.q@ocs-worker2": {"matlab": "qc:1", "scratch": "hc:2048.000G"},
+		}))
+	})
+
 	It("skips an instance without a name and reports a cut document as incomplete", func() {
 		qis, stats, err := decode(`<job_info><queue_info><Queue-List><name></name></Queue-List>` +
 			`<Queue-List><name>a.q@n1</name><resource name='r' type='qc'> 2 </resource></Queue-List></queue_info></job_info>`)

@@ -1,0 +1,59 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <queue_info>
+    <Queue-List>
+      <name>zzdom.q@ocs-master</name>
+      <qtype>N</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>2</slots_total>
+      <arch>lx-amd64</arch>
+      <state>d</state>
+      <resource name="matlab" type="qc">5</resource>
+      <resource name="scratch" type="qc">100.000G</resource>
+    </Queue-List>
+    <Queue-List>
+      <name>zzdom.q@ocs-worker1</name>
+      <qtype>N</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>3</slots_total>
+      <arch>lx-amd64</arch>
+      <state>d</state>
+      <resource name="matlab" type="qc">4</resource>
+      <resource name="gpu" type="qc">2</resource>
+      <resource name="scratch" type="hc">500.000G</resource>
+    </Queue-List>
+    <Queue-List>
+      <name>zzdom.q@ocs-worker2</name>
+      <qtype>N</qtype>
+      <slots_used>0</slots_used>
+      <slots_resv>0</slots_resv>
+      <slots_total>6</slots_total>
+      <arch>lx-amd64</arch>
+      <state>d</state>
+      <resource name="matlab" type="qc">1</resource>
+      <resource name="scratch" type="hc">2048.000G</resource>
+    </Queue-List>
+  </queue_info>
+  <job_info>
+    <job_list state="pending">
+      <JB_job_number>3030</JB_job_number>
+      <JAT_prio>0.55512</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-30T08:34:49.279936</JAT_submission_time>
+      <slots>1</slots>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3032</JB_job_number>
+      <JAT_prio>0.52048</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-30T08:43:05.361501</JAT_submission_time>
+      <slots>1</slots>
+    </job_list>
+  </job_info>
+</job_info>
