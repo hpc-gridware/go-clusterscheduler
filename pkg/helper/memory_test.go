@@ -59,6 +59,17 @@ var _ = Describe("Memory", func() {
 			Entry("parses fractional with uppercase G", "15.6G", int64(16750372454)), // 15.6G -> 15.6 * 1073741824, truncating the fractional part
 			Entry("parses fractional with uppercase M", "2.5M", int64(2.5*1048576)),  // 1048576 = 1024^2
 			Entry("parses fractional with lowercase m", "2.5m", int64(2.5*1000000)),
+
+			// Tera and peta, 1024-based upper case and 1000-based lower case.
+			Entry("parses with uppercase T", "2T", int64(2*1024*1024*1024*1024)),
+			Entry("parses with lowercase t", "2t", int64(2000000000000)),
+			Entry("parses with uppercase P", "1P", int64(1<<50)),
+			Entry("parses fractional with uppercase P", "1.5P", int64(1.5*(1<<50))),
+			Entry("parses with lowercase p", "1p", int64(1000000000000000)),
+
+			// Fractions without a unit are truncated to whole bytes.
+			Entry("parses decimal string without unit", "1234.5", int64(1234)),
+			Entry("parses fractional with uppercase G", "0.5G", int64(512*1024*1024)),
 		)
 
 		DescribeTable("should return error for invalid memory strings",
@@ -68,10 +79,25 @@ var _ = Describe("Memory", func() {
 			},
 			Entry("empty string", ""),
 			Entry("non-numeric value with unit", "abcG"),
-			Entry("floating-point number without unit", "15.6"),
+			Entry("number followed by a space", "15 "),
 			Entry("invalid unit because of unrecognized multiplier", "10X"),
 			Entry("invalid fractional part", "15.twoG"),
+
+			// Values that have no meaning as a byte count or do not fit.
+			Entry("NaN", "NaN"),
+			Entry("NaN with unit", "NaNG"),
+			Entry("infinity", "Inf"),
+			Entry("negative infinity with unit", "-InfK"),
+			Entry("negative integer", "-1"),
+			Entry("negative value with unit", "-1G"),
+			Entry("negative fraction", "-0.5"),
+			Entry("overflowing exponent", "1e30"),
+			Entry("overflowing after the multiplier", "8192P"),
 		)
+
+		It("accepts the largest int64 without unit", func() {
+			Expect(helper.ParseMemoryFromString("9223372036854775807")).To(Equal(int64(9223372036854775807)))
+		})
 	})
 
 	Describe("MemoryToString", func() {
@@ -100,6 +126,8 @@ var _ = Describe("Memory", func() {
 			// For values >= 1024^3.
 			Entry("converts 1G bytes to 1G", int64(1024*1024*1024), "1G"),
 			Entry("large value conversion to G", int64(2*1024*1024*1024), "2G"),
+			Entry("stays in G from 1 TiB on", int64(1024*1024*1024*1024), "1024G"),
+			Entry("stays in G for several TiB", int64(5*1024*1024*1024*1024+7), "5120G"),
 
 			// Negative values are returned as a simple numeric string.
 			Entry("handles negative values", int64(-100), "-100"),

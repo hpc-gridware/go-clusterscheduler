@@ -1,0 +1,11 @@
+Job 3452 queue instance "slurm.q@ocs-master" dropped because it is temporarily not available
+Job 3452 has no permission for cluster queue "gpu.q"
+Job 3452 queue instance "interactive.q@ocs-master" dropped because it is temporarily not available
+Job 3452 queue instance "long.q@ocs-master" dropped because it is temporarily not available
+Job 3452 queue instance "night.q@ocs-worker1" dropped because it is temporarily not available
+Job 3452 queue instance "night.q@ocs-worker2" dropped because it is temporarily not available
+Job 3452 queue instance "night.q@ocs-master" dropped because it is temporarily not available
+Job 3452 queue instance "short.q@ocs-master" dropped because it is temporarily not available
+Job 3452 queue instance "err.q@ocs-worker1" dropped because it is temporarily not available
+Job 3452 (-l matlab=1) cannot run globally because it offers only gc:matlab=0.000000
+verification: no suitable queues

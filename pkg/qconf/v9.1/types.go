@@ -59,8 +59,8 @@ var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
 var ErrNoModification = core.ErrNoModification
 var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
 
-// ShareCode* re-exports so qontrol handlers can branch on validation
-// errors without typing the raw string literals.
+// ShareCode* re-exports so callers (an HTTP or MCP handler, say) can
+// branch on validation errors without typing the raw string literals.
 const (
 	ShareCodeDuplicatePath          = core.ShareCodeDuplicatePath
 	ShareCodeProjectDuplicate       = core.ShareCodeProjectDuplicate
@@ -160,4 +160,26 @@ var ParseResourceQuotaSets = core.ParseResourceQuotaSets
 // ParseClusterQueues reads "qconf -sq" output holding any number of cluster queues.
 var ParseClusterQueues = core.ParseClusterQueues
 
+// RQSRule is one parsed limit rule of a resource quota set; see core.RQSRule.
+type RQSRule = core.RQSRule
+
+// RQSScope is one filter of an RQSRule; see core.RQSScope.
+type RQSScope = core.RQSScope
+
+// RQSLimit is one resource limit of an RQSRule; see core.RQSLimit.
+type RQSLimit = core.RQSLimit
+
+// ParseRQSRule parses one limit line of a resource quota set; see core.ParseRQSRule.
+var ParseRQSRule = core.ParseRQSRule
+
+// ParseRQSRules parses every limit line of a resource quota set; see core.ParseRQSRules.
+var ParseRQSRules = core.ParseRQSRules
+
 var _ ConfigContextReader = (*CommandLineQConf)(nil)
+
+// ThreadInfo is one row of "qconf -stl"; see core.ThreadInfo.
+type ThreadInfo = core.ThreadInfo
+
+// ErrNotSupported is returned when qconf does not know an option; see
+// core.ErrNotSupported.
+var ErrNotSupported = core.ErrNotSupported

@@ -47,7 +47,6 @@ package core
 //   - qmaster unreachable: exit 1, the reason on stderr.
 
 import (
-	"bytes"
 	"context"
 	"encoding/xml"
 	"errors"
@@ -155,23 +154,7 @@ func (q *QQuotaImpl) RunContext(ctx context.Context, env []string, args ...strin
 	if q.config.DryRun {
 		return fmt.Sprintf("Dry run: qquota %v", args), "", nil
 	}
-	cmd := exec.CommandContext(ctx, q.config.Executable, args...)
-	if env != nil {
-		cmd.Env = env
-	}
-	cmd.WaitDelay = streamWaitDelay
-	var stdout bytes.Buffer
-	stderr := helper.NewCappedBuffer(maxStderrBytes)
-	cmd.Stdout = &stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	if err != nil {
-		if ctx.Err() != nil {
-			err = ctx.Err()
-		}
-		return stdout.String(), stderr.String(), commandError(stderr, err)
-	}
-	return stdout.String(), stderr.String(), nil
+	return helper.RunContext(ctx, q.config.Executable, env, nil, args...)
 }
 
 // StreamQuotasXML implements QuotaStreamer.

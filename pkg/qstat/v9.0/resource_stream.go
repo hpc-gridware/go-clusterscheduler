@@ -91,7 +91,7 @@ func (q *QStatImpl) StreamQueueResourcesXML(ctx context.Context, env []string, r
 		if len(list) <= MaxListArgument {
 			args = []string{"-F", list, "-q", strings.Join(chunk, ","), "-xml"}
 		}
-		st, err := q.stream(ctx, env, args, func(r io.Reader) (Stats, error) {
+		st, err := q.StreamXML(ctx, env, args, func(r io.Reader) (Stats, error) {
 			return DecodeQueueResourcesXML(r, fn)
 		})
 		total.Decoded += st.Decoded

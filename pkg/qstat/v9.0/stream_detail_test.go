@@ -22,6 +22,7 @@ package qstat_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -156,6 +157,88 @@ var _ = Describe("Queue instance detail XML", func() {
 		})
 	})
 
+	Context("on a whole-cluster 9.1.7 capture (-u nobodyx, so no nested jobs)", func() {
+		It("reads every instance and the one load alarm", func() {
+			f := openFixture("qstat-f-xml-explain-all-9.1.7.xml")
+			defer f.Close()
+			var details []qstat.QueueInstanceDetailXML
+			stats, err := qstat.DecodeQueueInstanceDetailsXML(f, func(d qstat.QueueInstanceDetailXML) error {
+				details = append(details, d)
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stats).To(Equal(qstat.Stats{Decoded: 22, Complete: true}))
+			d := detailByName(details, "alarm.q@ocs-worker2")
+			Expect(d.State).To(Equal("a"))
+			Expect(d.LoadAlarmReasons).To(Equal([]string{"alarm hl:np_load_avg=0.058571 load-threshold=0.01"}))
+			for _, d := range details {
+				Expect(d.Jobs).To(BeEmpty(), d.Name)
+			}
+		})
+	})
+
+	It("carries the -r requests of nested jobs", func() {
+		details, _, err := collectDetails(`<job_info><queue_info>
+		  <Queue-List><name>gpu.q@n1</name><slots_total>2</slots_total>
+		    <job_list state="running">
+		      <JB_job_number>7</JB_job_number><JB_name>train</JB_name><JB_owner>alice</JB_owner><state>r</state>
+		      <slots>2</slots>
+		      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+		      <hard_request name="h_rt" resource_contribution="0.000000">3600</hard_request>
+		      <requested_pe name="smp">2</requested_pe>
+		      <hard_req_queue>gpu.q</hard_req_queue>
+		    </job_list>
+		  </Queue-List>
+		</queue_info></job_info>`)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(details[0].Jobs).To(HaveLen(1))
+		job := details[0].Jobs[0]
+		Expect(job.HardRequests).To(Equal([]qstat.ResourceRequestXML{{Name: "gpu", Value: "1"}, {Name: "h_rt", Value: "3600"}}))
+		Expect(job.RequestedPE).To(Equal("smp"))
+		Expect(job.HardRequestedQueues).To(Equal([]string{"gpu.q"}))
+	})
+
+	It("carries the master and slave scoped -r requests of nested jobs apart from the global ones", func() {
+		// Element names and shapes from ocs_qstat_xml.cc
+		// (qstat_xml_job_report_hard_resource,
+		// qstat_xml_job_hard_requested_queue); not a live capture.
+		details, _, err := collectDetails(`<job_info><queue_info>
+		  <Queue-List><name>gpu.q@n1</name><slots_total>4</slots_total>
+		    <job_list state="running">
+		      <JB_job_number>8</JB_job_number><JB_name>mpi</JB_name><JB_owner>alice</JB_owner><state>r</state>
+		      <slots>4</slots>
+		      <hard_request name="h_rt" resource_contribution="0.000000">3600</hard_request>
+		      <master_hard_request name="mem" resource_contribution="0.000000">4G</master_hard_request>
+		      <slave_hard_request name="gpu" resource_contribution="1000.000000">1</slave_hard_request>
+		      <slave_hard_request name="" resource_contribution="0.000000">x</slave_hard_request>
+		      <requested_pe name="mpi">4</requested_pe>
+		      <hard_req_queue>all.q</hard_req_queue>
+		      <master_hard_req_queue> io.q </master_hard_req_queue>
+		      <slave_hard_req_queue>gpu.q</slave_hard_req_queue>
+		    </job_list>
+		  </Queue-List>
+		</queue_info></job_info>`)
+		Expect(err).NotTo(HaveOccurred())
+		job := details[0].Jobs[0]
+		Expect(job.HardRequests).To(Equal([]qstat.ResourceRequestXML{{Name: "h_rt", Value: "3600"}}))
+		Expect(job.MasterHardRequests).To(Equal([]qstat.ResourceRequestXML{{Name: "mem", Value: "4G"}}))
+		Expect(job.SlaveHardRequests).To(Equal([]qstat.ResourceRequestXML{{Name: "gpu", Value: "1"}}), "a nameless request is dropped")
+		Expect(job.HardRequestedQueues).To(Equal([]string{"all.q"}))
+		Expect(job.MasterHardRequestedQueues).To(Equal([]string{"io.q"}))
+		Expect(job.SlaveHardRequestedQueues).To(Equal([]string{"gpu.q"}))
+		Expect(job.RequestedPE).To(Equal("mpi"))
+
+		plain, _, err := collectDetails(`<job_info><queue_info>
+		  <Queue-List><name>all.q@n1</name><slots_total>1</slots_total>
+		    <job_list state="running"><JB_job_number>9</JB_job_number><slots>1</slots></job_list>
+		  </Queue-List></queue_info></job_info>`)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(plain[0].Jobs[0].MasterHardRequests).To(BeNil())
+		Expect(plain[0].Jobs[0].SlaveHardRequests).To(BeNil())
+		Expect(plain[0].Jobs[0].MasterHardRequestedQueues).To(BeNil())
+		Expect(plain[0].Jobs[0].SlaveHardRequestedQueues).To(BeNil())
+	})
+
 	It("skips an instance it cannot type and keeps going", func() {
 		details, stats, err := collectDetails(`<job_info><queue_info>
 		  <Queue-List><name>bad.q@n1</name><slots_used>x</slots_used></Queue-List>
@@ -223,10 +306,108 @@ var _ = Describe("Queue instance detail XML", func() {
 			Expect(err.Error()).To(ContainSubstring("failed to run command ()"))
 		})
 
-		It("refuses to run without a queue", func() {
+		It("refuses to run without a queue unless AllQueues is set", func() {
 			_, err := impl.StreamQueueInstanceDetailsXML(context.Background(), env(), qstat.QueueDetailOptions{}, noop)
 			Expect(errors.Is(err, qstat.ErrNoQueues)).To(BeTrue(), "got: %v", err)
 			Expect(argsFile).NotTo(BeAnExistingFile(), "qstat must not have been started")
+		})
+
+		It("refuses AllQueues together with a queue list", func() {
+			_, err := impl.StreamQueueInstanceDetailsXML(context.Background(), env(),
+				qstat.QueueDetailOptions{AllQueues: true, Queues: []string{"all.q"}}, noop)
+			Expect(err).To(MatchError(ContainSubstring("mutually exclusive")))
+			Expect(errors.Is(err, qstat.ErrNoQueues)).To(BeFalse())
+			Expect(argsFile).NotTo(BeAnExistingFile(), "qstat must not have been started")
+		})
+
+		It("asks for the whole cluster, without -q, when AllQueues is set", func() {
+			n := 0
+			stats, err := impl.StreamQueueInstanceDetailsXML(context.Background(),
+				env("FAKE_QSTAT_FILE="+fixture("qstat-f-xml-explain-all-9.1.7.xml")),
+				qstat.QueueDetailOptions{AllQueues: true}, func(qstat.QueueInstanceDetailXML) error { n++; return nil })
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stats.Complete).To(BeTrue())
+			Expect(n).To(Equal(22))
+			Expect(recordedArgs()).To(Equal([]string{"-f", "-xml", "-explain", "aAcE", "-s", "r", "-u", "*"}))
+		})
+
+		It("adds -r before the user filter when the nested jobs should carry their requests", func() {
+			_, err := impl.StreamQueueInstanceDetailsXML(context.Background(),
+				env("FAKE_QSTAT_FILE="+fixture("qstat-xml-empty-9.1.7.xml")),
+				qstat.QueueDetailOptions{Queues: []string{"all.q"}, Requests: true}, noop)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(recordedArgs()).To(Equal([]string{"-f", "-xml", "-explain", "aAcE", "-s", "r", "-r", "-u", "*", "-q", "all.q"}))
+		})
+
+		It("does not blame a -q list when there is none and qstat fails", func() {
+			_, err := impl.StreamQueueInstanceDetailsXML(context.Background(),
+				env("FAKE_QSTAT_EXIT=1", "FAKE_QSTAT_STDERR=error: unable to contact qmaster"),
+				qstat.QueueDetailOptions{AllQueues: true}, noop)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix("failed to run command (error: unable to contact qmaster)"))
+		})
+
+		DescribeTable("refuses an empty queue entry whatever GCS_VALIDATION says, so it never becomes the whole cluster",
+			func(mode string, queues []string) {
+				GinkgoT().Setenv("GCS_VALIDATION", mode)
+				_, err := impl.StreamQueueInstanceDetailsXML(context.Background(), env(),
+					qstat.QueueDetailOptions{Queues: queues}, noop)
+				Expect(errors.Is(err, qstat.ErrNoQueues)).To(BeTrue(), "got: %v", err)
+				Expect(argsFile).NotTo(BeAnExistingFile(), "qstat must not have been started")
+			},
+			Entry("default", "", []string{""}),
+			Entry("strict", "strict", []string{""}),
+			Entry("warn", "warn", []string{""}),
+			Entry("off", "off", []string{""}),
+			Entry("off, blank next to a real queue", "off", []string{"all.q", " "}),
+		)
+
+		It("splits a -q list too long for one argument into runs, in order, with Stats added up", func() {
+			queues := make([]string, 3000)
+			for i := range queues {
+				queues[i] = fmt.Sprintf("q%059d.q", i)
+			}
+			argsLog := filepath.Join(GinkgoT().TempDir(), "argslog")
+			var names []string
+			stats, err := impl.StreamQueueInstanceDetailsXML(context.Background(),
+				env("FAKE_QSTAT_ARGS_LOG="+argsLog, "FAKE_QSTAT_FILE="+fixture("qstat-f-xml-explain-9.1.7.xml")),
+				qstat.QueueDetailOptions{Queues: queues},
+				func(d qstat.QueueInstanceDetailXML) error { names = append(names, d.Name); return nil })
+			Expect(err).NotTo(HaveOccurred())
+			logged, err := os.ReadFile(argsLog)
+			Expect(err).NotTo(HaveOccurred())
+			lines := strings.Split(strings.TrimSpace(string(logged)), "\n")
+			Expect(len(lines)).To(BeNumerically(">=", 2), "3,000 queues of 64 characters do not fit one argument")
+			var asked []string
+			for _, l := range lines {
+				f := strings.Fields(l)
+				Expect(f[:len(f)-2]).To(Equal([]string{"-f", "-xml", "-explain", "aAcE", "-s", "r", "-u", "*"}))
+				Expect(f[len(f)-2]).To(Equal("-q"))
+				Expect(len(f[len(f)-1])).To(BeNumerically("<=", qstat.MaxListArgument))
+				asked = append(asked, strings.Split(f[len(f)-1], ",")...)
+			}
+			Expect(asked).To(Equal(queues), "every queue asked for exactly once, in order")
+
+			perRun := stats.Decoded / len(lines)
+			Expect(perRun).To(BeNumerically(">", 0))
+			Expect(stats.Decoded).To(Equal(perRun*len(lines)), "each run's instances are counted")
+			Expect(stats.Complete).To(BeTrue())
+			Expect(names).To(HaveLen(stats.Decoded))
+			for run := 1; run < len(lines); run++ {
+				Expect(names[run*perRun:(run+1)*perRun]).To(Equal(names[:perRun]), "run %d in document order", run)
+			}
+		})
+
+		It("stops at the first failing run and names its -q list", func() {
+			queues := make([]string, 3000)
+			for i := range queues {
+				queues[i] = fmt.Sprintf("q%059d.q", i)
+			}
+			stats, err := impl.StreamQueueInstanceDetailsXML(context.Background(), env("FAKE_QSTAT_EXIT=1"),
+				qstat.QueueDetailOptions{Queues: queues}, noop)
+			Expect(err).To(MatchError(ContainSubstring(queues[0])))
+			Expect(err.Error()).NotTo(ContainSubstring(queues[len(queues)-1]), "only the first run was made")
+			Expect(stats.Complete).To(BeFalse())
 		})
 
 		DescribeTable("refuses an entry that could forge an option or another entry",

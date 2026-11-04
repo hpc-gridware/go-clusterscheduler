@@ -96,9 +96,8 @@ var _ = Describe("ExtraFields helpers", func() {
 			// ParseMultiLineValue joins continuation lines without
 			// preserving the original delimiter, which would silently
 			// corrupt a round trip. The helper drops the key rather
-			// than store a malformed value. See
-			// qontrol/todos/185-* for the long-term fix that would
-			// preserve multi-line unknowns byte-faithfully.
+			// than store a malformed value. Preserving multi-line
+			// unknowns byte-faithfully is a known long-term gap.
 			lines := []string{
 				"future_param accounting=true \\",
 				"  reporting=false finished_jobs=0",

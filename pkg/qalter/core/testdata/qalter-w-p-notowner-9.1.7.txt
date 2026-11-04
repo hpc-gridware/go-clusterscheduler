@@ -1,0 +1,1 @@
+denied: "alice" must be at least owner of job 3452 to change job attributes

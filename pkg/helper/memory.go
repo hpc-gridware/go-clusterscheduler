@@ -22,11 +22,12 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
-	"strings"
 )
 
-// ParseMemoryFromString takes a string like "4.078G".
+// ParseMemoryFromString takes a string like "4.078G" and returns bytes.
+// Example: "15.6G" -> 15.6 * 1024 * 1024 * 1024
 //
 // man sge_types:
 //
@@ -35,8 +36,14 @@ import (
 // letters are k, K, m, M, g and G, where k means multiply the value by
 // 1000, K multiply by 1024, m multiply by 1000*1000, M multiply by 1024*1024,
 // g multiply by 1000*1000*1000 and G multiply by 1024*1024*1024. If no
-// multiplier is present, the value is just counted in bytes.""
-// Example: "15.6G" -> 15.6 * 1024 * 1024 * 1024
+// multiplier is present, the value is just counted in bytes."
+//
+// Following that convention t/T and p/P are accepted too (1000^4 and
+// 1024^4, 1000^5 and 1024^5). The number may carry a fraction with or
+// without a multiplier; the result is truncated to whole bytes.
+//
+// Negative values, NaN, infinities and values that do not fit into an
+// int64 are rejected with an error.
 func ParseMemoryFromString(m string) (int64, error) {
 	if len(m) == 0 {
 		return 0, errors.New("empty string")
@@ -47,51 +54,65 @@ func ParseMemoryFromString(m string) (int64, error) {
 		return 0, nil
 	}
 
-	if m == "0" || m == "0.0" || m == "0.00" || m == "0.000" {
-		return 0, nil
+	numberStr := m
+	multiplier := int64(1)
+	switch m[len(m)-1] {
+	case 'K':
+		multiplier = 1 << 10
+	case 'M':
+		multiplier = 1 << 20
+	case 'G':
+		multiplier = 1 << 30
+	case 'T':
+		multiplier = 1 << 40
+	case 'P':
+		multiplier = 1 << 50
+	case 'k':
+		multiplier = 1000
+	case 'm':
+		multiplier = 1000 * 1000
+	case 'g':
+		multiplier = 1000 * 1000 * 1000
+	case 't':
+		multiplier = 1000 * 1000 * 1000 * 1000
+	case 'p':
+		multiplier = 1000 * 1000 * 1000 * 1000 * 1000
+	default:
+		// no unit: integers are returned as is, decimals are truncated
+		if value, err := strconv.ParseInt(m, 10, 64); err == nil {
+			if value < 0 {
+				return 0, fmt.Errorf("negative memory value: %s", m)
+			}
+			return value, nil
+		}
+	}
+	if multiplier > 1 {
+		numberStr = m[:len(m)-1]
 	}
 
-	// last character must be a multiplier
-	if !strings.HasSuffix(m, "k") && !strings.HasSuffix(m, "K") &&
-		!strings.HasSuffix(m, "m") && !strings.HasSuffix(m, "M") &&
-		!strings.HasSuffix(m, "g") && !strings.HasSuffix(m, "G") {
-		// no unit, return the number as is
-		return strconv.ParseInt(m, 10, 64)
-	}
-
-	unit := m[len(m)-1]
-	numberStr := m[:len(m)-1]
-
-	// Parse the number part
 	number, err := strconv.ParseFloat(numberStr, 64)
 	if err != nil {
 		return 0, fmt.Errorf("invalid number: %s: %v", numberStr, err)
 	}
-
-	// Determine the multiplier
-	multiplier := int64(1) // Default is bytes if no unit
-	switch string(unit) {
-	case "K":
-		multiplier = 1024
-	case "M":
-		multiplier = 1024 * 1024
-	case "G":
-		multiplier = 1024 * 1024 * 1024
-	case "k":
-		multiplier = 1000
-	case "m":
-		multiplier = 1000 * 1000
-	case "g":
-		multiplier = 1000 * 1000 * 1000
-	case "":
-		multiplier = 1
-	default:
-		return 0, errors.New("invalid unit")
+	if math.IsNaN(number) || math.IsInf(number, 0) {
+		return 0, fmt.Errorf("invalid number: %s: not finite", numberStr)
 	}
-
-	return int64(number * float64(multiplier)), nil
+	if number < 0 {
+		return 0, fmt.Errorf("negative memory value: %s", m)
+	}
+	// float64(math.MaxInt64) rounds up to 2^63, which is already out of
+	// range, so the comparison must include equality. Converting an out of
+	// range float to int64 is implementation-defined in Go.
+	value := number * float64(multiplier)
+	if value >= float64(math.MaxInt64) {
+		return 0, fmt.Errorf("memory value out of range: %s", m)
+	}
+	return int64(value), nil
 }
 
+// MemoryToString formats bytes in the largest of K, M and G the value
+// reaches, truncating the remainder (1536 -> "1K", 1 TiB -> "1024G").
+// Values below 1024, negative ones included, are printed as plain numbers.
 func MemoryToString(m int64) string {
 	if m < 1024 {
 		return strconv.FormatInt(m, 10)

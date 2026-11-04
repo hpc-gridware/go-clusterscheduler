@@ -96,6 +96,33 @@ var _ = Describe("Streaming qstat XML", func() {
 			Expect(jobs[5].Name).To(Equal("future"))
 		})
 
+		It("reads the -r request elements of a pending listing and leaves them empty without -r", func() {
+			jobs, stats, err := collectJobs("qstat-xml-pending-r-9.1.7.xml")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stats.Complete).To(BeTrue())
+			Expect(stats.Decoded).To(Equal(39))
+			byID := map[uint64]qstat.JobXML{}
+			for _, j := range jobs {
+				byID[j.JobNumber] = j
+			}
+			Expect(byID[3378].HardRequests).To(Equal([]qstat.ResourceRequestXML{{Name: "gpu", Value: "1"}}))
+			Expect(byID[3378].HardRequestedQueues).To(Equal([]string{"gpu.q"}))
+			Expect(byID[3378].RequestedPE).To(BeEmpty())
+			Expect(byID[3442].HardRequests).To(Equal([]qstat.ResourceRequestXML{{Name: "gpu", Value: "99"}}))
+			Expect(byID[3451].RequestedPE).To(Equal("smp"))
+			Expect(byID[3451].Slots).To(Equal(uint32(999)))
+			Expect(byID[3451].HardRequests).To(BeNil())
+			Expect(byID[3441].HardRequests).To(BeNil(), "a job without requests")
+			Expect(byID[3441].HardRequestedQueues).To(BeNil())
+
+			plain, _, err := collectJobs("qstat-xml-jobs-9.1.7.xml")
+			Expect(err).NotTo(HaveOccurred())
+			for _, j := range plain {
+				Expect(j.HardRequests).To(BeNil())
+				Expect(j.RequestedPE).To(BeEmpty())
+			}
+		})
+
 		It("reports an empty cluster as a complete document with no elements", func() {
 			jobs, stats, err := collectJobs("qstat-xml-empty-9.1.7.xml")
 			Expect(err).NotTo(HaveOccurred())
@@ -333,6 +360,10 @@ var _ = Describe("Streaming qstat XML", func() {
 			Expect(t).To(Equal(time.Date(2024, 10, 28, 7, 21, 41, 0, time.Local)))
 
 			t, err = qstat.ParseXMLTime("")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(t.IsZero()).To(BeTrue())
+
+			t, err = qstat.ParseXMLTime("0") // an unset JB_execution_time or JB_deadline
 			Expect(err).NotTo(HaveOccurred())
 			Expect(t.IsZero()).To(BeTrue())
 

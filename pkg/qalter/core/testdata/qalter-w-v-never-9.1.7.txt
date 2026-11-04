@@ -1,0 +1,19 @@
+Job 3442 does not request 'forced' resource "slurm_shim" of queue instance slurm.q@ocs-worker2
+Job 3442 does not request 'forced' resource "slurm_shim" of queue instance slurm.q@ocs-worker1
+Job 3442 does not request 'forced' resource "slurm_shim" of queue instance slurm.q@ocs-master
+Job 3442 (-l gpu=99) cannot run in queue "bigmem.q@ocs-worker2" because job requests unknown resource (gpu)
+Job 3442 cannot run because it exceeds limit "alice/////" in rule "gpu_per_user/1"
+Job 3442 cannot run in queue instance "interactive.q@ocs-worker2" because it is not of type batch
+Job 3442 cannot run in queue instance "interactive.q@ocs-worker1" because it is not of type batch
+Job 3442 cannot run in queue instance "interactive.q@ocs-master" because it is not of type batch
+Job 3442 (-l gpu=99) cannot run in queue "long.q@ocs-worker2" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run at host "ocs-worker1" because it offers only hc:gpu=4.000000
+Job 3442 (-l gpu=99) cannot run in queue "long.q@ocs-master" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "night.q@ocs-worker2" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "night.q@ocs-master" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "short.q@ocs-worker2" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "short.q@ocs-master" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "all.q@ocs-master" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "all.q@ocs-worker2" because job requests unknown resource (gpu)
+Job 3442 (-l gpu=99) cannot run in queue "alarm.q@ocs-worker2" because job requests unknown resource (gpu)
+verification: no suitable queues

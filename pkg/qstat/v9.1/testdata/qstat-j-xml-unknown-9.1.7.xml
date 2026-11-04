@@ -1,0 +1,7 @@
+<?xml version='1.0'?>
+<unknown_jobs  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <>
+    <ST_name>999999999</ST_name>
+    <ST_id>0</ST_id>
+  </>
+</unknown_jobs>

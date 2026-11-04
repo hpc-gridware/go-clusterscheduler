@@ -77,6 +77,27 @@ func NewCommandLineQConf(config CommandLineQConfConfig) (*CommandLineQConf, erro
 	return c, nil
 }
 
+// showList runs one of qconf's list commands ("-scall", "-spl", ...) and
+// returns one name per line. An empty list is not an error: qconf then
+// prints "no <what> defined" and exits 1, where <what> is the list's own
+// name (MSG_QCONF_NOXDEFINED_S, show_object_list in ocs_qconf_parse.cc).
+// Each caller passes ITS name. One shared message for every list once made
+// every empty list but the cluster queues an error (calendars, PEs, quota
+// sets, ...), and a loose match on "no" and "defined" would read a real
+// failure such as "user root not defined as manager" as an empty list.
+func (c *CommandLineQConf) showList(flag string, what ...string) ([]string, error) {
+	output, err := c.RunCommand(flag)
+	if err != nil {
+		for _, w := range what {
+			if strings.Contains(output, "no "+w+" defined") {
+				return []string{}, nil
+			}
+		}
+		return nil, err
+	}
+	return splitWithoutEmptyLines(output, "\n"), nil
+}
+
 // RunCommand executes the qconf command with the specified arguments.
 //
 // A hung binary (NFS stall, unresponsive qmaster) is killed after
@@ -185,30 +206,7 @@ func strictEach(what string, xs []string, strict func(string) error) error {
 // program whose output the caller is about to parse, which is what version
 // detection is usually for.
 func (c *CommandLineQConf) GetVersion() (ClusterSchedulerVersion, error) {
-	if c.config.DryRun {
-		fmt.Printf("Executing: %s -help", c.config.Executable)
-		return ClusterSchedulerVersion{}, nil
-	}
-
-	candidates := []string{c.config.Executable}
-	if qhost := deriveQhostPath(c.config.Executable); qhost != c.config.Executable {
-		candidates = append(candidates, qhost)
-	}
-
-	// The CONFIGURED binary's failure is the one reported. A fallback that
-	// is simply absent produces "no output from .../qhost", which would
-	// otherwise mask the real cause -- a timeout, or qconf missing.
-	var firstErr error
-	for _, path := range candidates {
-		version, err := c.versionFrom(path)
-		if err == nil {
-			return version, nil
-		}
-		if firstErr == nil {
-			firstErr = err
-		}
-	}
-	return ClusterSchedulerVersion{}, firstErr
+	return c.GetVersionContext(context.Background(), nil)
 }
 
 // versionFrom runs "<path> -help" and parses the banner.
@@ -216,16 +214,21 @@ func (c *CommandLineQConf) GetVersion() (ClusterSchedulerVersion, error) {
 // Bounded by the configured Timeout. Without it a client binary that hangs --
 // on an unreachable shared filesystem, say -- blocks the caller forever, and
 // this is the one command a caller is most likely to run at startup, before
-// anything else has had a chance to fail fast.
-func (c *CommandLineQConf) versionFrom(path string) (ClusterSchedulerVersion, error) {
+// anything else has had a chance to fail fast. The call also ends with
+// ctx, and runs with env instead of the process environment when env is
+// not nil.
+func (c *CommandLineQConf) versionFrom(ctx context.Context, env []string, path string) (ClusterSchedulerVersion, error) {
 	timeout := c.config.Timeout
 	if timeout <= 0 {
 		timeout = defaultCommandTimeout
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, path, "-help")
+	if env != nil {
+		cmd.Env = append([]string{}, env...)
+	}
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
@@ -243,9 +246,14 @@ func (c *CommandLineQConf) versionFrom(path string) (ClusterSchedulerVersion, er
 	// consulted -- only whether anything was produced.
 	_ = cmd.Run()
 
-	if ctx.Err() != nil {
-		return ClusterSchedulerVersion{}, fmt.Errorf(
-			"%s -help timed out after %s: %w", path, timeout, ctx.Err())
+	// ctx carries both the caller's context and the Timeout: a deadline
+	// (either one) is a timeout, a cancel by the caller is not.
+	if err := ctx.Err(); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return ClusterSchedulerVersion{}, fmt.Errorf(
+				"%s -help timed out (limit %s): %w", path, timeout, err)
+		}
+		return ClusterSchedulerVersion{}, fmt.Errorf("%s -help canceled: %w", path, err)
 	}
 	output := out.String()
 	if strings.TrimSpace(output) == "" {
@@ -832,15 +840,7 @@ func (c *CommandLineQConf) ShowCalendar(calendarName string) (CalendarConfig, er
 
 // ShowCalendars shows all calendars.
 func (c *CommandLineQConf) ShowCalendars() ([]string, error) {
-	output, err := c.RunCommand("-scall")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	// each line is a calender name
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-scall", "calendar")
 }
 
 func SetDefaultComplexEntryValues(c *ComplexEntryConfig) {
@@ -982,15 +982,7 @@ func (c *CommandLineQConf) ShowComplexEntry(entryName string) (ComplexEntryConfi
 
 // ShowComplexEntries shows all complex entries.
 func (c *CommandLineQConf) ShowComplexEntries() ([]string, error) {
-	output, err := c.RunCommand("-scel")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	// each line is a complex entry name
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-scel", "complex entry")
 }
 
 // ShowAllComplexes shows all complexes. It makes one call to
@@ -1105,8 +1097,13 @@ func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfac
 	if err != nil {
 		return CkptInterfaceConfig{}, err
 	}
-	lines := strings.Split(out, "\n")
-	cfg := CkptInterfaceConfig{Name: interfaceName}
+	return parseCkptInterface(strings.Split(out, "\n"), interfaceName), nil
+}
+
+// parseCkptInterface reads "qconf -sckpt" output; name is used when the
+// output carries no ckpt_name line.
+func parseCkptInterface(lines []string, name string) CkptInterfaceConfig {
+	cfg := CkptInterfaceConfig{Name: name}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -1135,20 +1132,12 @@ func (c *CommandLineQConf) ShowCkptInterface(interfaceName string) (CkptInterfac
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
-	return cfg, nil
+	return cfg
 }
 
 // ShowCkptInterfaces shows all checkpointing interfaces.
 func (c *CommandLineQConf) ShowCkptInterfaces() ([]string, error) {
-	output, err := c.RunCommand("-sckptl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	// Each line is a checkpointing interface name
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-sckptl", "ckpt interface definition")
 }
 
 // AddHostConfiguration adds a new host configuration.
@@ -1531,14 +1520,7 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 
 // ShowHostConfigurations shows all host configurations.
 func (c *CommandLineQConf) ShowHostConfigurations() ([]string, error) {
-	output, err := c.RunCommand("-sconfl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-sconfl", "config")
 }
 
 // AddExecHost adds a new execution host.
@@ -1752,15 +1734,7 @@ func (c *CommandLineQConf) ShowExecHost(hostName string) (HostExecConfig, error)
 
 // ShowExecHosts shows all execution hosts.
 func (c *CommandLineQConf) ShowExecHosts() ([]string, error) {
-	output, err := c.RunCommand("-sel")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	// do not return empty strings
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-sel", "execution host")
 }
 
 func splitWithoutEmptyLines(content, sep string) []string {
@@ -1908,14 +1882,7 @@ func (c *CommandLineQConf) ShowHostGroupResolved(groupName string) ([]string, er
 
 // ShowHostGroups shows all host groups.
 func (c *CommandLineQConf) ShowHostGroups() ([]string, error) {
-	output, err := c.RunCommand("-shgrpl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-shgrpl", "host group list")
 }
 
 // AddResourceQuotaSet adds a new resource quota set.
@@ -2003,14 +1970,7 @@ func parseResourceQuotaSet(lines []string, name string) ResourceQuotaSetConfig {
 
 // ShowResourceQuotaSets shows all resource quota sets.
 func (c *CommandLineQConf) ShowResourceQuotaSets() ([]string, error) {
-	output, err := c.RunCommand("-srqsl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-srqsl", "resource quota set list")
 }
 
 // AddUserToManagerList adds a list of users to the manager list.
@@ -2072,14 +2032,7 @@ func (c *CommandLineQConf) DeleteUserFromOperatorList(users []string) error {
 
 // ShowOperators shows the operator list.
 func (c *CommandLineQConf) ShowOperators() ([]string, error) {
-	output, err := c.RunCommand("-so")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-so", "operator")
 }
 
 func SetDefaultParallelEnvironmentValues(pe *ParallelEnvironmentConfig) {
@@ -2282,14 +2235,7 @@ func (c *CommandLineQConf) ShowParallelEnvironment(peName string) (ParallelEnvir
 
 // ShowParallelEnvironments shows all parallel environments.
 func (c *CommandLineQConf) ShowParallelEnvironments() ([]string, error) {
-	output, err := c.RunCommand("-spl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-spl", "parallel environment")
 }
 
 func SetDefaultProjectValues(project *ProjectConfig) {
@@ -2349,8 +2295,13 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 	if err != nil {
 		return ProjectConfig{}, err
 	}
-	lines := strings.Split(out, "\n")
-	cfg := ProjectConfig{Name: projectName}
+	return parseProject(strings.Split(out, "\n"), projectName), nil
+}
+
+// parseProject reads "qconf -sprj" output; name is used when the output
+// carries no name line.
+func parseProject(lines []string, name string) ProjectConfig {
+	cfg := ProjectConfig{Name: name}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -2371,19 +2322,12 @@ func (c *CommandLineQConf) ShowProject(projectName string) (ProjectConfig, error
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
-	return cfg, nil
+	return cfg
 }
 
 // ShowProjects shows all projects.
 func (c *CommandLineQConf) ShowProjects() ([]string, error) {
-	output, err := c.RunCommand("-sprjl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-sprjl", "project list")
 }
 
 func SetDefaultQueueValues(queue *ClusterQueueConfig) {
@@ -2957,14 +2901,7 @@ func parseClusterQueue(raw []string, queueName string) ClusterQueueConfig {
 
 // ShowClusterQueues shows all cluster queues.
 func (c *CommandLineQConf) ShowClusterQueues() ([]string, error) {
-	output, err := c.RunCommand("-sql")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-sql", "cqueue list")
 }
 
 // AddSubmitHosts adds a list of submit hosts.
@@ -2993,14 +2930,12 @@ func (c *CommandLineQConf) DeleteSubmitHost(hostnames []string) error {
 
 // ShowSubmitHosts shows all submit hosts.
 func (c *CommandLineQConf) ShowSubmitHosts() ([]string, error) {
-	output, err := c.RunCommand("-ss")
+	// qconf prints either name, depending on the code path that answers.
+	hosts, err := c.showList("-ss", "submit host", "submit")
 	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
 		return nil, fmt.Errorf("error showing submit hosts: %v", err)
 	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return hosts, nil
 }
 
 // AddUserToUserSetList adds a user to a user set list.
@@ -3039,8 +2974,14 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 	if err != nil {
 		return UserSetListConfig{}, err
 	}
-	lines := strings.Split(out, "\n")
-	cfg := UserSetListConfig{Name: listnameList}
+	return parseUserSetList(strings.Split(out, "\n"), listnameList), nil
+}
+
+// parseUserSetList reads "qconf -su" output holding one user set list;
+// name is used when the output carries no name line. Output holding
+// several lists is merged into one; ParseUserSetLists splits it.
+func parseUserSetList(lines []string, name string) UserSetListConfig {
+	cfg := UserSetListConfig{Name: name}
 	for i, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) < 2 {
@@ -3061,7 +3002,7 @@ func (c *CommandLineQConf) ShowUserSetList(listnameList string) (UserSetListConf
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
-	return cfg, nil
+	return cfg
 }
 
 func SetDefaultUserSetListConfig(u *UserSetListConfig) {
@@ -3193,26 +3134,12 @@ func (c *CommandLineQConf) ShowUser(userName string) (UserConfig, error) {
 }
 
 func (c *CommandLineQConf) ShowUsers() ([]string, error) {
-	output, err := c.RunCommand("-suserl")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-suserl", "user list")
 }
 
 // ShowUsers shows all user set lists.
 func (c *CommandLineQConf) ShowUserSetLists() ([]string, error) {
-	output, err := c.RunCommand("-sul")
-	if err != nil {
-		if strings.Contains(output, msgNoClusterQueue) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	return splitWithoutEmptyLines(output, "\n"), nil
+	return c.showList("-sul", "userset list")
 }
 
 // CleanQueue cleans a queue for the specified destinations.
@@ -4326,7 +4253,12 @@ func (c *CommandLineQConf) ShowSchedulerConfiguration() (*SchedulerConfig, error
 	if err != nil {
 		return nil, err
 	}
-	lines := strings.Split(out, "\n")
+	cfg := parseSchedulerConfig(strings.Split(out, "\n"))
+	return &cfg, nil
+}
+
+// parseSchedulerConfig reads "qconf -ssconf" output.
+func parseSchedulerConfig(lines []string) SchedulerConfig {
 	cfg := SchedulerConfig{}
 	for i, line := range lines {
 		fields := strings.Fields(line)
@@ -4410,7 +4342,7 @@ func (c *CommandLineQConf) ShowSchedulerConfiguration() (*SchedulerConfig, error
 			CaptureExtraField(&cfg.ExtraFields, lines, i)
 		}
 	}
-	return &cfg, nil
+	return cfg
 }
 
 // writeSchedulerConfig emits the typed fields of cfg as qconf attribute

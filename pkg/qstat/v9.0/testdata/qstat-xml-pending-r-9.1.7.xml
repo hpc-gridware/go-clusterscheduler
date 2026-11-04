@@ -1,0 +1,481 @@
+<?xml version='1.0'?>
+<job_info  xmlns:xsd="https://github.com/hpc-gridware/clusterscheduler/raw/master/source/dist/util/resources/schemas/qstat/qstat.xsd">
+  <queue_info>
+  </queue_info>
+  <job_info>
+    <job_list state="pending">
+      <JB_job_number>3378</JB_job_number>
+      <JAT_prio>1.50010</JAT_prio>
+      <JB_name>risk_var_298</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:04.652462</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>risk_var_298</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3441</JB_job_number>
+      <JAT_prio>1.50000</JAT_prio>
+      <JB_name>whyprobe_eqw</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-11-03T12:41:52.373841</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_eqw</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3442</JB_job_number>
+      <JAT_prio>0.84706</JAT_prio>
+      <JB_name>whyprobe_never</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:41:53.108554</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_never</full_job_name>
+      <hard_request name="gpu" resource_contribution="99000.000000">99</hard_request>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3451</JB_job_number>
+      <JAT_prio>0.79527</JAT_prio>
+      <JB_name>whyprobe_pe999</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:42:00.722051</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>999</slots>
+      <full_job_name>whyprobe_pe999</full_job_name>
+      <requested_pe name="smp">999</requested_pe>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3443</JB_job_number>
+      <JAT_prio>0.77075</JAT_prio>
+      <JB_name>whyprobe_neverq</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:41:53.839556</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_neverq</full_job_name>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3448</JB_job_number>
+      <JAT_prio>0.72685</JAT_prio>
+      <JB_name>whyprobe_ar</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:41:58.444252</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_ar</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3452</JB_job_number>
+      <JAT_prio>0.68823</JAT_prio>
+      <JB_name>whyprobe_matlab_one</JB_name>
+      <JB_owner>bob</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:42:26.817293</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_matlab_one</full_job_name>
+      <hard_request name="matlab" resource_contribution="0.000000">1</hard_request>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3454</JB_job_number>
+      <JAT_prio>0.67145</JAT_prio>
+      <JB_name>whyprobe_alarm</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:42:28.448696</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_alarm</full_job_name>
+      <hard_req_queue>alarm.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3231</JB_job_number>
+      <JAT_prio>0.57379</JAT_prio>
+      <JB_name>md_protein_158</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:57.113559</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>md_protein_158</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3140</JB_job_number>
+      <JAT_prio>0.55790</JAT_prio>
+      <JB_name>climate_ens_48</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:53.560947</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>climate_ens_48</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3030</JB_job_number>
+      <JAT_prio>0.55512</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-30T08:34:49.279936</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>sleep</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3103</JB_job_number>
+      <JAT_prio>0.54832</JAT_prio>
+      <JB_name>monte_carlo_31</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:49.607289</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>monte_carlo_31</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3266</JB_job_number>
+      <JAT_prio>0.54442</JAT_prio>
+      <JB_name>md_protein_192</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:58.625397</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>md_protein_192</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3157</JB_job_number>
+      <JAT_prio>0.53651</JAT_prio>
+      <JB_name>monte_carlo_68</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:54.285422</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>monte_carlo_68</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3182</JB_job_number>
+      <JAT_prio>0.53413</JAT_prio>
+      <JB_name>climate_ens_62</JB_name>
+      <JB_owner>carol</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:55.216554</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>climate_ens_62</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3305</JB_job_number>
+      <JAT_prio>0.53298</JAT_prio>
+      <JB_name>md_protein_172</JB_name>
+      <JB_owner>carol</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:00.458717</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>md_protein_172</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3360</JB_job_number>
+      <JAT_prio>0.53172</JAT_prio>
+      <JB_name>matlab_fit_222</JB_name>
+      <JB_owner>carol</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:03.401740</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>matlab_fit_222</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3453</JB_job_number>
+      <JAT_prio>0.53054</JAT_prio>
+      <JB_name>whyprobe_rqs</JB_name>
+      <JB_owner>carol</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:42:27.546829</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_rqs</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3325</JB_job_number>
+      <JAT_prio>0.52751</JAT_prio>
+      <JB_name>monte_carlo_177</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:01.303176</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>monte_carlo_177</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3242</JB_job_number>
+      <JAT_prio>0.52404</JAT_prio>
+      <JB_name>fem_bridge_96</JB_name>
+      <JB_owner>carol</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:57.556219</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>fem_bridge_96</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3037</JB_job_number>
+      <JAT_prio>0.52384</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-30T11:02:46.898867</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>sleep</full_job_name>
+      <hard_req_queue>err.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3032</JB_job_number>
+      <JAT_prio>0.52048</JAT_prio>
+      <JB_name>sleep</JB_name>
+      <JB_owner>root</JB_owner>
+      <state>Eqw</state>
+      <JAT_submission_time>2026-10-30T08:43:05.361501</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>sleep</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3177</JB_job_number>
+      <JAT_prio>0.51614</JAT_prio>
+      <JB_name>matlab_fit_76</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:54.988283</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>matlab_fit_76</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3320</JB_job_number>
+      <JAT_prio>0.51331</JAT_prio>
+      <JB_name>lattice_qcd_260</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:01.074415</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>lattice_qcd_260</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3311</JB_job_number>
+      <JAT_prio>0.51184</JAT_prio>
+      <JB_name>genome_align_167</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:00.793942</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>genome_align_167</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3337</JB_job_number>
+      <JAT_prio>0.51027</JAT_prio>
+      <JB_name>fem_bridge_210</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:01.937895</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>fem_bridge_210</full_job_name>
+      <hard_request name="gpu" resource_contribution="2000.000000">2</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3170</JB_job_number>
+      <JAT_prio>0.50765</JAT_prio>
+      <JB_name>fem_bridge_74</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:54.763033</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>fem_bridge_74</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3199</JB_job_number>
+      <JAT_prio>0.50718</JAT_prio>
+      <JB_name>fem_bridge_122</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:19:55.923653</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>fem_bridge_122</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3341</JB_job_number>
+      <JAT_prio>0.50678</JAT_prio>
+      <JB_name>matlab_fit_292</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-10-31T08:20:02.115802</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>matlab_fit_292</full_job_name>
+      <hard_request name="gpu" resource_contribution="1000.000000">1</hard_request>
+      <hard_req_queue>gpu.q</hard_req_queue>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3152</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>pde_heat_55</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-31T08:19:54.058942</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>pde_heat_55</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3174</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>md_protein_121</JB_name>
+      <JB_owner>bob</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-31T08:19:54.950308</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>md_protein_121</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3200</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>cfd_wing_157</JB_name>
+      <JB_owner>dave</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-31T08:19:55.952280</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>cfd_wing_157</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3259</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>genome_align_184</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-31T08:19:58.327003</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>genome_align_184</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3317</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>matlab_fit_176</JB_name>
+      <JB_owner>carol</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-31T08:20:01.053562</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>matlab_fit_176</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3363</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>md_protein_257</JB_name>
+      <JB_owner>erin</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-10-31T08:20:03.680859</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>md_protein_257</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3438</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>whyprobe_hold</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-11-03T12:41:50.152861</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_hold</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3439</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>whyprobe_dep</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>hqw</state>
+      <JAT_submission_time>2026-11-03T12:41:50.895862</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_dep</full_job_name>
+      <predecessor_jobs_req>3438</predecessor_jobs_req>
+      <predecessor_jobs>3438</predecessor_jobs>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3440</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>whyprobe_time</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:41:51.642863</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <full_job_name>whyprobe_time</full_job_name>
+    </job_list>
+    <job_list state="pending">
+      <JB_job_number>3446</JB_job_number>
+      <JAT_prio>0.00000</JAT_prio>
+      <JB_name>whyprobe_tc</JB_name>
+      <JB_owner>alice</JB_owner>
+      <state>qw</state>
+      <JAT_submission_time>2026-11-03T12:41:56.093501</JAT_submission_time>
+      <queue_name></queue_name>
+      <slots>1</slots>
+      <tasks>3-10:1</tasks>
+      <full_job_name>whyprobe_tc</full_job_name>
+    </job_list>
+  </job_info>
+</job_info>

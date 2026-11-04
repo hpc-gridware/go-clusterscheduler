@@ -20,11 +20,13 @@
 package qstat
 
 // The queue instance DETAIL listing: "qstat -f -xml -explain aAcE -s r",
-// scoped to a few queue instances (typically every instance of one host,
-// "-q '*@node01'"). Unlike the whole-cluster queue pass it keeps what the
-// scheduler says about each instance -- why it is in alarm, why it is in
-// error or configuration ambiguous -- and the running jobs nested in it. It
-// is meant for one host at a time, on request; it is not a poller.
+// usually scoped to a few queue instances (every instance of one host,
+// "-q '*@node01'") and, when the caller opts in with AllQueues, the whole
+// cluster. Unlike the plain
+// queue pass it keeps what the scheduler says about each instance -- why it
+// is in alarm, why it is in error or configuration ambiguous -- and the
+// running jobs nested in it, with their requests when asked ("-r"). It is
+// meant for a request, not a poller.
 //
 // The reason elements are written by the qstat client
 // (source/clients/qstat/ocs_qstat_xml.cc): load-alarm-reason for an a
@@ -53,12 +55,22 @@ type QueueDetailStreamer interface {
 // QueueDetailOptions selects the queue instances of the detail listing.
 type QueueDetailOptions struct {
 	// Queues is the -q list: cluster queues, queue instances or queue
-	// domains ("*@node01"). Required: the detail listing is for a few
-	// instances, never the whole cluster.
+	// domains ("*@node01"). Required unless AllQueues is set: an empty
+	// list returns ErrNoQueues, so a forgotten list never turns into a
+	// whole-cluster query, and an empty entry is an error. A list longer
+	// than MaxListArgument is asked for in several qstat runs.
 	Queues []string
+	// AllQueues lists every queue instance of the cluster (no -q). It is
+	// the explicit opt-in to the heavy query; Queues must then be empty.
+	AllQueues bool
 	// Users restricts the nested jobs to these owners; empty means every
 	// user ("-u *"). Validated like JobStreamOptions.Users.
 	Users []string
+	// Requests adds "-r", so the nested jobs carry their hard requests,
+	// requested parallel environment and requested queues (JobXML.
+	// HardRequests, RequestedPE, HardRequestedQueues and their master and
+	// slave scoped counterparts).
+	Requests bool
 }
 
 // QueueInstanceDetailXML is one <Queue-List> element of the detail listing.
@@ -81,17 +93,31 @@ type QueueInstanceDetailXML struct {
 var _ QueueDetailStreamer = (*QStatImpl)(nil)
 
 // ErrNoQueues is returned by StreamQueueInstanceDetailsXML when
-// QueueDetailOptions.Queues is empty.
+// QueueDetailOptions.Queues is empty and AllQueues is not set.
 var ErrNoQueues = errors.New("no queue given for the queue instance detail listing")
 
 // StreamQueueInstanceDetailsXML implements QueueDetailStreamer.
 //
 // A -q list that matches no queue instance makes qstat exit 1 without
 // printing anything (9.0.12 to 9.1.7), so the error of a failed run names
-// the -q list.
+// the -q list. A -q list longer than MaxListArgument is split into several
+// qstat runs, one after the other; fn sees their instances in order and the
+// returned Stats add up all runs. An instance matched by entries that land
+// in different runs ("all.q" and "*@node01") is then reported once per run.
 func (q *QStatImpl) StreamQueueInstanceDetailsXML(ctx context.Context, env []string, opts QueueDetailOptions, fn func(QueueInstanceDetailXML) error) (Stats, error) {
-	if len(opts.Queues) == 0 {
+	switch {
+	case opts.AllQueues && len(opts.Queues) > 0:
+		return Stats{}, errors.New("queue instance detail: AllQueues and Queues are mutually exclusive")
+	case !opts.AllQueues && len(opts.Queues) == 0:
 		return Stats{}, ErrNoQueues
+	}
+	// An empty entry is checked here, not through Enforce: under a relaxed
+	// GCS_VALIDATION it would otherwise join to an empty -q list and turn
+	// into the whole-cluster query that AllQueues guards.
+	for _, queue := range opts.Queues {
+		if strings.TrimSpace(queue) == "" {
+			return Stats{}, fmt.Errorf("queue instance detail: empty queue entry: %w", ErrNoQueues)
+		}
 	}
 	if err := validate.Enforce(validate.List("queue", opts.Queues)); err != nil {
 		return Stats{}, err
@@ -100,16 +126,34 @@ func (q *QStatImpl) StreamQueueInstanceDetailsXML(ctx context.Context, env []str
 	if err != nil {
 		return Stats{}, err
 	}
-	queues := strings.Join(opts.Queues, ",")
-	args := []string{"-f", "-xml", "-explain", "aAcE", "-s", "r", "-u", users, "-q", queues}
-	stats, err := q.stream(ctx, env, args, func(r io.Reader) (Stats, error) {
-		return DecodeQueueInstanceDetailsXML(r, fn)
-	})
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		err = fmt.Errorf("queue instance detail for %q (an unknown queue fails without a message): %w", queues, err)
+	args := []string{"-f", "-xml", "-explain", "aAcE", "-s", "r"}
+	if opts.Requests {
+		args = append(args, "-r")
 	}
-	return stats, err
+	args = append(args, "-u", users)
+	decode := func(r io.Reader) (Stats, error) {
+		return DecodeQueueInstanceDetailsXML(r, fn)
+	}
+	if opts.AllQueues {
+		return q.StreamXML(ctx, env, args, decode)
+	}
+	var total Stats
+	for _, chunk := range chunkList(opts.Queues, MaxListArgument) {
+		queues := strings.Join(chunk, ",")
+		st, err := q.StreamXML(ctx, env, append(args[:len(args):len(args)], "-q", queues), decode)
+		total.Decoded += st.Decoded
+		total.Skipped += st.Skipped
+		total.Complete = st.Complete
+		if err != nil {
+			total.Complete = false
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				err = fmt.Errorf("queue instance detail for %q (an unknown queue fails without a message): %w", queues, err)
+			}
+			return total, err
+		}
+	}
+	return total, nil
 }
 
 // DecodeQueueInstanceDetailsXML reads a "qstat -f -xml -explain" document and

@@ -45,6 +45,23 @@ GCS_RUN_FLAGS = --platform=$(PLATFORM) --rm -h master \
 	-v $(CURDIR)/$(GCS_PACKAGES):/packages:ro \
 	-v $(CURDIR):$(PROJECT_DIR)
 
+# The OCS counterpart: the image entrypoint (/entrypoint.sh) installs OCS
+# into the mounted directory on first start, starts the daemons and sources
+# settings.sh before it runs the command, so qconf and friends are on PATH.
+OCS_INSTALL_DIR  = installation
+OCS_RUN_FLAGS = --platform=$(PLATFORM) --rm -h master \
+	-e OCS_VERSION=$(OCS_VERSION) \
+	-v $(CURDIR)/$(OCS_INSTALL_DIR):/opt/ocs \
+	-v $(CURDIR):$(PROJECT_DIR)
+
+# The full test suite runs against a cluster installed from scratch in its own
+# directory: the qconf integration specs mutate the cluster (they remove the
+# exec host from @allhosts), so a reused cluster gives different results, and
+# the interactive clusters of run and run-gcs must not be wiped by a test run.
+# -p 1 because the cluster-backed packages share one cluster and interfere
+# when go test runs them concurrently.
+FULL_TEST_CMD = /bin/bash -c "cd $(PROJECT_DIR) && go test -p 1 ./pkg/... -v"
+
 .PHONY: build run run-privileged test test-all test-integration simulate adapter run-rest \
 	run-gcs test-gcs clean
 
@@ -54,13 +71,10 @@ build:
 		-t $(IMAGE_NAME) .
 
 run: build
-	mkdir -p ./installation
-	docker run --platform=$(PLATFORM) --rm -it -h master \
-		-e OCS_VERSION=$(OCS_VERSION) \
+	mkdir -p ./$(OCS_INSTALL_DIR)
+	docker run $(OCS_RUN_FLAGS) -it \
 		-p 7070:7070 -p 8888:8888 \
 		--name $(CONTAINER_NAME) \
-		-v $(CURDIR)/installation:/opt/ocs \
-		-v $(CURDIR):$(PROJECT_DIR) \
 		$(IMAGE_NAME)
 
 run-privileged: build
@@ -74,6 +88,8 @@ run-privileged: build
 		-v $(CURDIR):$(PROJECT_DIR) \
 		$(IMAGE_NAME)
 
+# Unit tests only: no cluster, so the entrypoint (which installs one) is
+# skipped on purpose.
 test: build
 	docker run --platform=$(PLATFORM) --rm \
 		--entrypoint /bin/bash \
@@ -81,20 +97,16 @@ test: build
 		$(IMAGE_NAME) \
 		-c "cd $(PROJECT_DIR) && go test ./pkg/helper/... ./pkg/accounting/... ./pkg/adapter/... -v"
 
+# Every package against a fresh OCS $(OCS_VERSION) cluster.
+test-all: OCS_INSTALL_DIR = installation-test-ocs-$(OCS_VERSION)
 test-all: build
-	docker run --platform=$(PLATFORM) --rm \
-		--entrypoint /bin/bash \
-		-v $(CURDIR):$(PROJECT_DIR) \
-		$(IMAGE_NAME) \
-		-c "cd $(PROJECT_DIR) && go test ./pkg/... -v"
+	rm -rf ./$(OCS_INSTALL_DIR) && mkdir -p ./$(OCS_INSTALL_DIR)
+	docker run $(OCS_RUN_FLAGS) $(IMAGE_NAME) $(FULL_TEST_CMD)
 
+# Interactive shell on the persistent OCS cluster of run.
 test-integration: build
-	mkdir -p ./installation
-	docker run --platform=$(PLATFORM) --rm -it -h master \
-		-e OCS_VERSION=$(OCS_VERSION) \
-		-v $(CURDIR)/installation:/opt/ocs \
-		-v $(CURDIR):$(PROJECT_DIR) \
-		$(IMAGE_NAME)
+	mkdir -p ./$(OCS_INSTALL_DIR)
+	docker run $(OCS_RUN_FLAGS) -it $(IMAGE_NAME)
 
 run-gcs: build
 	mkdir -p ./$(GCS_INSTALL_DIR)
@@ -103,13 +115,11 @@ run-gcs: build
 		--name $(CONTAINER_NAME) \
 		$(IMAGE_NAME)
 
-# -p 1 because the cluster-backed packages share one cluster and interfere
-# when go test runs them concurrently.
+# Every package against a fresh GCS cluster from $(GCS_PACKAGES).
+test-gcs: GCS_INSTALL_DIR = installation-test-$(notdir $(GCS_PACKAGES))
 test-gcs: build
 	rm -rf ./$(GCS_INSTALL_DIR) && mkdir -p ./$(GCS_INSTALL_DIR)
-	docker run $(GCS_RUN_FLAGS) \
-		$(IMAGE_NAME) \
-		/bin/bash -c "cd $(PROJECT_DIR) && go test -p 1 ./pkg/... -v"
+	docker run $(GCS_RUN_FLAGS) $(IMAGE_NAME) $(FULL_TEST_CMD)
 
 simulate: build
 	rm -rf ./installation && mkdir -p ./installation
@@ -156,4 +166,4 @@ run-rest: build
 clean:
 	docker rm -f $(CONTAINER_NAME) || true
 	docker rmi $(IMAGE_NAME) || true
-	rm -rf ./installation ./installation-gcs*
+	rm -rf ./installation ./installation-gcs* ./installation-test-*

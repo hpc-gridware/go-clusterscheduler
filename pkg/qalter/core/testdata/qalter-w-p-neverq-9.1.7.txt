@@ -1,0 +1,11 @@
+Job 3443 cannot run in queue "slurm.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "bigmem.q" because it is not contained in its hard queue list (-q)
+Job 3443 queue instance "gpu.q@ocs-worker1" dropped because it is temporarily not available
+Job 3443 cannot run in queue "interactive.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "long.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "night.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "short.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "err.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "all.q" because it is not contained in its hard queue list (-q)
+Job 3443 cannot run in queue "alarm.q" because it is not contained in its hard queue list (-q)
+verification: no suitable queues

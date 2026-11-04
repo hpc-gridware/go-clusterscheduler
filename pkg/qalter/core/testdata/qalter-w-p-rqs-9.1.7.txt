@@ -1,0 +1,11 @@
+Job 3453 queue instance "slurm.q@ocs-master" dropped because it is temporarily not available
+Job 3453 queue instance "gpu.q@ocs-worker1" dropped because it is temporarily not available
+Job 3453 queue instance "interactive.q@ocs-master" dropped because it is temporarily not available
+Job 3453 queue instance "long.q@ocs-master" dropped because it is temporarily not available
+Job 3453 queue instance "night.q@ocs-worker1" dropped because it is temporarily not available
+Job 3453 queue instance "night.q@ocs-worker2" dropped because it is temporarily not available
+Job 3453 queue instance "night.q@ocs-master" dropped because it is temporarily not available
+Job 3453 queue instance "short.q@ocs-master" dropped because it is temporarily not available
+Job 3453 queue instance "err.q@ocs-worker1" dropped because it is temporarily not available
+Job 3453 cannot run because it exceeds limit "carol/////" in rule "max_slots_per_user/1"
+verification: no suitable queues

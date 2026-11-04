@@ -49,7 +49,6 @@ package qstat
 // reported, never silently accepted as a complete listing.
 
 import (
-	"bytes"
 	"context"
 	"encoding/xml"
 	"errors"
@@ -138,6 +137,37 @@ type JobXML struct {
 	// Master is "MASTER" or "SLAVE" when qstat prints parallel task
 	// distribution ("-g t").
 	Master string
+	// HardRequests are the job's hard resource requests, one
+	// <hard_request name="gpu" ...>1</hard_request> each. They are
+	// printed with "-r" only (JobStreamOptions.ExtraArgs or
+	// QueueDetailOptions.Requests) and are nil otherwise.
+	HardRequests []ResourceRequestXML
+	// RequestedPE is the name attribute of <requested_pe>, the parallel
+	// environment the job asked for; "-r" only, empty without one.
+	RequestedPE string
+	// HardRequestedQueues are the <hard_req_queue> entries, the cluster
+	// queues or queue instances the job asked for with "-q"; "-r" only.
+	HardRequestedQueues []string
+	// MasterHardRequests and SlaveHardRequests are the hard requests a
+	// parallel job scoped to its master task or to its slave tasks
+	// ("qsub -scope master|slave -l ..."), printed as
+	// <master_hard_request> and <slave_hard_request>; "-r" only, nil
+	// without such a request. HardRequests holds the global ones only, so
+	// a caller asking which jobs use a resource reads all three.
+	MasterHardRequests []ResourceRequestXML
+	SlaveHardRequests  []ResourceRequestXML
+	// MasterHardRequestedQueues and SlaveHardRequestedQueues are the
+	// scoped "-q" requests, <master_hard_req_queue> and
+	// <slave_hard_req_queue>; "-r" only.
+	MasterHardRequestedQueues []string
+	SlaveHardRequestedQueues  []string
+}
+
+// ResourceRequestXML is one resource request of a job as "qstat -r -xml"
+// prints it: the complex name and the requested value, both as text.
+type ResourceRequestXML struct {
+	Name  string
+	Value string
 }
 
 // QueueInstanceXML is one <Queue-List> element of "qstat -f -xml".
@@ -181,8 +211,10 @@ type Stats struct {
 var ErrIncompleteDocument = errors.New("qstat XML document ended before its root close tag")
 
 // ErrNoSuchJob is returned by SchedulerJobInfoContext when qstat reports
-// "Following jobs do not exist" for every requested id.
-var ErrNoSuchJob = errors.New("job does not exist")
+// "Following jobs do not exist" for every requested id. It is
+// helper.ErrNoSuchJob, shared with qalter, so errors.Is matches across
+// packages.
+var ErrNoSuchJob = helper.ErrNoSuchJob
 
 // maxStderrBytes bounds the stderr a streamed command may leave behind. The
 // messages that matter ("unable to send message to qmaster", "Following jobs
@@ -210,23 +242,7 @@ func (q *QStatImpl) RunContext(ctx context.Context, env []string, args ...string
 	if q.config.DryRun {
 		return fmt.Sprintf("Dry run: qstat %v", args), "", nil
 	}
-	cmd := exec.CommandContext(ctx, q.config.Executable, args...)
-	if env != nil {
-		cmd.Env = env
-	}
-	cmd.WaitDelay = streamWaitDelay
-	var stdout bytes.Buffer
-	stderr := helper.NewCappedBuffer(maxStderrBytes)
-	cmd.Stdout = &stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	if err != nil {
-		if ctx.Err() != nil {
-			err = ctx.Err()
-		}
-		return stdout.String(), stderr.String(), commandError(stderr, err)
-	}
-	return stdout.String(), stderr.String(), nil
+	return helper.RunContext(ctx, q.config.Executable, env, nil, args...)
 }
 
 // StreamJobsXML implements Streamer.
@@ -241,14 +257,14 @@ func (q *QStatImpl) StreamJobsXML(ctx context.Context, env []string, opts JobStr
 	}
 	args = append(args, "-u", users)
 	args = append(args, opts.ExtraArgs...)
-	return q.stream(ctx, env, args, func(r io.Reader) (Stats, error) {
+	return q.StreamXML(ctx, env, args, func(r io.Reader) (Stats, error) {
 		return DecodeJobsXML(r, fn)
 	})
 }
 
 // StreamQueueInstancesXML implements Streamer.
 func (q *QStatImpl) StreamQueueInstancesXML(ctx context.Context, env []string, fn func(QueueInstanceXML) error) (Stats, error) {
-	return q.stream(ctx, env, []string{"-f", "-xml"}, func(r io.Reader) (Stats, error) {
+	return q.StreamXML(ctx, env, []string{"-f", "-xml"}, func(r io.Reader) (Stats, error) {
 		return DecodeQueueInstancesXML(r, fn)
 	})
 }
@@ -266,10 +282,16 @@ func userList(users []string) (string, error) {
 	return strings.Join(users, ","), nil
 }
 
-// stream runs qstat with args and feeds its stdout to decode while the
-// process runs. The process is killed when decode stops early (callback
-// error, malformed document) or when ctx ends.
-func (q *QStatImpl) stream(ctx context.Context, env []string, args []string, decode func(io.Reader) (Stats, error)) (Stats, error) {
+// StreamXML runs qstat with args and feeds its stdout to decode while the
+// process runs, so any qstat XML document can be read with the same process
+// handling as the typed streams of this package. The process is killed when
+// decode stops early (callback error, malformed document) or when ctx ends.
+// decode must read r to EOF on success (the typed decoders do so by reading
+// the root close tag); otherwise a qstat with more to say than the pipe
+// holds would block until ctx ends. Errors are ranked as the typed streams
+// rank them: a complete document wins over a late deadline, the deadline
+// over the exit status, the exit status over an incomplete document.
+func (q *QStatImpl) StreamXML(ctx context.Context, env []string, args []string, decode func(io.Reader) (Stats, error)) (Stats, error) {
 	if err := validate.Enforce(validate.Args(args...)); err != nil {
 		return Stats{}, err
 	}
@@ -477,6 +499,25 @@ type jobListXML struct {
 	Project        string `xml:"JB_project"`
 	Department     string `xml:"JB_department"`
 	Master         string `xml:"master"`
+	// The -r elements; absent without -r.
+	// The scoped ones (qsub -scope) are written under their own element
+	// names (ocs_qstat_xml.cc, qstat_xml_job_report_hard_resource and
+	// qstat_xml_job_hard_requested_queue).
+	HardRequests       []namedValueXML `xml:"hard_request"`
+	MasterHardRequests []namedValueXML `xml:"master_hard_request"`
+	SlaveHardRequests  []namedValueXML `xml:"slave_hard_request"`
+	RequestedPE        namedValueXML   `xml:"requested_pe"`
+	HardQueues         []string        `xml:"hard_req_queue"`
+	MasterHardQueues   []string        `xml:"master_hard_req_queue"`
+	SlaveHardQueues    []string        `xml:"slave_hard_req_queue"`
+}
+
+// namedValueXML is an element with a name attribute and a text value, the
+// shape of <hard_request name="gpu">1</hard_request> and <requested_pe
+// name="smp">999</requested_pe>.
+type namedValueXML struct {
+	Name  string `xml:"name,attr"`
+	Value string `xml:",chardata"`
 }
 
 func (r jobListXML) typed() (JobXML, bool) {
@@ -489,22 +530,45 @@ func (r jobListXML) typed() (JobXML, bool) {
 		return JobXML{}, false
 	}
 	prio, _ := strconv.ParseFloat(strings.TrimSpace(r.Priority), 64)
-	return JobXML{
-		ListState:      r.ListState,
-		JobNumber:      id,
-		Priority:       prio,
-		Name:           r.Name,
-		Owner:          r.Owner,
-		State:          strings.TrimSpace(r.State),
-		StartTime:      strings.TrimSpace(r.StartTime),
-		SubmissionTime: strings.TrimSpace(r.SubmissionTime),
-		QueueName:      strings.TrimSpace(r.QueueName),
-		Slots:          slots,
-		Tasks:          strings.TrimSpace(r.Tasks),
-		Project:        r.Project,
-		Department:     r.Department,
-		Master:         strings.TrimSpace(r.Master),
-	}, true
+	job := JobXML{
+		ListState:           r.ListState,
+		JobNumber:           id,
+		Priority:            prio,
+		Name:                r.Name,
+		Owner:               r.Owner,
+		State:               strings.TrimSpace(r.State),
+		StartTime:           strings.TrimSpace(r.StartTime),
+		SubmissionTime:      strings.TrimSpace(r.SubmissionTime),
+		QueueName:           strings.TrimSpace(r.QueueName),
+		Slots:               slots,
+		Tasks:               strings.TrimSpace(r.Tasks),
+		Project:             r.Project,
+		Department:          r.Department,
+		Master:              strings.TrimSpace(r.Master),
+		RequestedPE:         strings.TrimSpace(r.RequestedPE.Name),
+		HardRequestedQueues: trimAll(r.HardQueues),
+		HardRequests:        resourceRequests(r.HardRequests),
+		MasterHardRequests:  resourceRequests(r.MasterHardRequests),
+		SlaveHardRequests:   resourceRequests(r.SlaveHardRequests),
+
+		MasterHardRequestedQueues: trimAll(r.MasterHardQueues),
+		SlaveHardRequestedQueues:  trimAll(r.SlaveHardQueues),
+	}
+	return job, true
+}
+
+// resourceRequests turns the raw request elements into typed ones,
+// dropping those without a name; nil when there is none.
+func resourceRequests(in []namedValueXML) []ResourceRequestXML {
+	var out []ResourceRequestXML
+	for _, h := range in {
+		name := strings.TrimSpace(h.Name)
+		if name == "" {
+			continue
+		}
+		out = append(out, ResourceRequestXML{Name: name, Value: strings.TrimSpace(h.Value)})
+	}
+	return out
 }
 
 // queueListXML is the raw shape of a <Queue-List> element. The nested
@@ -570,10 +634,11 @@ var xmlTimeLayouts = []string{
 }
 
 // ParseXMLTime parses a JAT_start_time or JAT_submission_time value in the
-// local zone. The empty string is a zero time without error.
+// local zone. The empty string and "0" (how "qstat -j -xml" prints an unset
+// JB_execution_time or JB_deadline) are a zero time without error.
 func ParseXMLTime(s string) (time.Time, error) {
 	s = strings.TrimSpace(s)
-	if s == "" {
+	if s == "" || s == "0" {
 		return time.Time{}, nil
 	}
 	var lastErr error

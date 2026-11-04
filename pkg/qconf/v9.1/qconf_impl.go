@@ -20,6 +20,7 @@
 package qconf
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -56,8 +57,22 @@ func (c *CommandLineQConf) ShowGlobalConfiguration() (*GlobalConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	lines := strings.Split(out, "\n")
+	return parseGlobalConfig(strings.Split(out, "\n"))
+}
 
+// ShowGlobalConfigurationContext is ShowGlobalConfiguration under the
+// caller's context and environment, returning the v9.1 GlobalConfig.
+func (c *CommandLineQConf) ShowGlobalConfigurationContext(ctx context.Context, env []string) (*GlobalConfig, error) {
+	out, err := c.RunCommandContext(ctx, env, "-sconf", "global")
+	if err != nil {
+		return nil, err
+	}
+	return parseGlobalConfig(strings.Split(out, "\n"))
+}
+
+// parseGlobalConfig reads "qconf -sconf global" output into the v9.1
+// GlobalConfig; see ShowGlobalConfiguration for the promotion rules.
+func parseGlobalConfig(lines []string) (*GlobalConfig, error) {
 	// Parse base (v9.0/core) fields. Anything outside the v9.0 schema
 	// lands in baseCfg.ExtraFields, including the v9.1-specific keys
 	// promoted just below.

@@ -1,0 +1,2 @@
+Job 3451 cannot run in PE "smp" because it only offers 0 slots
+verification: no suitable queues

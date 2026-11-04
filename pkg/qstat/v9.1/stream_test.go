@@ -22,10 +22,13 @@ package qstat_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper"
+	v90 "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.0"
 	qstat "github.com/hpc-gridware/go-clusterscheduler/pkg/qstat/v9.1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -116,6 +119,11 @@ var _ = Describe("SchedulerJobInfoContext (9.1 parser over the shared runner)", 
 			"10/22/2026 13:20:01 [0:42]: error: can't chdir to /scratch/x: No such file or directory",
 			"second line",
 		}))
+	})
+
+	It("shares ErrNoSuchJob with v9.0 and helper, so errors.Is matches across packages", func() {
+		Expect(errors.Is(qstat.ErrNoSuchJob, helper.ErrNoSuchJob)).To(BeTrue())
+		Expect(errors.Is(fmt.Errorf("wrapped: %w", v90.ErrNoSuchJob), qstat.ErrNoSuchJob)).To(BeTrue())
 	})
 
 	It("maps an unknown job to ErrNoSuchJob", func() {
@@ -227,15 +235,20 @@ var _ = Describe("Streaming qstat XML through the 9.1 aliases", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stats.Complete).To(BeTrue())
 		Expect(alarms).NotTo(BeEmpty())
-		var _ qstat.QueueDetailStreamer = &qstat.QStatImpl{}
+		var _ qstat.QueueDetailStreamer = (*qstat.QStatImpl)(nil)
 	})
 
-	It("refuses a detail listing without a queue with the shared sentinel", func() {
+	It("lists the whole cluster only with AllQueues and accepts the -r option", func() {
 		impl, err := qstat.NewCommandLineQstat(qstat.CommandLineQStatConfig{DryRun: true})
 		Expect(err).NotTo(HaveOccurred())
-		_, err = impl.StreamQueueInstanceDetailsXML(context.Background(), nil, qstat.QueueDetailOptions{},
-			func(qstat.QueueInstanceDetailXML) error { return nil })
-		Expect(errors.Is(err, qstat.ErrNoQueues)).To(BeTrue())
+		noop := func(qstat.QueueInstanceDetailXML) error { return nil }
+		_, err = impl.StreamQueueInstanceDetailsXML(context.Background(), nil, qstat.QueueDetailOptions{Requests: true}, noop)
+		Expect(errors.Is(err, qstat.ErrNoQueues)).To(BeTrue(), "got: %v", err)
+		stats, err := impl.StreamQueueInstanceDetailsXML(context.Background(), nil,
+			qstat.QueueDetailOptions{AllQueues: true, Requests: true}, noop)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stats.Complete).To(BeTrue())
+		var _ []qstat.ResourceRequestXML = qstat.JobXML{}.HardRequests
 	})
 
 	It("reports a truncated document with the shared sentinel", func() {

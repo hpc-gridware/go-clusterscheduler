@@ -1,0 +1,11 @@
+Job 3448 cannot run in queue "slurm.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "bigmem.q" because it was not reserved by advance reservation 2
+Job 3448 queue instance "gpu.q@ocs-worker1" dropped because it is temporarily not available
+Job 3448 cannot run in queue "interactive.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "long.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "night.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "short.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "err.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "all.q" because it was not reserved by advance reservation 2
+Job 3448 cannot run in queue "alarm.q" because it was not reserved by advance reservation 2
+verification: no suitable queues

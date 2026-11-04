@@ -20,13 +20,11 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
-	"time"
 
+	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper"
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
 
@@ -68,35 +66,34 @@ const msgNoClusterQueue = "no cqueue list defined"
 // env instead of the process environment when env is not nil. A caller
 // that passes env should set LC_ALL=C: some answers are recognised by
 // their English text. SGE_SINGLE_LINE=true is always added.
+//
+// stdout and stderr are kept apart. On success only stdout is returned, so
+// a warning on stderr never becomes parser input. On failure stdout
+// followed by stderr is returned, so a caller can still recognise an
+// answer such as "no <what> defined" whichever stream qconf used, and the
+// error carries only the first helper.MaxStderrBytes of stderr, never the
+// configuration printed on stdout.
 func (c *CommandLineQConf) RunCommandContext(ctx context.Context, env []string, args ...string) (string, error) {
+	stdout, stderr, err := c.runContext(ctx, env, args...)
+	if err != nil {
+		return stdout + stderr, err
+	}
+	return stdout, nil
+}
+
+// runContext is RunCommandContext returning stdout and the capped stderr
+// separately, for a caller that parses stdout of a failed call.
+func (c *CommandLineQConf) runContext(ctx context.Context, env []string, args ...string) (string, string, error) {
 	if err := validate.Enforce(validate.Args(args...)); err != nil {
-		return "", err
+		return "", "", err
 	}
 	if c.config.DryRun {
 		fmt.Printf("Executing: %s, %v", c.config.Executable, args)
-		return "", nil
+		return "", "", nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, c.config.Executable, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	// See RunCommand: without WaitDelay a grandchild holding the pipes
-	// keeps Run waiting after ctx has ended.
-	cmd.WaitDelay = time.Second
-	if env == nil {
-		env = cmd.Environ()
-	}
-	cmd.Env = append(append([]string{}, env...), "SGE_SINGLE_LINE=true")
-	err := cmd.Run()
-	if ctx.Err() != nil {
-		return out.String(), fmt.Errorf("qconf %s: %w", strings.Join(args, " "), ctx.Err())
-	}
-	if err != nil {
-		return out.String(), fmt.Errorf("failed to run command (%s): %v", out.String(), err)
-	}
-	return out.String(), nil
+	return helper.RunContext(ctx, c.config.Executable, env, []string{"SGE_SINGLE_LINE=true"}, args...)
 }
 
 // ShowAllResourceQuotaSetsContext implements ConfigContextReader.

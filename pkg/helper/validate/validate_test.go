@@ -160,6 +160,36 @@ var _ = Describe("validate", func() {
 		)
 	})
 
+	Describe("SingleJob", func() {
+		DescribeTable("accepts one job id with an optional task range",
+			func(in string) {
+				Expect(validate.SingleJob(in)).To(Succeed())
+			},
+			Entry("job id", "42"),
+			Entry("one task", "42.3"),
+			Entry("task range", "42.1-10"),
+			Entry("task range with step", "42.1-10:2"),
+		)
+		DescribeTable("rejects anything that can select more or fewer than one job",
+			func(in string) {
+				Expect(validate.SingleJob(in)).To(HaveOccurred())
+			},
+			Entry("empty", ""),
+			Entry("comma list", "1,2"),
+			Entry("space list", "1 2"),
+			Entry("all jobs", "*"),
+			Entry("wildcard", "4*"),
+			Entry("job name", "myjob"),
+			Entry("boolean pattern", "(1|2)"),
+			Entry("leading dash", "-1"),
+			Entry("zero", "0"),
+			Entry("leading zero", "042"),
+			Entry("trailing dot", "42."),
+			Entry("surrounding space", " 42"),
+			Entry("newline", "42\n"),
+		)
+	})
+
 	Describe("NameValueKey / NameValueValue", func() {
 		DescribeTable("key rejects '=', ',', and leading dash",
 			func(in string) {

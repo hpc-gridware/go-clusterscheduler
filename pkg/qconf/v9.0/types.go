@@ -94,8 +94,8 @@ var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
 var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
 var ErrNoModification = core.ErrNoModification
 
-// ShareCode* re-exports so qontrol handlers can branch on validation
-// errors without typing the raw string literals. Keep in lock-step with
+// ShareCode* re-exports so callers (an HTTP or MCP handler, say) can branch
+// on validation errors without typing the raw string literals. Keep in lock-step with
 // go-clusterscheduler/pkg/qconf/core/share_tree_validate.go.
 const (
 	ShareCodeDuplicatePath          = core.ShareCodeDuplicatePath

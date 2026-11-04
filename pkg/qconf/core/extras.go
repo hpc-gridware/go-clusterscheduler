@@ -34,7 +34,7 @@
 //     typed field's json tag, the typed field's value is what gets
 //     written; the ExtraFields entry is silently dropped on emit.
 //   - Deterministic order. ExtraFields keys are emitted in sorted
-//     order so the ETag canonicalisation that the qontrol layer wraps
+//     order so the ETag canonicalisation that a consumer layer wraps
 //     around the typed struct + extras is stable.
 //   - Sanitisation on both sides. ExtraFields is part of the JSON wire
 //     format, so a map can arrive either from CaptureExtraField

@@ -1,0 +1,4 @@
+Job 3456 (-l matlab=61) cannot run in queue "global" because it offers only gc:matlab=60.000000
+Job 3456 (-l matlab=61) cannot run in queue "global" because it offers only gc:matlab=60.000000
+Job 3456 cannot run in PE "mpi" because it only offers 0 slots
+verification: no suitable queues

@@ -31,8 +31,30 @@ type QConf = core.QConf
 // core.ConfigContextReader. CommandLineQConf implements it.
 type ConfigContextReader = core.ConfigContextReader
 
+// ThreadInfo is one row of "qconf -stl"; see core.ThreadInfo.
+type ThreadInfo = core.ThreadInfo
+
+// ErrNotSupported is returned when qconf does not know an option; see
+// core.ErrNotSupported.
+var ErrNotSupported = core.ErrNotSupported
+
 // ParseResourceQuotaSets reads "qconf -srqs" output holding any number of sets.
 var ParseResourceQuotaSets = core.ParseResourceQuotaSets
 
 // ParseClusterQueues reads "qconf -sq" output holding any number of cluster queues.
 var ParseClusterQueues = core.ParseClusterQueues
+
+// RQSRule is one parsed limit rule of a resource quota set; see core.RQSRule.
+type RQSRule = core.RQSRule
+
+// RQSScope is one filter of an RQSRule; see core.RQSScope.
+type RQSScope = core.RQSScope
+
+// RQSLimit is one resource limit of an RQSRule; see core.RQSLimit.
+type RQSLimit = core.RQSLimit
+
+// ParseRQSRule parses one limit line of a resource quota set; see core.ParseRQSRule.
+var ParseRQSRule = core.ParseRQSRule
+
+// ParseRQSRules parses every limit line of a resource quota set; see core.ParseRQSRules.
+var ParseRQSRules = core.ParseRQSRules

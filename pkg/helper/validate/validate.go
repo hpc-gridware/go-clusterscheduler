@@ -60,6 +60,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 )
@@ -275,6 +276,24 @@ func List(what string, xs []string) error {
 		if err := ListElement(x); err != nil {
 			return fmt.Errorf("%s %q: %w", what, x, err)
 		}
+	}
+	return nil
+}
+
+// singleJobPattern is a job id with an optional task range: "42", "42.3",
+// "42.1-10", "42.1-10:2".
+var singleJobPattern = regexp.MustCompile(`^[1-9][0-9]*(\.[1-9][0-9]*(-[1-9][0-9]*(:[1-9][0-9]*)?)?)?$`)
+
+// SingleJob validates a reference to exactly one job, for calls whose answer
+// describes one job ("qstat -j <id> -xml", "qalter -w v <id>"): a numeric
+// job id with an optional task range. Lists, wildcards and job names are
+// rejected because each can select several jobs, and such a call would
+// silently answer for the first one or merge the answers. Unlike the
+// context validators it is a contract of the call, not a policy, so
+// callers apply it directly instead of through Enforce.
+func SingleJob(s string) error {
+	if !singleJobPattern.MatchString(s) {
+		return fmt.Errorf("job %q: must be one job id with an optional task range (42, 42.1-10:2)", s)
 	}
 	return nil
 }

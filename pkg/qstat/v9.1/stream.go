@@ -40,6 +40,9 @@ type JobStreamOptions = v90.JobStreamOptions
 // JobXML is one <job_list> element of "qstat -xml".
 type JobXML = v90.JobXML
 
+// ResourceRequestXML is one "-r" resource request of a JobXML.
+type ResourceRequestXML = v90.ResourceRequestXML
+
 // QueueInstanceXML is one <Queue-List> element of "qstat -f -xml".
 type QueueInstanceXML = v90.QueueInstanceXML
 
@@ -50,8 +53,9 @@ type Stats = v90.Stats
 // output did not end with the root close tag.
 var ErrIncompleteDocument = v90.ErrIncompleteDocument
 
-// ErrNoSuchJob is returned by SchedulerJobInfoContext when qstat reports
-// "Following jobs do not exist" for every requested id.
+// ErrNoSuchJob is returned by SchedulerJobInfoContext and
+// JobDetailXMLContext when qstat reports that no requested job exists. It
+// is helper.ErrNoSuchJob, shared with v9.0 and qalter.
 var ErrNoSuchJob = v90.ErrNoSuchJob
 
 // DecodeJobsXML is the v9.0 decoder; the document shape is unchanged.
@@ -88,9 +92,12 @@ func SchedulerJobInfoContext(ctx context.Context, env []string, s Streamer, ids 
 type QueueDetailStreamer = v90.QueueDetailStreamer
 
 // QueueDetailOptions selects the queue instances of the detail listing.
+// Queues is required unless AllQueues opts in to the whole cluster; both
+// set is an error.
 type QueueDetailOptions = v90.QueueDetailOptions
 
-// ErrNoQueues is returned when QueueDetailOptions.Queues is empty.
+// ErrNoQueues is returned by StreamQueueInstanceDetailsXML when
+// QueueDetailOptions.Queues is empty and AllQueues is not set.
 var ErrNoQueues = v90.ErrNoQueues
 
 // QueueInstanceDetailXML is one <Queue-List> element of the detail listing.

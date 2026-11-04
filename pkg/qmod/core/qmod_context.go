@@ -33,12 +33,8 @@ package core
 // them over untouched together with the exit error.
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
-	"strings"
-	"time"
 
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper"
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
@@ -61,15 +57,10 @@ type ContextRunner interface {
 
 var _ ContextRunner = (*CommandLineQMod)(nil)
 
-// maxStderrBytes bounds the stderr a qmod run may leave behind. stdout is
-// not capped: its answer lines are the result, one per target, and a
-// wildcard target on a large cluster prints tens of thousands of them.
-const maxStderrBytes = 64 * 1024
-
-// waitDelay bounds Wait after the context is done.
-const waitDelay = time.Second
-
-// RunContext implements ContextRunner.
+// RunContext implements ContextRunner. stderr is capped by
+// helper.RunContext; stdout is not: its answer lines are the result, one per
+// target, and a wildcard target on a large cluster prints tens of thousands
+// of them.
 func (c *CommandLineQMod) RunContext(ctx context.Context, env []string, args ...string) (string, string, error) {
 	if err := validate.Enforce(validate.Args(args...)); err != nil {
 		return "", "", err
@@ -77,24 +68,7 @@ func (c *CommandLineQMod) RunContext(ctx context.Context, env []string, args ...
 	if c.config.DryRun {
 		return fmt.Sprintf("Dry run: qmod %v", args), "", nil
 	}
-	cmd := exec.CommandContext(ctx, c.config.Executable, args...)
-	if env != nil {
-		cmd.Env = env
-	}
-	cmd.WaitDelay = waitDelay
-	var stdout bytes.Buffer
-	stderr := helper.NewCappedBuffer(maxStderrBytes)
-	cmd.Stdout = &stdout
-	cmd.Stderr = stderr
-	err := cmd.Run()
-	if err != nil {
-		if ctx.Err() != nil {
-			err = ctx.Err()
-		}
-		return stdout.String(), stderr.String(),
-			fmt.Errorf("failed to run command (%s): %w", strings.TrimSpace(stderr.String()), err)
-	}
-	return stdout.String(), stderr.String(), nil
+	return helper.RunContext(ctx, c.config.Executable, env, nil, args...)
 }
 
 // ActionContext implements ContextRunner.
