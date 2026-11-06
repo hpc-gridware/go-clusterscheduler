@@ -111,6 +111,15 @@ var _ = Describe("qmaster threads", func() {
 			Expect(running).To(BeTrue())
 		})
 
+		It("fails on an empty -stl answer with exit 0 (qmaster down), never reads it as stopped", func() {
+			f := fakeqconf.New(GinkgoT(), "", 0)
+			defer f.Cleanup()
+			qc, err := core.NewCommandLineQConf(core.CommandLineQConfConfig{Executable: f.Path()})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = qc.SchedulerRunningContext(context.Background(), nil)
+			Expect(err).To(MatchError(ContainSubstring("no thread list")))
+		})
+
 		It("still fails on -stl output without a thread list", func() {
 			f := fakeqconf.New(GinkgoT(), "error: commlib error: can't connect to service\n", 1)
 			defer f.Cleanup()

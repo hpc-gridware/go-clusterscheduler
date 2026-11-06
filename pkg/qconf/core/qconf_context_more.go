@@ -359,18 +359,26 @@ func (c *CommandLineQConf) ShowSchedulerHostContext(ctx context.Context, env []s
 }
 
 // ShowThreadsContext returns the qmaster thread pools and their sizes
-// ("qconf -stl"). "qconf -stl"
-// prints a "POOL SIZE" header, a dash line and then one "<name> <count>"
-// row per thread pool; the two header lines are skipped and a row whose
-// count is not a number is left out.
+// ("qconf -stl"): a "POOL SIZE" header, a dash line and then one
+// "<name> <count>" row per thread pool; the two header lines are skipped and
+// a row whose count is not a number is left out.
 //
-// qconf -stl exits 1 even when it prints the whole list (9.1.7, scheduler
-// running or not), so a printed header is the answer whatever the exit
-// code; only output without it is a failure.
+// qconf -stl exits 1 even when it prints the whole list (OCS 9.0.12 and GCS
+// 9.1.7, scheduler running or not), so a printed header is the answer
+// whatever the exit code. Output without the header is a failure on any
+// exit code (qconf can answer nothing with exit 0 while qmaster is down),
+// and so is any cut by a deadline: a partial list that lacks a pool would
+// report that pool missing.
 func (c *CommandLineQConf) ShowThreadsContext(ctx context.Context, env []string) ([]ThreadInfo, error) {
 	out, err := c.RunCommandContext(ctx, env, "-stl")
-	if err != nil && (ctx.Err() != nil || !hasThreadListHeader(out)) {
+	if err != nil && (errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)) {
 		return nil, err
+	}
+	if !hasThreadListHeader(out) {
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("qconf -stl: no thread list in the answer %q", strings.TrimSpace(out))
 	}
 	return ParseThreadList(out), nil
 }

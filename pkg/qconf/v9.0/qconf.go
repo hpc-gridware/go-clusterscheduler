@@ -46,12 +46,6 @@ const (
 	SchedulerThread      = core.SchedulerThread
 )
 
-// ParseThreadAnswer and SchedulerInThreads: see core.
-var (
-	ParseThreadAnswer  = core.ParseThreadAnswer
-	SchedulerInThreads = core.SchedulerInThreads
-)
-
 // ErrNotSupported is returned when qconf does not know an option; see
 // core.ErrNotSupported.
 var ErrNotSupported = core.ErrNotSupported

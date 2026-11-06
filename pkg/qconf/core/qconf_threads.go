@@ -33,9 +33,9 @@ import (
 // from the exit code.
 type ThreadAnswer string
 
-// The answers qmaster gives, with the text they are read from (9.1.7,
-// LC_ALL=C, printed on stderr; "scheduler" is the only thread name -at
-// accepts):
+// The answers qmaster gives, with the text they are read from (identical on
+// OCS 9.0.12 and GCS 9.1.7, LC_ALL=C, printed on stderr; "scheduler" is the
+// only thread name -at accepts):
 //
 //	-at scheduler  "scheduler has been started"           ThreadStarted
 //	-at scheduler  "scheduler thread is already running"  ThreadAlreadyRunning
