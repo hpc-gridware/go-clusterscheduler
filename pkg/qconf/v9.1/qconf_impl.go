@@ -237,6 +237,7 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 		Users:                coreCfg.Users,
 		ClusterQueues:        coreCfg.ClusterQueues,
 		UserSetLists:         coreCfg.UserSetLists,
+		SkippedHosts:         coreCfg.SkippedHosts,
 	}
 
 	// Replace GlobalConfig with v9.1 version.

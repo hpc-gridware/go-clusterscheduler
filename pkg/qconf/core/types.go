@@ -59,6 +59,47 @@ type ClusterConfig struct {
 	Users                map[string]UserConfig                `json:"users"`
 	ClusterQueues        map[string]ClusterQueueConfig        `json:"cluster_queues"`
 	UserSetLists         map[string]UserSetListConfig         `json:"user_set_lists"`
+	// SkippedHosts lists the hosts whose configuration could not be read
+	// while the configuration was collected (GetClusterConfiguration). Such
+	// a configuration is INCOMPLETE: the host exists in the cluster but is
+	// missing from HostConfigurations or ExecHosts, so a comparison would
+	// report it as removed. Empty for a complete configuration.
+	SkippedHosts []SkippedHost `json:"skipped_hosts,omitempty"`
+}
+
+// SkippedHost is one host left out of a collected ClusterConfig because
+// reading it failed.
+type SkippedHost struct {
+	// Name is the host as the cluster lists it.
+	Name string `json:"name"`
+	// Section is the ClusterConfig section the host is missing from:
+	// "host_configurations" or "exec_hosts".
+	Section string `json:"section"`
+	// Reason is the error the read returned.
+	Reason string `json:"reason"`
+}
+
+// The SkippedHost sections.
+const (
+	SectionHostConfigurations = "host_configurations"
+	SectionExecHosts          = "exec_hosts"
+)
+
+// readHosts reads every named host with read and collects the ones that
+// fail instead of dropping them silently: the caller's configuration is
+// then known to be incomplete.
+func readHosts[T any](names []string, section string, read func(string) (T, error)) (map[string]T, []SkippedHost) {
+	out := make(map[string]T, len(names))
+	var skipped []SkippedHost
+	for _, name := range names {
+		v, err := read(name)
+		if err != nil {
+			skipped = append(skipped, SkippedHost{Name: name, Section: section, Reason: err.Error()})
+			continue
+		}
+		out[name] = v
+	}
+	return out, skipped
 }
 
 // ClusterEnvironment provides information about the

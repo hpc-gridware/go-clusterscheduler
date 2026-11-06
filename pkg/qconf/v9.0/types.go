@@ -92,6 +92,10 @@ var ApplySubtreeMove = core.ApplySubtreeMove
 var ErrNoShareTree = core.ErrNoShareTree
 var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
 var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
+var ErrIncompleteConfiguration = core.ErrIncompleteConfiguration
+
+type SkippedHost = core.SkippedHost
+
 var ErrNoModification = core.ErrNoModification
 
 // ShareCode* re-exports so callers (an HTTP or MCP handler, say) can branch

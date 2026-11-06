@@ -58,6 +58,7 @@ var ErrNoShareTree = core.ErrNoShareTree
 var ErrShareTreeMonNotAvail = core.ErrShareTreeMonNotAvail
 var ErrNoModification = core.ErrNoModification
 var ErrShareTreeNodeNotFound = core.ErrShareTreeNodeNotFound
+var ErrIncompleteConfiguration = core.ErrIncompleteConfiguration
 
 // ShareCode* re-exports so callers (an HTTP or MCP handler, say) can
 // branch on validation errors without typing the raw string literals.
@@ -135,7 +136,14 @@ type ClusterConfig struct {
 	Users                map[string]UserConfig                `json:"users"`
 	ClusterQueues        map[string]ClusterQueueConfig        `json:"cluster_queues"`
 	UserSetLists         map[string]UserSetListConfig         `json:"user_set_lists"`
+	// SkippedHosts: see core.ClusterConfig. Empty for a complete
+	// configuration.
+	SkippedHosts []SkippedHost `json:"skipped_hosts,omitempty"`
 }
+
+// SkippedHost is a host left out of a collected configuration (see
+// core.SkippedHost).
+type SkippedHost = core.SkippedHost
 
 // GlobalConfig extends the core GlobalConfig with v9.1-specific fields.
 type GlobalConfig struct {

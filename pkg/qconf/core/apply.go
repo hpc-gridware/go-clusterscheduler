@@ -24,6 +24,10 @@ import (
 	"fmt"
 )
 
+// ErrIncompleteConfiguration is returned by Apply when the current cluster
+// configuration could not be read completely (ClusterConfig.SkippedHosts).
+var ErrIncompleteConfiguration = errors.New("current cluster configuration is incomplete")
+
 // Apply compares the current cluster configuration with the new configuration
 // and applies the changes. If dryRun is true, it only prints the plan of the actions,
 // otherwise it applies the changes.
@@ -31,6 +35,13 @@ func Apply(qc QConf, newConfig ClusterConfig, dryRun bool) error {
 	currentConfig, err := qc.GetClusterConfiguration()
 	if err != nil {
 		return fmt.Errorf("failed to get current cluster configuration: %w", err)
+	}
+	// An incomplete current configuration lacks the hosts it could not
+	// read, so the comparison would plan to add hosts that exist (or, for
+	// a configuration taken from this cluster, to remove them).
+	if n := len(currentConfig.SkippedHosts); n > 0 {
+		return fmt.Errorf("%w: %d host(s) could not be read, first %s (%s)", ErrIncompleteConfiguration,
+			n, currentConfig.SkippedHosts[0].Name, currentConfig.SkippedHosts[0].Reason)
 	}
 
 	comparison, err := currentConfig.CompareTo(newConfig)

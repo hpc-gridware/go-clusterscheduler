@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -453,17 +452,11 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read host configs: %v", err)
 	}
-	cc.HostConfigurations = make(map[string]HostConfiguration)
-	for _, host := range hostConfigs {
-		hc, err := c.ShowHostConfiguration(host)
-		if err != nil {
-			// The host might be unreachable. stderr, never stdout: a
-			// caller may use stdout as a protocol channel.
-			log.Printf("warning: host %s is unreachable", host)
-			continue
-		}
-		cc.HostConfigurations[host] = hc
-	}
+	// A host that cannot be read is reported in SkippedHosts, never
+	// dropped silently: a configuration without it would read as complete.
+	var skipped []SkippedHost
+	cc.HostConfigurations, skipped = readHosts(hostConfigs, SectionHostConfigurations, c.ShowHostConfiguration)
+	cc.SkippedHosts = append(cc.SkippedHosts, skipped...)
 
 	projectNames, err := c.ShowProjects()
 	if err != nil {
@@ -521,15 +514,8 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	if err != nil {
 		return cc, fmt.Errorf("failed to read exec hosts: %v", err)
 	}
-	cc.ExecHosts = make(map[string]HostExecConfig, 0)
-	for _, execHost := range execHosts {
-		eh, err := c.ShowExecHost(execHost)
-		if err != nil {
-			log.Printf("warning: exec host %s is unreachable", execHost)
-			continue
-		}
-		cc.ExecHosts[execHost] = eh
-	}
+	cc.ExecHosts, skipped = readHosts(execHosts, SectionExecHosts, c.ShowExecHost)
+	cc.SkippedHosts = append(cc.SkippedHosts, skipped...)
 
 	// Read Admin Hosts
 	adminHosts, err := c.ShowAdminHosts()
