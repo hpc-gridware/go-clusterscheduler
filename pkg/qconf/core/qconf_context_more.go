@@ -363,12 +363,28 @@ func (c *CommandLineQConf) ShowSchedulerHostContext(ctx context.Context, env []s
 // prints a "POOL SIZE" header, a dash line and then one "<name> <count>"
 // row per thread pool; the two header lines are skipped and a row whose
 // count is not a number is left out.
+//
+// qconf -stl exits 1 even when it prints the whole list (9.1.7, scheduler
+// running or not), so a printed header is the answer whatever the exit
+// code; only output without it is a failure.
 func (c *CommandLineQConf) ShowThreadsContext(ctx context.Context, env []string) ([]ThreadInfo, error) {
 	out, err := c.RunCommandContext(ctx, env, "-stl")
-	if err != nil {
+	if err != nil && (ctx.Err() != nil || !hasThreadListHeader(out)) {
 		return nil, err
 	}
 	return ParseThreadList(out), nil
+}
+
+// hasThreadListHeader reports whether out carries the "POOL SIZE" header of
+// a "qconf -stl" thread list.
+func hasThreadListHeader(out string) bool {
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 2 && f[0] == "POOL" && f[1] == "SIZE" {
+			return true
+		}
+	}
+	return false
 }
 
 // ParseThreadList reads "qconf -stl" output; see ShowThreadsContext for

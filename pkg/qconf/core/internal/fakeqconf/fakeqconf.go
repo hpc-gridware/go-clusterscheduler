@@ -67,6 +67,18 @@ func Available() bool {
 // (typically via defer or t.Cleanup on the *testing.T path).
 func New(t TestingT, stdout string, rc int) *Fake {
 	t.Helper()
+	return newFake(t, stdout, "", rc)
+}
+
+// NewStderr is New for a qconf that answers on stderr (with stdout empty),
+// as "qconf -at" / "qconf -kt" do.
+func NewStderr(t TestingT, stderr string, rc int) *Fake {
+	t.Helper()
+	return newFake(t, "", stderr, rc)
+}
+
+func newFake(t TestingT, stdout, stderr string, rc int) *Fake {
+	t.Helper()
 	if !Available() {
 		t.Fatalf("fakeqconf.New called on unsupported platform %s", runtime.GOOS)
 	}
@@ -82,12 +94,18 @@ func New(t TestingT, stdout string, rc int) *Fake {
 		_ = os.RemoveAll(dir)
 		t.Fatalf("fakeqconf: write stdout fixture: %v", err)
 	}
+	errPath := filepath.Join(dir, "stderr.txt")
+	if err := os.WriteFile(errPath, []byte(stderr), 0o644); err != nil {
+		_ = os.RemoveAll(dir)
+		t.Fatalf("fakeqconf: write stderr fixture: %v", err)
+	}
 
 	script := fmt.Sprintf(`#!/usr/bin/env bash
 printf "%%s\n" "$*" >> %q
 cat %q
+cat %q >&2
 exit %d
-`, logPath, bodyPath, rc)
+`, logPath, bodyPath, errPath, rc)
 
 	scriptPath := filepath.Join(dir, "qconf")
 	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {

@@ -3169,7 +3169,10 @@ func (c *CommandLineQConf) KillEventClient(evids []string) error {
 	return err
 }
 
-// KillQmasterThread kills the specified qmaster thread.
+// KillQmasterThread kills the specified qmaster thread. It reports only a
+// failure to run qconf: qconf exits 0 also when it refuses ("thread is not
+// running"), so a caller that needs qmaster's answer uses
+// KillQmasterThreadContext.
 func (c *CommandLineQConf) KillQmasterThread(threadName string) error {
 	_, err := c.runNamed("-kt", threadName)
 	return err

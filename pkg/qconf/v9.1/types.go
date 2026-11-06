@@ -188,6 +188,24 @@ var _ ConfigContextReader = (*CommandLineQConf)(nil)
 // ThreadInfo is one row of "qconf -stl"; see core.ThreadInfo.
 type ThreadInfo = core.ThreadInfo
 
+// ThreadAnswer is qmaster's answer to "qconf -at" / "qconf -kt"; see
+// core.ThreadAnswer.
+type ThreadAnswer = core.ThreadAnswer
+
+const (
+	ThreadStarted        = core.ThreadStarted
+	ThreadAlreadyRunning = core.ThreadAlreadyRunning
+	ThreadTerminated     = core.ThreadTerminated
+	ThreadNotRunning     = core.ThreadNotRunning
+	SchedulerThread      = core.SchedulerThread
+)
+
+// ParseThreadAnswer and SchedulerInThreads: see core.
+var (
+	ParseThreadAnswer  = core.ParseThreadAnswer
+	SchedulerInThreads = core.SchedulerInThreads
+)
+
 // ErrNotSupported is returned when qconf does not know an option; see
 // core.ErrNotSupported.
 var ErrNotSupported = core.ErrNotSupported
