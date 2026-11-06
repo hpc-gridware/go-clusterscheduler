@@ -134,6 +134,26 @@ type JobXML struct {
 	// Project and Department are present with Extended only.
 	Project    string
 	Department string
+	// The ticket and share columns of "qstat -ext", Extended only (zero
+	// otherwise): NormalizedTickets is JAT_ntix (the "ntckts" column),
+	// Tickets the total, OverrideTickets, FunctionalTickets and
+	// ShareTreeTickets its parts (JB_override_tickets, otickets, ftickets,
+	// stickets), Share JAT_share. qstat writes them for every job that is
+	// not a zombie (ocs_qstat_xml.cc).
+	NormalizedTickets float64
+	Tickets           uint64
+	OverrideTickets   uint64
+	OTickets          uint64
+	FunctionalTickets uint64
+	ShareTreeTickets  uint64
+	Share             float64
+	// CPUUsage, MemUsage and IOUsage are the scaled usage of a running
+	// task as printed (cpu_usage, mem_usage, io_usage), Extended only.
+	// qstat writes each one only after the first load report, so the empty
+	// string means "not reported yet", never zero.
+	CPUUsage string
+	MemUsage string
+	IOUsage  string
 	// Master is "MASTER" or "SLAVE" when qstat prints parallel task
 	// distribution ("-g t").
 	Master string
@@ -499,6 +519,17 @@ type jobListXML struct {
 	Project        string `xml:"JB_project"`
 	Department     string `xml:"JB_department"`
 	Master         string `xml:"master"`
+	// The -ext elements; absent without -ext.
+	NormalizedTickets string `xml:"JAT_ntix"`
+	Tickets           string `xml:"tickets"`
+	OverrideTickets   string `xml:"JB_override_tickets"`
+	OTickets          string `xml:"otickets"`
+	FunctionalTickets string `xml:"ftickets"`
+	ShareTreeTickets  string `xml:"stickets"`
+	Share             string `xml:"JAT_share"`
+	CPUUsage          string `xml:"cpu_usage"`
+	MemUsage          string `xml:"mem_usage"`
+	IOUsage           string `xml:"io_usage"`
 	// The -r elements; absent without -r.
 	// The scoped ones (qsub -scope) are written under their own element
 	// names (ocs_qstat_xml.cc, qstat_xml_job_report_hard_resource and
@@ -553,8 +584,32 @@ func (r jobListXML) typed() (JobXML, bool) {
 
 		MasterHardRequestedQueues: trimAll(r.MasterHardQueues),
 		SlaveHardRequestedQueues:  trimAll(r.SlaveHardQueues),
+
+		NormalizedTickets: parseFloatOrZero(r.NormalizedTickets),
+		Tickets:           parseUintOrZero(r.Tickets),
+		OverrideTickets:   parseUintOrZero(r.OverrideTickets),
+		OTickets:          parseUintOrZero(r.OTickets),
+		FunctionalTickets: parseUintOrZero(r.FunctionalTickets),
+		ShareTreeTickets:  parseUintOrZero(r.ShareTreeTickets),
+		Share:             parseFloatOrZero(r.Share),
+		CPUUsage:          strings.TrimSpace(r.CPUUsage),
+		MemUsage:          strings.TrimSpace(r.MemUsage),
+		IOUsage:           strings.TrimSpace(r.IOUsage),
 	}
 	return job, true
+}
+
+// parseFloatOrZero and parseUintOrZero read an informational -ext column:
+// a value that does not parse is 0 rather than a skipped job, like the
+// priority. The job's identity and slots stay strict.
+func parseFloatOrZero(s string) float64 {
+	v, _ := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	return v
+}
+
+func parseUintOrZero(s string) uint64 {
+	v, _ := strconv.ParseUint(strings.TrimSpace(s), 10, 64)
+	return v
 }
 
 // resourceRequests turns the raw request elements into typed ones,

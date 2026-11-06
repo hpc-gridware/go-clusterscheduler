@@ -684,4 +684,99 @@ binding:                         NONE`
 
 	})
 
+	// Captured live from 9.1.7 with two job names containing a blank ("my
+	// run" running, "my job" pending) and an owner longer than the 12
+	// characters of the text columns. Before, one such job shifted every
+	// later column and failed the whole parse.
+	Context("job names with blanks (live 9.1.7 output)", func() {
+		read := func(name string) string {
+			raw, err := os.ReadFile(filepath.Join("testdata", name))
+			Expect(err).NotTo(HaveOccurred())
+			return string(raw)
+		}
+
+		It("parses every row of qstat -ext -u '*'", func() {
+			jobs, err := qstat.ParseExtendedJobInfo(read("qstat-ext-states-9.1.7.txt"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(16))
+			byID := map[int]qstat.ExtendedJobInfo{}
+			for _, j := range jobs {
+				byID[j.JobID] = j
+			}
+			Expect(byID[546].Name).To(Equal("my run"))
+			Expect(byID[546].User).To(Equal("erin"))
+			Expect(byID[546].State).To(Equal("r"))
+			Expect(byID[546].Queue).To(Equal("all.q@node3"))
+			Expect(byID[546].Memory).To(BeNumerically(">", 0))
+			Expect(byID[547].Name).To(Equal("my job"))
+			Expect(byID[547].State).To(Equal("hqw"))
+			// The text columns cut name and owner; StreamJobsXML has them whole.
+			Expect(byID[543].Name).To(Equal("longowner_"))
+			Expect(byID[543].User).To(Equal("administrato"))
+			// A restarted job: the restart clears w (Rq while pending).
+			Expect(byID[550].State).To(Equal("Rr"))
+			Expect(byID[548].State).To(Equal("Ehqw"))
+		})
+
+		It("parses every job line of qstat -f -u '*'", func() {
+			queues, err := qstat.ParseQstatFullOutput(read("qstat-f-states-9.1.7.txt"))
+			Expect(err).NotTo(HaveOccurred())
+			var names []string
+			for _, q := range queues {
+				for _, j := range q.Jobs {
+					names = append(names, j.Name)
+					if j.Name == "my run" {
+						Expect(j.User).To(Equal("erin"))
+						Expect(j.State).To(Equal("r"))
+						Expect(q.QueueName).To(Equal("all.q@node3"))
+					}
+				}
+			}
+			Expect(names).To(ContainElements("my run", "longowner_", "array"))
+		})
+
+		It("parses every row of plain qstat -u '*', whatever its state", func() {
+			jobs, err := qstat.ParseJobInfo(read("qstat-states-9.1.7.txt"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(16))
+			byKey := map[string]qstat.JobInfo{}
+			for _, j := range jobs {
+				byKey[j.Name+"/"+j.State] = j
+			}
+			run := byKey["my run/r"]
+			Expect(run.User).To(Equal("erin"))
+			Expect(run.Queue).To(Equal("all.q@node3"))
+			Expect(run.StartTime.IsZero()).To(BeFalse())
+			Expect(run.SubmitTime.IsZero()).To(BeTrue())
+			// A hold on a running task: still a running row with its queue.
+			held := byKey["held_runni/hr"]
+			Expect(held.Queue).NotTo(BeEmpty())
+			Expect(held.Slots).To(Equal(1))
+			// A held job in error: a pending row with its submit time.
+			bad := byKey["stalled/Ehqw"]
+			Expect(bad.Queue).To(BeEmpty())
+			Expect(bad.SubmitTime.IsZero()).To(BeFalse())
+			Expect(bad.Slots).To(Equal(1))
+			var pendingRange qstat.JobInfo
+			for _, j := range jobs {
+				if j.Name == "array" && j.State == "qw" {
+					pendingRange = j
+				}
+			}
+			Expect(pendingRange.JaTaskIDs).To(HaveLen(38))
+		})
+
+		It("keeps splitting a line without the fixed name column on blanks", func() {
+			jobs, err := qstat.ParseJobInfo("job-ID prior name user state submit/start at queue slots ja-task-ID\n" +
+				"-----\n" +
+				"   15 0.55500 sleep root qw 2024-12-14 17:22:00 1 1-99:2\n")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(jobs).To(HaveLen(1))
+			Expect(jobs[0].Name).To(Equal("sleep"))
+			Expect(jobs[0].User).To(Equal("root"))
+			Expect(jobs[0].SubmitTime).To(Equal(time.Date(2024, 12, 14, 17, 22, 0, 0, time.Local)))
+			Expect(jobs[0].JaTaskIDs).To(HaveLen(50))
+		})
+	})
+
 })

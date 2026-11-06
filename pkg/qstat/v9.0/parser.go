@@ -398,6 +398,52 @@ job-ID  prior   ntckts  name       user         project          department stat
      32 0.55500 0.50000 sleep      root         NA               defaultdep r     NA         NA      NA          0     0     0     0     0 0.00  all.q@master                       1 9
 */
 
+// jobNameWidth and jobOwnerWidth are the widths qstat prints a job name
+// and its owner in, in bytes: the text listings format them as "%-10.10s "
+// and "%-12.12s " (ocs_qstat.cc), cut and padded, each followed by one
+// blank.
+const (
+	jobNameWidth  = 10
+	jobOwnerWidth = 12
+)
+
+// jobLineFields splits one job line of a qstat text listing into its
+// columns. strings.Fields is not enough: a job name may contain blanks
+// ("my job"), which shifts every later column, so one such job used to
+// fail the whole parse. lead is the number of columns before the name
+// (job-ID and prior; plus ntckts with -ext). The name is taken by its
+// fixed width and returned as one field, trimmed; the columns after it
+// hold no blanks. A line that does not have that shape is split on blanks
+// as before, and the caller's own checks report it.
+func jobLineFields(line string, lead int) []string {
+	fields := make([]string, 0, 20)
+	i := 0
+	for n := 0; n < lead; n++ {
+		for i < len(line) && line[i] == ' ' {
+			i++
+		}
+		start := i
+		for i < len(line) && line[i] != ' ' {
+			i++
+		}
+		if start == i {
+			return strings.Fields(line)
+		}
+		fields = append(fields, line[start:i])
+	}
+	// Exactly one blank separates the column before the name from it, and
+	// the owner column after it has its own fixed width.
+	nameStart := i + 1
+	nameEnd := nameStart + jobNameWidth
+	ownerEnd := nameEnd + 1 + jobOwnerWidth
+	if ownerEnd >= len(line) || line[i] != ' ' || line[nameStart] == ' ' ||
+		line[nameEnd] != ' ' || line[nameEnd+1] == ' ' || line[ownerEnd] != ' ' {
+		return strings.Fields(line)
+	}
+	fields = append(fields, strings.TrimRight(line[nameStart:nameEnd], " "))
+	return append(fields, strings.Fields(line[nameEnd:])...)
+}
+
 func ParseExtendedJobInfo(output string) ([]ExtendedJobInfo, error) {
 	ext := []ExtendedJobInfo{}
 
@@ -561,7 +607,7 @@ job-ID  prior   ntckts  name       user         project          department stat
 */
 
 func parseExtendedJobInfoLine(line string) (ExtendedJobInfo, error) {
-	fields := strings.Fields(line)
+	fields := jobLineFields(line, 3)
 
 	// Initialize variables
 	var jobID int
@@ -573,8 +619,6 @@ func parseExtendedJobInfoLine(line string) (ExtendedJobInfo, error) {
 	var queue string
 	var slots int
 	var jaTaskID string
-
-	fmt.Println(len(fields))
 
 	if len(fields) == 19 || len(fields) == 20 {
 		// Expected number of fields when job is in 'r' state
@@ -693,9 +737,10 @@ func parseExtendedJobInfoLine(line string) (ExtendedJobInfo, error) {
 			len(fields), line)
 	}
 
-	// TODO convert them correctly
-	mem = io
-	io = mem
+	// mem and io are the scaled usage columns; "NA" (not reported yet)
+	// and an empty column read as 0, like the ticket columns.
+	memory, _ := strconv.ParseFloat(mem, 64)
+	ioUsage, _ := strconv.ParseFloat(io, 64)
 
 	return ExtendedJobInfo{
 		JobID:      jobID,
@@ -706,18 +751,18 @@ func parseExtendedJobInfoLine(line string) (ExtendedJobInfo, error) {
 		Department: department,
 		State:      state,
 		CPU:        cpu,
-		//Memory:     mem,
-		//IO:         io,
-		Tckts:    tckts,
-		Ovrts:    ovrts,
-		Otckt:    otckt,
-		Ftckt:    ftckt,
-		Stckt:    stckt,
-		Ntckts:   ntckts,
-		Share:    share,
-		Queue:    queue,
-		Slots:    slots,
-		JATaskID: jaTaskID,
+		Memory:     memory,
+		IO:         ioUsage,
+		Tckts:      tckts,
+		Ovrts:      ovrts,
+		Otckt:      otckt,
+		Ftckt:      ftckt,
+		Stckt:      stckt,
+		Ntckts:     ntckts,
+		Share:      share,
+		Queue:      queue,
+		Slots:      slots,
+		JATaskID:   jaTaskID,
 	}, nil
 }
 
@@ -744,7 +789,7 @@ func ParseJobInfo(out string) ([]JobInfo, error) {
 		if strings.HasPrefix(line, "---------") {
 			continue
 		}
-		fields := strings.Fields(line)
+		fields := jobLineFields(line, 2)
 		if len(fields) < 8 {
 			continue
 		}
@@ -766,32 +811,32 @@ func ParseJobInfo(out string) ([]JobInfo, error) {
 		var queue string
 		var slots int
 		var jaTaskIDs []int64
-		// the state defines the format of the rest of the fields
-		if state == "r" {
-			// we have a running job in a queue intance
-			submitTimeString := fields[5] + fields[6]
-			submitTime, err = time.Parse("2024-12-14 17:21:43", submitTimeString)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse submit time: %v", err)
-			}
-			queue = fields[7]
-			slots, err = strconv.Atoi(fields[8])
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse slots: %v", err)
-			}
-			// TODO parse jaTaskIDs
-		} else if state == "qw" {
-			// we have a queued job
-			startTimeString := fields[5] + fields[6]
-			startTime, err = time.Parse("2024-12-14 17:21:43", startTimeString)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse run time: %v", err)
-			}
-			slots, err = strconv.Atoi(fields[7])
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse slots: %v", err)
-			}
-			// TODO parse jaTaskIDs
+		// The columns decide the row's shape, never the state: a state is
+		// a combination of letters (r, hr, Rr, t, s, qw, hqw, Eqw, Rq, dr,
+		// ...). A row with a queue instance in column 8 is a running (or
+		// suspended, transferring, deleting) task and its time is the start
+		// time; without one it is pending and its time is the submit time.
+		jobTime, err := time.ParseInLocation("2006-01-02 15:04:05", fields[5]+" "+fields[6], time.Local)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse submit/start time of job %d: %v", jobID, err)
+		}
+		rest := fields[7:]
+		if strings.Contains(rest[0], "@") {
+			queue = rest[0]
+			rest = rest[1:]
+			startTime = jobTime
+		} else {
+			submitTime = jobTime
+		}
+		if len(rest) == 0 {
+			return nil, fmt.Errorf("missing slots of job %d: %q", jobID, line)
+		}
+		slots, err = strconv.Atoi(rest[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse slots of job %d: %v", jobID, err)
+		}
+		if len(rest) > 1 {
+			jaTaskIDs = parseJaTaskIDs(rest[1])
 		}
 
 		jobInfo := JobInfo{
@@ -922,7 +967,7 @@ func ParseJobArrayTask(out string) ([]JobArrayTask, error) {
 	}
 
 	for _, line := range lines[2:] {
-		fields := strings.Fields(line)
+		fields := jobLineFields(line, 2)
 		if len(fields) < 8 {
 			continue
 		}
@@ -1107,7 +1152,7 @@ func ParseQstatFullOutput(out string) ([]FullQueueInfo, error) {
 			if currentQueue == nil {
 				return nil, fmt.Errorf("job info found without preceding queue header: %q", line)
 			}
-			fields := strings.Fields(line)
+			fields := jobLineFields(line, 2)
 			if len(fields) < 8 {
 				return nil, fmt.Errorf("invalid job line format: %q", line)
 			}

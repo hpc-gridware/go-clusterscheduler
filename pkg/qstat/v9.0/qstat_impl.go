@@ -71,7 +71,6 @@ func (q *QStatImpl) WatchJobs(ctx context.Context, jobIds []int64) (chan Schedul
 		out, err := q.NativeSpecification([]string{"-j", jobId})
 		if err != nil {
 			if i >= 2 {
-				fmt.Printf("error getting qstat output: %v\n", err)
 				return nil, fmt.Errorf("error getting qstat output: %w", err)
 			}
 			// wait 1 second and try again

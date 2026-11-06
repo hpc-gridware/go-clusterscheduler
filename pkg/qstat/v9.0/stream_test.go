@@ -315,6 +315,91 @@ var _ = Describe("Streaming qstat XML", func() {
 			Entry("9.1.0", "qstat-xml-ext-jobs-9.1.0.xml"),
 		)
 
+		// Captured live from a 9.1.7 cluster with one job in every state
+		// letter combination a job row can show: r, hr (a hold on a running
+		// task), s, Rq (rescheduled, pending: the restart clears the w),
+		// qw, hqw (also from -hold_jid), Ehqw (a held job in error), an
+		// array job with running tasks and a pending range, two job names
+		// with a space and an owner longer than the 12 characters of the
+		// text columns.
+		It("decodes every state, full name and owner of qstat -xml -ext (9.1.7)", func() {
+			jobs, stats, err := collectJobs("qstat-xml-ext-states-9.1.7.xml")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stats).To(Equal(qstat.Stats{Decoded: 16, Complete: true}))
+			states := map[string]int{}
+			for _, j := range jobs {
+				states[j.State]++
+			}
+			Expect(states).To(Equal(map[string]int{
+				"r": 4, "hr": 1, "s": 1, "Rq": 1, "qw": 2, "hqw": 6, "Ehqw": 1,
+			}))
+			m := byKey(jobs)
+			Expect(m["543."].Owner).To(Equal("administrator1"))
+			Expect(m["543."].Name).To(Equal("longowner_run"))
+			Expect(m["546."].Name).To(Equal("my run"))
+			Expect(m["547."].Name).To(Equal("my job"))
+			Expect(m["551.3-40:1"].State).To(Equal("qw"))
+			running := m["546."]
+			Expect(running.QueueName).To(Equal("all.q@node3"))
+			Expect(running.NormalizedTickets).To(Equal(0.5))
+			Expect(running.CPUUsage).NotTo(BeEmpty())
+			Expect(running.IOUsage).NotTo(BeEmpty())
+			pending := m["547."]
+			Expect(pending.CPUUsage).To(BeEmpty(), "usage is printed only once reported")
+			Expect(pending.QueueName).To(BeEmpty())
+		})
+
+		It("decodes the -ext ticket and share columns", func() {
+			doc := `<?xml version='1.0'?>
+<job_info>
+  <queue_info>
+    <job_list state="running">
+      <JB_job_number>7</JB_job_number>
+      <JAT_prio>0.60500</JAT_prio>
+      <JAT_ntix>0.25000</JAT_ntix>
+      <JB_name>t</JB_name>
+      <JB_owner>u</JB_owner>
+      <JB_project>p</JB_project>
+      <JB_department>defaultdepartment</JB_department>
+      <state>r</state>
+      <cpu_usage>12.00000</cpu_usage>
+      <mem_usage>0.50000</mem_usage>
+      <io_usage>0.00100</io_usage>
+      <tickets>1100</tickets>
+      <JB_override_tickets>100</JB_override_tickets>
+      <JB_jobshare>0</JB_jobshare>
+      <otickets>100</otickets>
+      <ftickets>600</ftickets>
+      <stickets>400</stickets>
+      <JAT_share>0.12500</JAT_share>
+      <queue_name>all.q@h1</queue_name>
+      <slots>1</slots>
+    </job_list>
+  </queue_info>
+  <job_info>
+  </job_info>
+</job_info>
+`
+			var got []qstat.JobXML
+			_, err := qstat.DecodeJobsXML(strings.NewReader(doc), func(j qstat.JobXML) error {
+				got = append(got, j)
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(1))
+			j := got[0]
+			Expect(j.NormalizedTickets).To(Equal(0.25))
+			Expect(j.Tickets).To(Equal(uint64(1100)))
+			Expect(j.OverrideTickets).To(Equal(uint64(100)))
+			Expect(j.OTickets).To(Equal(uint64(100)))
+			Expect(j.FunctionalTickets).To(Equal(uint64(600)))
+			Expect(j.ShareTreeTickets).To(Equal(uint64(400)))
+			Expect(j.Share).To(Equal(0.125))
+			Expect(j.CPUUsage).To(Equal("12.00000"))
+			Expect(j.MemUsage).To(Equal("0.50000"))
+			Expect(j.IOUsage).To(Equal("0.00100"))
+		})
+
 		DescribeTable("qstat -f -xml",
 			func(file string) {
 				f := openFixture(file)

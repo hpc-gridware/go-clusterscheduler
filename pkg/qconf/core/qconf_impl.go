@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -456,8 +457,9 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	for _, host := range hostConfigs {
 		hc, err := c.ShowHostConfiguration(host)
 		if err != nil {
-			// host is might be unreachable
-			fmt.Printf("warning: host %s is unreachable\n", host)
+			// The host might be unreachable. stderr, never stdout: a
+			// caller may use stdout as a protocol channel.
+			log.Printf("warning: host %s is unreachable", host)
 			continue
 		}
 		cc.HostConfigurations[host] = hc
@@ -523,7 +525,7 @@ func (c *CommandLineQConf) GetClusterConfiguration() (ClusterConfig, error) {
 	for _, execHost := range execHosts {
 		eh, err := c.ShowExecHost(execHost)
 		if err != nil {
-			fmt.Printf("warning: exec host %s is unreachable\n", execHost)
+			log.Printf("warning: exec host %s is unreachable", execHost)
 			continue
 		}
 		cc.ExecHosts[execHost] = eh
