@@ -20,8 +20,10 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/helper/validate"
 )
@@ -79,9 +81,66 @@ func (q *QAcctImpl) NativeSpecification(args []string) (string, error) {
 	command := exec.Command(q.config.Executable, args...)
 	out, err := command.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get output of qacct: %w", err)
+		return "", commandError(err)
 	}
 	return string(out), nil
+}
+
+// maxStderrLineBytes bounds the part of qacct's stderr kept in an error.
+const maxStderrLineBytes = 1024
+
+// commandError is the error of a failed qacct run, in the shape the other
+// command wrappers of this module use: "failed to run command (<stderr>):
+// <cause>". Without the stderr part a refusal read "exit status 1" only,
+// although qacct had named the cause (an unknown job, a date it cannot
+// read).
+//
+// Only qacct's message is kept: after a usage error qacct prints its
+// version banner and whole help text, below the message if it has one.
+func commandError(cause error) error {
+	var exitErr *exec.ExitError
+	stderr := ""
+	if errors.As(cause, &exitErr) {
+		stderr = stderrMessage(string(exitErr.Stderr))
+	}
+	return fmt.Errorf("failed to run command (%s): %w", stderr, cause)
+}
+
+// usagePrefix starts the help text qacct prints after a usage error.
+const usagePrefix = "usage:"
+
+// stderrMessage returns the first non-empty line of qacct's stderr, trimmed
+// and cut at maxStderrLineBytes.
+//
+// It returns "" when that line is only the version banner. For an unknown
+// option or a missing argument qacct names no cause: it prints the banner
+// ("OCS 9.1.5 (250826-0734)") directly followed by the usage text, and the
+// banner would read like a cause without being one.
+func stderrMessage(text string) string {
+	lines := nonEmptyLines(text)
+	if len(lines) == 0 || strings.HasPrefix(lines[0], usagePrefix) {
+		return ""
+	}
+	if len(lines) > 1 && strings.HasPrefix(lines[1], usagePrefix) {
+		return ""
+	}
+	message := lines[0]
+	if len(message) > maxStderrLineBytes {
+		message = message[:maxStderrLineBytes]
+	}
+	return message
+}
+
+// nonEmptyLines returns the trimmed lines of text that are not empty.
+func nonEmptyLines(text string) []string {
+	var lines []string
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }
 
 func (q *QAcctImpl) ShowHelp() (string, error) {
