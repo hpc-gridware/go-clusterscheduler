@@ -147,6 +147,13 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 			job.JobUsage.Usage.MaxRSS = parseFloat(value)
 		case "arid":
 			job.ArID = value
+		default:
+			// qacct prints custom usage values (usage_patterns) after the
+			// standard ones, without their group. Every numeric value that
+			// has no field is taken as one.
+			if v, err := strconv.ParseFloat(value, 64); err == nil && key != "" {
+				job.JobUsage.addCustom(CustomUsageNoGroup, map[string]float64{key: v})
+			}
 		}
 	}
 

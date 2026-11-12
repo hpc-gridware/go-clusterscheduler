@@ -42,6 +42,7 @@ const ShareTreeNodeProject = core.ShareTreeNodeProject
 var ParseShareTreeText = core.ParseShareTreeText
 var FormatShareTreeText = core.FormatShareTreeText
 var ParseShareMonOutput = core.ParseShareMonOutput
+var MergeUsagePatterns = core.MergeUsagePatterns
 
 var NormalizeSharePath = core.NormalizeSharePath
 var SplitSharePath = core.SplitSharePath

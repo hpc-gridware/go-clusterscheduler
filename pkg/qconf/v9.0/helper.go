@@ -30,6 +30,7 @@ var JoinStringFloatMap = core.JoinStringFloatMap
 var JoinStringStringMap = core.JoinStringStringMap
 var ParseCommaSeparatedMultiLineValues = core.ParseCommaSeparatedMultiLineValues
 var ParseSpaceSeparatedMultiLineValues = core.ParseSpaceSeparatedMultiLineValues
+var MergeUsagePatterns = core.MergeUsagePatterns
 var ParseSpaceSeparatedValuesWithOverrides = core.ParseSpaceSeparatedValuesWithOverrides
 var ParseCommaSeparatedValuesWithOverrides = core.ParseCommaSeparatedValuesWithOverrides
 var ParseSpaceAndCommaSeparatedMultiLineValues = core.ParseSpaceAndCommaSeparatedMultiLineValues

@@ -19,6 +19,11 @@
 
 package core
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 type ReservationUsage struct {
 	ArID string `json:"ar"`
 	Usage
@@ -107,9 +112,106 @@ type JobDetail struct {
 	JobUsage          JobUsage `json:"usage"`
 }
 
+// JobUsage is the usage part of an accounting record.
 type JobUsage struct {
 	Usage  Usage  `json:"usage"`
 	RUsage RUsage `json:"rusage"`
+	// Custom holds the usage values which have no field in Usage or RUsage:
+	// the values selected by usage_patterns in the reporting_params of the
+	// global configuration (GPU or agent metrics, for example).
+	//
+	// The accounting file stores them in one group per usage_patterns name
+	// ("usage":{"gpu":{"nvidia_energy_consumed":12.5}}), which is the key of
+	// the outer map. The qacct -j output does not show the group, so values
+	// parsed from it are in CustomUsageNoGroup.
+	Custom map[string]map[string]float64 `json:"custom,omitempty"`
+}
+
+// CustomUsageNoGroup is the key of JobUsage.Custom for values whose
+// usage_patterns group is not known (qacct -j output).
+const CustomUsageNoGroup = ""
+
+// CustomValue returns the custom usage value with the given name from
+// whatever group it is in.
+func (u JobUsage) CustomValue(name string) (float64, bool) {
+	for _, group := range u.Custom {
+		if v, ok := group[name]; ok {
+			return v, true
+		}
+	}
+	return 0, false
+}
+
+// UnmarshalJSON reads the usage object of an accounting record. The extended
+// usage is named "usage" by 9.0 and "eusage" by 9.1; every other group besides
+// "rusage" is custom usage. It also reads what JobUsage marshals to.
+func (u *JobUsage) UnmarshalJSON(data []byte) error {
+	var groups map[string]json.RawMessage
+	if err := json.Unmarshal(data, &groups); err != nil {
+		return err
+	}
+	*u = JobUsage{}
+	for name, raw := range groups {
+		switch name {
+		case "rusage":
+			if err := json.Unmarshal(raw, &u.RUsage); err != nil {
+				return fmt.Errorf("rusage: %w", err)
+			}
+		case "usage", "eusage":
+			// qmaster writes all extended usage values as floating point
+			// numbers ("ioops":334.0), which do not fit an integer field.
+			var values map[string]float64
+			if err := json.Unmarshal(raw, &values); err != nil {
+				return fmt.Errorf("%s: %w", name, err)
+			}
+			u.Usage = usageFromValues(values)
+		default:
+			var values map[string]float64
+			if err := json.Unmarshal(raw, &values); err == nil {
+				u.addCustom(name, values)
+				continue
+			}
+			// The "custom" object JobUsage itself marshals to.
+			var nested map[string]map[string]float64
+			if name == "custom" && json.Unmarshal(raw, &nested) == nil {
+				for group, values := range nested {
+					u.addCustom(group, values)
+				}
+			}
+			// Anything else is not usage this version knows about.
+		}
+	}
+	return nil
+}
+
+func (u *JobUsage) addCustom(group string, values map[string]float64) {
+	if len(values) == 0 {
+		return
+	}
+	if u.Custom == nil {
+		u.Custom = map[string]map[string]float64{}
+	}
+	if u.Custom[group] == nil {
+		u.Custom[group] = map[string]float64{}
+	}
+	for name, value := range values {
+		u.Custom[group][name] = value
+	}
+}
+
+func usageFromValues(values map[string]float64) Usage {
+	return Usage{
+		WallClock:  values["wallclock"],
+		UserTime:   values["utime"],
+		SystemTime: values["stime"],
+		CPU:        values["cpu"],
+		Memory:     values["mem"],
+		IO:         values["io"],
+		IOOps:      int64(values["ioops"]),
+		IOWait:     values["iow"],
+		MaxVMem:    values["maxvmem"],
+		MaxRSS:     values["maxrss"],
+	}
 }
 
 // RUsage represents the resource usage data structure.
