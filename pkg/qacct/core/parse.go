@@ -21,16 +21,24 @@ package core
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/goccy/go-json"
 )
 
 func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error) {
 	var jobs []JobDetail
 	var job JobDetail
+	// qacct prints the custom usage values (usage_patterns) of a record
+	// after its standard usage, which ends with maxrss and, when execd
+	// reports memory details, maxpss. From there on a line is custom usage
+	// even if it has the name of a standard field: an expression such as
+	// "io*" prints "ioops 102.000" a second time, and that line must not
+	// replace the standard value.
+	var standardUsageDone, maxPSSSeen bool
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -39,6 +47,7 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 				jobs = append(jobs, job)
 			}
 			job = JobDetail{}
+			standardUsageDone, maxPSSSeen = false, false
 			continue
 		}
 
@@ -49,6 +58,13 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
+
+		if standardUsageDone && key != "arid" && (key != "maxpss" || maxPSSSeen) {
+			if v, ok := parseCustomUsageValue(value); ok && key != "" {
+				job.JobUsage.addCustom(CustomUsageNoGroup, map[string]float64{key: v})
+			}
+			continue
+		}
 
 		switch key {
 		case "qname":
@@ -145,15 +161,12 @@ func ParseQacctJobOutputWithScanner(scanner *bufio.Scanner) ([]JobDetail, error)
 			job.JobUsage.Usage.MaxVMem = parseFloat(value)
 		case "maxrss":
 			job.JobUsage.Usage.MaxRSS = parseFloat(value)
+			standardUsageDone = true
+		case "maxpss":
+			job.JobUsage.Usage.MaxPSS = parseFloat(value)
+			maxPSSSeen = true
 		case "arid":
 			job.ArID = value
-		default:
-			// qacct prints custom usage values (usage_patterns) after the
-			// standard ones, without their group. Every numeric value that
-			// has no field is taken as one.
-			if v, err := strconv.ParseFloat(value, 64); err == nil && key != "" {
-				job.JobUsage.addCustom(CustomUsageNoGroup, map[string]float64{key: v})
-			}
 		}
 	}
 
@@ -210,6 +223,19 @@ func parseFloat(value string) float64 {
 	return f
 }
 
+// parseCustomUsageValue reads a custom usage value of the qacct -j output.
+// qacct prints these with %f, so only plain decimal numbers are accepted:
+// "nan" and "inf" (which could not be marshalled to JSON afterwards) and
+// other spellings strconv.ParseFloat knows are not usage values.
+func parseCustomUsageValue(value string) (float64, bool) {
+	if value == "" || strings.Trim(value, "0123456789+-.") != "" {
+		return 0, false
+	}
+	v, err := strconv.ParseFloat(value, 64)
+	return v, err == nil
+}
+
+// ParseAccountingJSONLine parses one line (record) of the accounting file.
 func ParseAccountingJSONLine(line string) (JobDetail, error) {
 	var job JobDetail
 	err := json.Unmarshal([]byte(line), &job)

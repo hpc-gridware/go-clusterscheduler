@@ -159,6 +159,10 @@ Total System Usage
 			Expect(job1.JobUsage.RUsage.RuMaxrss).To(Equal(int64(10300)))
 			Expect(job1.JobUsage.Usage.MaxVMem).To(Equal(float64(21045248)))
 			Expect(job1.JobUsage.Usage.MaxRSS).To(Equal(float64(10547200)))
+			// Nothing of a 9.0 record or of the summary which follows the
+			// records is custom usage.
+			Expect(job1.JobUsage.Custom).To(BeNil())
+			Expect(jobs[1].JobUsage.Custom).To(BeNil())
 
 			job2 := jobs[1]
 			Expect(job2.QName).To(Equal("all.q"))
