@@ -115,6 +115,7 @@ arid                               undefined`
 			Expect(job.JobNumber).To(Equal(int64(8)))
 			Expect(job.TaskID).To(Equal(int64(97)))
 			Expect(job.JobUsage.Usage.WallClock).To(Equal(3.487))
+			Expect(job.JobUsage.Custom).To(BeNil())
 		})
 
 		It("should parse summary output", func() {

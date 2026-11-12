@@ -71,7 +71,9 @@ var _ = Describe("File", func() {
 					log.Printf("job: %+v", jd.JobNumber)
 					if slices.Contains(jobIDs, int(jd.JobNumber)) {
 						Expect(jd.SubmitCommandLine).To(ContainSubstring("bash"))
-						Expect(jd.JobUsage.Usage.Memory).To(BeNumerically(">=", 0))
+						// Not >= 0: that held while the extended usage
+						// of 9.1 records ("eusage") was not read at all.
+						Expect(jd.JobUsage.Usage.WallClock).To(BeNumerically(">", 0))
 						receivedJobs[int(jd.JobNumber)] = true
 					}
 				default:
