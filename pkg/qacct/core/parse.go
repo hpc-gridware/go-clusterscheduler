@@ -236,9 +236,6 @@ func parseCustomUsageValue(value string) (float64, bool) {
 }
 
 // ParseAccountingJSONLine parses one line (record) of the accounting file.
-//
-// It accepts any JSON object, as it always did; ParseAccountingRecord
-// also refuses an object which is not a record.
 func ParseAccountingJSONLine(line string) (JobDetail, error) {
 	var job JobDetail
 	err := json.Unmarshal([]byte(line), &job)
