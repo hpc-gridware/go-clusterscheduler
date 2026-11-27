@@ -113,6 +113,20 @@ type JobDetail struct {
 	ExitStatus        int64    `json:"exit_status"`
 	ArID              string   `json:"arid"`
 	JobUsage          JobUsage `json:"usage"`
+	// ARSubmissionTime is the submission time of the advance reservation
+	// the job ran in, in microseconds; 0 without one.
+	ARSubmissionTime int64 `json:"ar_submission_time,omitempty"`
+	// Category is the scheduler category of the job: its requests as a
+	// string ("-q all.q -l gpu=1"). Accounting file only.
+	Category string `json:"category,omitempty"`
+	// DeletedBy is "user@host" of who deleted the job (9.1.2 and later,
+	// accounting file only); empty when it was not deleted.
+	DeletedBy string `json:"deleted_by,omitempty"`
+	// Extra holds the members of an accounting record which have no field
+	// here, as they are written: a key a newer release added, or a known
+	// key whose value has another type than this version reads. Reading a
+	// record never drops a member. It is not marshalled.
+	Extra map[string]json.RawMessage `json:"-"`
 }
 
 // JobUsage is the usage part of an accounting record.
