@@ -38,3 +38,13 @@ type JobUsage = core.JobUsage
 type RUsage = core.RUsage
 type PeUsage = core.PeUsage
 type Usage = core.Usage
+
+// Reading the accounting file from its end; see core/tail.go.
+type Record = core.Record
+type ReadOptions = core.ReadOptions
+type ReadResult = core.ReadResult
+type UsageValue = core.UsageValue
+type WatchOptions = core.WatchOptions
+
+// ErrNotAccountingRecord is the error for a line which is no record.
+var ErrNotAccountingRecord = core.ErrNotAccountingRecord

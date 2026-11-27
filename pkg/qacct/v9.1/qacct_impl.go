@@ -22,6 +22,7 @@ package qacct
 import (
 	"bufio"
 	"context"
+	"io"
 
 	"github.com/hpc-gridware/go-clusterscheduler/pkg/qacct/core"
 )
@@ -63,4 +64,42 @@ func GetDefaultQacctFile() string {
 
 func WatchFile(ctx context.Context, path string, bufferSize int) (<-chan JobDetail, error) {
 	return core.WatchFile(ctx, path, bufferSize)
+}
+
+// WatchFileFrom follows the accounting file with options; see
+// core.WatchFileFrom.
+func WatchFileFrom(ctx context.Context, path string, o WatchOptions) (<-chan JobDetail, error) {
+	return core.WatchFileFrom(ctx, path, o)
+}
+
+// ParseAccountingRecord parses one line of the accounting file and refuses
+// a line which is no record.
+func ParseAccountingRecord(line []byte) (JobDetail, error) {
+	return core.ParseAccountingRecord(line)
+}
+
+// AccountingUsageValues returns every value of the usage object of one line
+// of the accounting file.
+func AccountingUsageValues(line []byte) ([]UsageValue, error) {
+	return core.AccountingUsageValues(line)
+}
+
+// ReadTail reads the last records of the accounting file; see core.ReadTail.
+func ReadTail(ctx context.Context, r io.ReaderAt, size int64, o ReadOptions) (ReadResult, error) {
+	return core.ReadTail(ctx, r, size, o)
+}
+
+// ReadForward reads the records from offset on; see core.ReadForward.
+func ReadForward(ctx context.Context, r io.ReaderAt, offset, size int64, o ReadOptions) (ReadResult, error) {
+	return core.ReadForward(ctx, r, offset, size, o)
+}
+
+// FindJob reads the records of one job; see core.FindJob.
+func FindJob(ctx context.Context, r io.ReaderAt, size int64, jobID int64, o ReadOptions) (ReadResult, error) {
+	return core.FindJob(ctx, r, size, jobID, o)
+}
+
+// FailedText returns the scheduler's text for a failed code.
+func FailedText(code int64) string {
+	return core.FailedText(code)
 }
